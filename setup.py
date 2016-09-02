@@ -33,7 +33,7 @@ setup(
                  'sandbox_fm'},
     entry_points={
         'console_scripts': [
-            'sandbox_fm=sandbox_fm.cli:main'
+            'sandbox-fm=sandbox_fm.cli:main'
         ]
     },
     include_package_data=True,
