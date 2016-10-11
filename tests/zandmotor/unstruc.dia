@@ -1,0 +1,28 @@
+* Deltares, D-Flow FM Version 1.1.179.45170, Mar 22 2016, 14:45:56
+* File creation date: 16:58:38, 01-08-2016                                      
+** INFO   :  MAXIMUM NUMBER OF LINKS         :            2
+** INFO   :  MAXIMUM NUMBER OF NODES         :            0
+** INFO   :  RESOLUTION GRAPHICS SCREEN      :         1600         990
+** INFO   :  RESOLUTION TEXT     SCREEN      :          200          66
+** INFO   :  NUMBER OF COLOURS AVAILABLE     :          256
+** DEBUG  :            0  0.1000020     NOD(KMAX)
+** DEBUG  :            6  0.7000140     XK (KMAX), YK (KMAX), ZK (KMAX), KC (KMAX), NMK (KMAX), RNOD(KMAX)
+** DEBUG  :            6  9.9999998E-03 XS(NSMAX),YS(NSMAX),ZS(NSMAX),IPSAM(NSMAX)
+** DEBUG  :            6  5.0000001E-02 xlan(maxlan)
+** DEBUG  :            7  5.0000001E-02 ylan(maxlan)
+** DEBUG  :            7  5.0000001E-02 zlan(maxlan)
+** DEBUG  :            7  2.5000000E-02 nclan(maxlan)
+** INFO   : Load MDU-file                    (*.mdu)
+** INFO   : Opened file : zm_tide.mdu
+** INFO   : Closed file : zm_tide.mdu
+** DEBUG  :            8  0.1000020     NOD(KMAX)
+** DEBUG  :           14  0.7000140     XK (KMAX), YK (KMAX), ZK (KMAX), KC (KMAX), NMK (KMAX), RNOD(KMAX)
+** DEBUG  :           14  1.4400000E-03 xsp(maxspl, maxsplen)
+** DEBUG  :           14  1.4400000E-03 ysp(maxspl, maxsplen)
+** DEBUG  :           14  1.4400000E-03 xsp2(maxspl, maxsplen)
+** DEBUG  :           14  1.4400000E-03 ysp2(maxspl, maxsplen)
+** DEBUG  :           14  9.9999998E-03 XS(NSMAX),YS(NSMAX),ZS(NSMAX),IPSAM(NSMAX)
+** DEBUG  :           14  5.9999999E-02 xlan(maxlan)
+** DEBUG  :           15  5.9999999E-02 ylan(maxlan)
+** DEBUG  :           15  5.9999999E-02 zlan(maxlan)
+** DEBUG  :           16  2.9999999E-02 nclan(maxlan)
