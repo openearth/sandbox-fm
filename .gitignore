@@ -1,5 +1,6 @@
 # FM output
 *.out
+*.dia
 *OUTPUT*
 
 # Byte-compiled / optimized / DLL files
