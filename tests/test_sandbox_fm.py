@@ -25,10 +25,15 @@ class TestSandbox_fm(object):
 
     def test_something(self):
         pass
+
     def test_command_line_interface(self):
         runner = CliRunner()
-        result = runner.invoke(cli.main)
-        assert result.exit_code == 0
+        result = runner.invoke(cli.main, [
+            'tests/depthimage.png',
+            'tests/zandmotor/zm_tide.mdu',
+            '--max-iterations=1'
+        ])
+        assert result.exit_code == 0, (result.output, result)
         assert 'sandbox_fm.cli.main' in result.output
         help_result = runner.invoke(cli.main, ['--help'])
         assert help_result.exit_code == 0
@@ -37,4 +42,3 @@ class TestSandbox_fm(object):
     @classmethod
     def teardown_class(cls):
         pass
-
