@@ -16,8 +16,8 @@ def update_delft3d_initial_vars(data, model):
             'flowelemnode'
     ]:
         data[name] = model.get_var(name)
-    for name in ['bl']:
-        data[name + '0'] = model.get_var(name)[:data['ndxi']].copy()
+    for name in ['bl', 's1']:
+        data[name + '_0'] = model.get_var(name)[:data['ndxi']].copy()
 
 
 def update_delft3d_vars(data, model):

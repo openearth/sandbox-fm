@@ -6,7 +6,8 @@ import matplotlib.pyplot as plt
 logger = logging.getLogger(__name__)
 
 
-def depth_images(image):
+def depth_images(image, skip=3):
+    """generate depth images, skipping skip number of cells"""
     while True:
         try:
             img = plt.imread(image)
@@ -14,5 +15,5 @@ def depth_images(image):
             logger.exception("can't read image %s", image)
             time.sleep(0.001)
             continue
-        depth = img[..., 0]
+        depth = img[::skip, ::skip, 0]
         yield depth

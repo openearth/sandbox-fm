@@ -28,7 +28,12 @@ logging.basicConfig(level=logging.INFO)
     default=0,
     help='Maximum number of iterations (0=no limit)'
 )
-def main(image, schematization, max_iterations):
+@click.option(
+    '--random-bathy',
+    default=0.0,
+    help='Raise or lower the bathymetry every 30 timesteps by at most x meter at random locations'
+)
+def main(image, schematization, max_iterations, random_bathy):
     """Console script for sandbox_fm"""
     click.echo("Make sure you start the SARndbox first")
     vis = Visualization()
@@ -37,11 +42,15 @@ def main(image, schematization, max_iterations):
 
     model = bmi.wrapper.BMIWrapper('dflowfm')
     img = next(images)
-    data = dict(kinect=img)
+    data = dict(
+        kinect0=img.copy(),
+        kinect=img
+    )
 
     # initialize model schematization, changes directory
     model.initialize(schematization.name)
 
+    dt = model.get_time_step()
     update_delft3d_initial_vars(data, model)
 
     # coordinates of the image in the model
@@ -69,8 +78,11 @@ def main(image, schematization, max_iterations):
     data['xy1_img_in_model'] = np.dot(xy1_img, img2model.T)
     # multiply [x, y, 1] with affine' gives [xt, yt, 1] (B'A' = (AB)')
     data['xy1_model_in_img'] = np.dot(xy1_model, model2img.T)
+
     vis.initialize(data)
 
+    change = 0
+    s = np.s_[0:0, 0:0]
 
     for i, img in enumerate(images):
         update_delft3d_vars(data, model)
@@ -79,11 +91,24 @@ def main(image, schematization, max_iterations):
             break
         data["kinect"] = img
 
+        if random_bathy :
+            # generate a random slice
+            if ((i % 30) == 0):
+                i_0 = np.random.randint(img.shape[0])
+                i_1 = np.random.randint(i_0, img.shape[0])
+                j_0 = np.random.randint(img.shape[1])
+                j_1 = np.random.randint(j_0, img.shape[1])
+                s = np.s_[i_0:i_1, j_0:j_1]
+                change = np.random.uniform(-random_bathy, random_bathy)
+            data["kinect"][s] = change
+
+        img_diff = diff = data["kinect0"] - data["kinect"]
+
         # diff = img - imgprevious
         # bathydiff = interp(diff)
         # data["bathydiff"] = bathydiff
         vis.update(data)
-        model.update()
+        model.update(dt)
 
 if __name__ == "__main__":
     main()
