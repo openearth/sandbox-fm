@@ -1,9 +1,12 @@
 # -*- coding: utf-8 -*-
 
 import os
+import pathlib
 import logging
 import time
+import json
 
+import cv2
 import tqdm
 import click
 import numpy as np
@@ -12,12 +15,19 @@ import matplotlib.pyplot as plt
 
 import bmi.wrapper
 
-from .depth import depth_images, calibrated_depth_images
+from .depth import (
+    depth_images,
+    calibrated_depth_images,
+    percentile_depth_images,
+    video_images
+)
+from .calibrate import (
+    compute_affines
+)
 from .plots import Visualization
 from .sandbox_fm import (
     update_delft3d_initial_vars,
-    update_delft3d_vars,
-    compute_affines
+    update_delft3d_vars
 )
 
 logger = logging.getLogger(__name__)
@@ -29,21 +39,105 @@ def cli():
     pass
 
 @cli.command()
-@click.option(
-    '--calibrated/--raw',
-    default=False,
-    help='Maximum number of iterations (0=no limit)'
-)
-def view(calibrated):
+@click.argument('schematization', type=click.File('rb'))
+def calibrate(schematization):
+    videos = video_images()
+    depths = depth_images()
+
+    curdir = pathlib.Path.cwd()
+
+    fig, axes = plt.subplots(1, 2)
+    # sic
+    fig.suptitle('select 4 points (counter clockwise in both figures)')
+
+    img_points = []
+    model_points = []
+    # define fixed box coordinates
+    box = np.array([
+        [0, 0],
+        [0, 480],
+        [640, 480],
+        [640, 0]
+    ], dtype='float32')
+
+    pid = None
+
+    video = next(videos)
+    depth = next(depths)
+
+
+
+    def picker(event):
+        if (event.inaxes == axes[0] and len(img_points) < 4):
+            img_points.append((event.xdata, event.ydata))
+            event.inaxes.set_title('%s points selected' % (len(img_points), ))
+        elif (event.inaxes == axes[1] and len(model_points) < 4):
+            model_points.append((event.xdata, event.ydata))
+            event.inaxes.set_title('%s points selected' % (len(model_points), ))
+        if len(img_points) == 4 and len(model_points) == 4:
+            fig.canvas.mpl_disconnect(pid)
+            show_result()
+
+
+
+    axes[0].imshow(video)
+    axes[0].imshow(depth, alpha=0.3, cmap='Reds')
+
+    model = bmi.wrapper.BMIWrapper('dflowfm')
+    schematization_path = pathlib.Path(schematization.name)
+    model.initialize(str(schematization_path.absolute()))
+    data = {}
+    update_delft3d_initial_vars(data, model)
+    xy_node = np.c_[
+        data['xk'],
+        data['yk'],
+        np.ones_like(data['xk'])
+    ].astype('float32')
+
+    def show_result():
+        fig, ax = plt.subplots()
+        model2box = cv2.getPerspectiveTransform(np.array(model_points, dtype='float32'), box)
+        img2box = cv2.getPerspectiveTransform(np.array(img_points, dtype='float32'), box)
+        result = {
+            "model2box": model2box.tolist(),
+            "img2box": img2box.tolist()
+        }
+        with open(str(curdir / 'calibration.json'), 'w') as f:
+            json.dump(result, f)
+
+        xy_nodes_in_img = np.squeeze(
+            cv2.perspectiveTransform(
+                np.dstack([
+                    xy_node[:,np.newaxis,0],
+                    xy_node[:,np.newaxis,1]
+                ]).astype('float32'),
+                model2box
+            )
+        )
+        ax.scatter(xy_nodes_in_img[:, 0], xy_nodes_in_img[:, 1], c=data['zk'].ravel(), cmap='Greens', edgecolor='none', alpha=0.5)
+        ax.imshow(cv2.warpPerspective(video, img2box, (640, 480)), cmap='Reds', alpha=0.5)
+        plt.show()
+
+    axes[1].scatter(data['xk'].ravel(), data['yk'].ravel(), c=data['zk'].ravel(), cmap='Greens', edgecolor='none')
+    plt.ion()
+    pid = fig.canvas.mpl_connect('button_press_event', picker)
+    plt.show(block=True)
+
+
+@cli.command()
+def view():
     """view raw kinect images"""
-    if calibrated:
-        images = calibrated_depth_images()
-        origin = 'bottom'
-    else:
-        images = depth_images()
-        origin = 'top'
-    fig, ax = plt.subplots()
-    im = ax.imshow(next(images), origin=origin, cmap='terrain')
+    images = calibrated_depth_images()
+    origin = 'bottom'
+
+    fig, ax = plt.subplots(frameon=False)
+    manager = plt.get_current_fig_manager()
+    manager.resize(*manager.window.maxsize())
+    fig.tight_layout()
+    fig.subplots_adjust(left=0, right=1, top=1, bottom=0)
+    ax.set_axis_off()
+    ax.set_frame_on(False)
+    im = ax.imshow(next(images), origin='upper', cmap='terrain')
     plt.ion()
     plt.show()
     for img in tqdm.tqdm(images):
@@ -71,7 +165,7 @@ def run(image, schematization, max_iterations, random_bathy):
     click.echo("Make sure you start the SARndbox first")
     vis = Visualization()
     # load model library
-    images = depth_images(os.path.abspath(image.name))
+    images = calibrated_depth_images()
 
     model = bmi.wrapper.BMIWrapper('dflowfm')
     img = next(images)

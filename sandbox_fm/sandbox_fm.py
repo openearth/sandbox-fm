@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 import numpy as np
 import matplotlib.transforms
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def update_delft3d_initial_vars(data, model):
@@ -11,12 +14,21 @@ def update_delft3d_initial_vars(data, model):
             'yzw',
             'xk',
             'yk',
+            'zk',
             'ndx',
             'ndxi',             # number of internal points (no boundaries)
             'numk',
             'flowelemnode'
     ]:
-        data[name] = model.get_var(name)
+        try:
+            data[name] = model.get_var(name)
+        except AttributeError:
+            if name == 'numk':
+                numk = data['zk'].shape[0]
+                data['numk'] = numk
+            else:
+                logger.exception("variable %s not found", name)
+
     for name in ['bl', 's1']:
         data[name + '_0'] = model.get_var(name)[:data['ndxi']].copy()
 
@@ -36,27 +48,3 @@ def update_delft3d_vars(data, model):
             # data should be off consistent shape now
         else:
             raise ValueError("unexpected data shape %s for variable %s" % (arr.shape, name) )
-
-
-def compute_affines(rect, shape):
-    """compute the affine transformation from a rectangle back to origin (img)"""
-    angle = np.arctan2(rect[1, 1] - rect[0, 1], rect[1, 0] - rect[0, 0])
-    translate = rect[0, 0], rect[0, 1]
-    # x -> n columns, pythagoras
-    scale_x = np.sqrt(
-        (rect[1, 0] - rect[0, 0])**2 + (rect[1, 1] - rect[0, 1])**2
-    ) / shape[1]
-    # y -> n rows
-    scale_y = np.sqrt(
-        (rect[2, 0] - rect[1, 0])**2 + (rect[2, 1] - rect[1, 1])**2
-    ) / shape[0]
-    scale = scale_x, scale_y
-
-    img2model = matplotlib.transforms.Affine2D()
-    img2model.scale(scale[0], scale[1])
-    img2model.rotate(angle)
-    img2model.translate(translate[0], translate[1])
-
-    model2img = img2model.inverted()
-
-    return img2model.get_matrix(), model2img.get_matrix()

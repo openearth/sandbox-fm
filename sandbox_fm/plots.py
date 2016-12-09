@@ -32,8 +32,6 @@ class Visualization():
         self.im_kinect = self.ax.imshow(
             data['kinect'],
             cmap='Greys',
-            vmin=0.0,
-            vmax=1.5,
             alpha=0.5
         )
         # get the xlim from the kinect image
@@ -41,13 +39,13 @@ class Visualization():
         ylim = self.ax.get_ylim()
 
         # xy of model in image coordinates
-        points = data['xy1_model_in_img'][:,:2]
+        points = data['xy_cells_model_in_img'][:,:2]
         logger.info("bl_0.shape: %s, points.shape: %s", data['bl_0'].shape, points.shape)
 
         self.L = scipy.interpolate.NearestNDInterpolator(points, data['bl_0'])
 
         # interpolate the bl_0 on image points
-        pts = np.ascontiguousarray(data['xy1_img'][:,:2].copy())
+        pts = np.ascontiguousarray(data['xy_img'][:,:2].copy())
 
         bl_in_img = self.L(pts)
         bl_img = bl_in_img.reshape(data['kinect'].shape)
@@ -85,7 +83,7 @@ class Visualization():
 
 
         # interpolate water levels
-        pts = np.ascontiguousarray(data['xy1_img'][:,:2].copy())
+        pts = np.ascontiguousarray(data['xy_img'][:,:2].copy())
         # set the values to s1
         self.L.values = np.ascontiguousarray(data['bl'][:, np.newaxis])
         # water levels (vector)

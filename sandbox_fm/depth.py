@@ -1,4 +1,5 @@
 import logging
+import collections
 
 import freenect
 import numpy as np
@@ -17,6 +18,21 @@ def uint11_to_uint8(arr):
     return arr
 
 
+def percentile_depth_images(buffer_size=25, q=25):
+    """"compute running percentile images"""
+    buffer = collections.deque(maxlen=buffer_size)
+    for img in depth_images():
+        buffer.append(img)
+        perc = np.percentile(buffer, q=q, axis=0)
+        yield perc
+
+
+def video_images():
+    while True:
+        img, _ = freenect.sync_get_video()
+        yield img
+
+
 def depth_images():
     """generate depth images"""
     while True:
@@ -28,7 +44,7 @@ def depth_images():
 def calibrated_depth_images(extent=None):
     """generate depth images on a fixed grid """
     v, u = np.mgrid[:HEIGHT, :WIDTH]
-    images = depth_images()
+    images = percentile_depth_images()
     if not extent:
         depth_0 = next(images)
         xyz_0, uv_0 = depth2xyzuv(depth_0, u, v)
