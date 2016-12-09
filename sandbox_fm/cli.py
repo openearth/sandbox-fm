@@ -4,13 +4,15 @@ import os
 import logging
 import time
 
+import tqdm
 import click
 import numpy as np
 import matplotlib.path
+import matplotlib.pyplot as plt
 
 import bmi.wrapper
 
-from .depth import depth_images
+from .depth import depth_images, calibrated_depth_images
 from .plots import Visualization
 from .sandbox_fm import (
     update_delft3d_initial_vars,
@@ -21,7 +23,37 @@ from .sandbox_fm import (
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
-@click.command()
+
+@click.group()
+def cli():
+    pass
+
+@cli.command()
+@click.option(
+    '--calibrated/--raw',
+    default=False,
+    help='Maximum number of iterations (0=no limit)'
+)
+def view(calibrated):
+    """view raw kinect images"""
+    if calibrated:
+        images = calibrated_depth_images()
+        origin = 'bottom'
+    else:
+        images = depth_images()
+        origin = 'top'
+    fig, ax = plt.subplots()
+    im = ax.imshow(next(images), origin=origin, cmap='terrain')
+    plt.ion()
+    plt.show()
+    for img in tqdm.tqdm(images):
+        im.set_data(img)
+        fig.canvas.draw()
+
+
+
+
+@cli.command()
 @click.argument('image', type=click.File('rb'))
 @click.argument('schematization', type=click.File('rb'))
 @click.option(
@@ -34,7 +66,7 @@ logging.basicConfig(level=logging.INFO)
     default=0.0,
     help='Raise or lower the bathymetry every 30 timesteps by at most x meter at random locations'
 )
-def main(image, schematization, max_iterations, random_bathy):
+def run(image, schematization, max_iterations, random_bathy):
     """Console script for sandbox_fm"""
     click.echo("Make sure you start the SARndbox first")
     vis = Visualization()

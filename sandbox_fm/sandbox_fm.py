@@ -38,7 +38,6 @@ def update_delft3d_vars(data, model):
             raise ValueError("unexpected data shape %s for variable %s" % (arr.shape, name) )
 
 
-
 def compute_affines(rect, shape):
     """compute the affine transformation from a rectangle back to origin (img)"""
     angle = np.arctan2(rect[1, 1] - rect[0, 1], rect[1, 0] - rect[0, 0])
