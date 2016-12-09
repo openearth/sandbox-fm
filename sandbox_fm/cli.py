@@ -2,10 +2,11 @@
 
 import os
 import logging
+import time
 
 import click
 import numpy as np
-import shapely.geometry
+import matplotlib.path
 
 import bmi.wrapper
 
@@ -43,7 +44,7 @@ def main(image, schematization, max_iterations, random_bathy):
     model = bmi.wrapper.BMIWrapper('dflowfm')
     img = next(images)
     data = dict(
-        kinect0=img.copy(),
+        kinect_0=img.copy(),
         kinect=img
     )
 
@@ -70,6 +71,11 @@ def main(image, schematization, max_iterations, random_bathy):
         data['yzw'],
         np.ones_like(data['xzw'])
     ]
+
+    img_in_model_path = matplotlib.path.Path(img_in_model)
+    in_sandbox = img_in_model_path.contains_points(xy1_model[:, :2])
+    data['in_sandbox'] = in_sandbox
+
     Y_img, X_img = np.mgrid[:img.shape[0], :img.shape[1]]
     xy1_img = np.c_[X_img.ravel(), Y_img.ravel(), np.ones_like(X_img.ravel())]
     data['xy1_img'] = xy1_img
@@ -101,14 +107,24 @@ def main(image, schematization, max_iterations, random_bathy):
                 s = np.s_[i_0:i_1, j_0:j_1]
                 change = np.random.uniform(-random_bathy, random_bathy)
             data["kinect"][s] = change
+            is_wet = data['bl'] < data['s1']
 
-        img_diff = diff = data["kinect0"] - data["kinect"]
+            is_selected = np.random.random(size=data['bl'].shape[0]) > 1/100.0
+            idx = np.logical_and(is_wet, is_selected)
+
+        # comput if wet
+        data['bl'][idx] += change
+
+        img_diff = diff = data["kinect_0"] - data["kinect"]
 
         # diff = img - imgprevious
         # bathydiff = interp(diff)
         # data["bathydiff"] = bathydiff
         vis.update(data)
+        tic = time.time()
         model.update(dt)
+        toc = time.time()
+        print(toc - tic)
 
 if __name__ == "__main__":
     main()

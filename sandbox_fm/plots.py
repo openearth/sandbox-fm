@@ -105,7 +105,6 @@ class Visualization():
         self.im_bl.set_data(values)
         # show the water level where it is bigger than bathymetry
         values = np.ma.masked_less_equal(s1_img, bl_img)
-        print(values.min(), values.max())
         self.im_s1.set_data(values)
         self.im_s1.set_clim(values.min(), values.max())
 

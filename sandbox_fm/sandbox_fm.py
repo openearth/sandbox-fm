@@ -13,6 +13,7 @@ def update_delft3d_initial_vars(data, model):
             'yk',
             'ndx',
             'ndxi',             # number of internal points (no boundaries)
+            'numk',
             'flowelemnode'
     ]:
         data[name] = model.get_var(name)
@@ -22,13 +23,20 @@ def update_delft3d_initial_vars(data, model):
 
 def update_delft3d_vars(data, model):
     """update the time varying variables in a delft3d model"""
-    for name in ['bl', 'ucx', 'ucy', 's1']:
+    for name in ['bl', 'ucx', 'ucy', 's1', 'zk']:
         # get data and toss away the boundary points
         arr = model.get_var(name)
-        assert arr.shape[0] == data['ndx'], "should be of shape ndx"
-        # ndxi:ndx are the boundary points (See  netcdf write code in unstruc)
-        data[name] = arr[:data['ndxi']]
-        # data should be off consistent shape now
+        # corner data
+        if arr.shape[0] == data['numk']:
+            data[name] = arr[:data['numk']]
+        elif arr.shape[0] == data['ndx']:
+            "should be of shape ndx"
+            # ndxi:ndx are the boundary points (See  netcdf write code in unstruc)
+            data[name] = arr[:data['ndxi']]
+            # data should be off consistent shape now
+        else:
+            raise ValueError("unexpected data shape %s for variable %s" % (arr.shape, name) )
+
 
 
 def compute_affines(rect, shape):
