@@ -1,6 +1,11 @@
 import logging
 import collections
+import itertools
+import pathlib
+import pkgutil
 
+
+import matplotlib.pyplot as plt
 import freenect
 import numpy as np
 import scipy.interpolate
@@ -8,6 +13,38 @@ import scipy.interpolate
 from .calibrate import HEIGHT, WIDTH, depth2xyzuv
 
 logger = logging.getLogger(__name__)
+
+
+class MockupFreenect(object):
+    """mockup freenect in case you have no connection"""
+    def __init__(self):
+        data_dir = 'data'
+        # TODO: pkgutil.get_data('data', '*')
+        self.videos = itertools.cycle(
+            pathlib.Path(data_dir).glob('video_*.png')
+        )
+        self.depths = itertools.cycle(
+            pathlib.Path(data_dir).glob('depth_*.png')
+        )
+
+    def sync_get_video(self):
+        """keep yielding videos"""
+        video = next(self.videos)
+        return plt.imread(str(video)), 3
+
+    def sync_get_depth(self):
+        """keep yielding depths"""
+        depth = next(self.depths)
+        img = plt.imread(str(depth))[..., 0]
+        return (img * 2**10).astype('uint16'), 3
+
+
+# try if we can read images, use mockup if not
+test_depth = freenect.sync_get_depth()
+if test_depth is None:
+    logger.warn("No kinect found, using test images")
+    freenect = MockupFreenect()
+del test_depth
 
 
 def uint11_to_uint8(arr):

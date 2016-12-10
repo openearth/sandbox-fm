@@ -31,6 +31,9 @@ setup(
     ],
     package_dir={'sandbox_fm':
                  'sandbox_fm'},
+    package_data={
+        'sandbox_fm': ['data/*.png']
+    },
     entry_points={
         'console_scripts': [
             'sandbox-fm=sandbox_fm.cli:cli'
