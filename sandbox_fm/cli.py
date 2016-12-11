@@ -25,7 +25,8 @@ from .calibrate import (
 from .plots import Visualization
 from .sandbox_fm import (
     update_delft3d_initial_vars,
-    update_delft3d_vars
+    update_delft3d_vars,
+    compute_delta_bl
 )
 
 logger = logging.getLogger(__name__)
@@ -251,6 +252,11 @@ def run(schematization):
     update_delft3d_initial_vars(data, model)
     dt = model.get_time_step()
 
+    model_bbox = matplotlib.path.Path(data['model_points'])
+    data['node_in_box'] = model_bbox.contains_points(np.c_[data['xk'], data['yk']])
+    data['cell_in_box'] = model_bbox.contains_points(np.c_[data['xzw'], data['yzw']])
+
+
     # images
     depths = depth_images()
     # load model library
@@ -267,10 +273,14 @@ def run(schematization):
         model.update(dt)
 
 
-    for i, depth in enumerate(depths):
+    for i, depth in enumerate(tqdm.tqdm(depths)):
         update_delft3d_vars(data, model)
         data['kinect'] = depth
-        # data['bl'][idx] += compute_delta_bl(data)
+
+        # only change bathymetry of wet cells
+        # idx = np.logical_and(data['cell_in_box'], data['is_wet']) #
+        idx = data['cell_in_box']
+        data['bl'][idx] += compute_delta_bl(data, idx)
 
         vis.update(data)
         tic = time.time()

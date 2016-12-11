@@ -1,4 +1,5 @@
 import logging
+import itertools
 
 import cv2
 import matplotlib.pyplot as plt
@@ -19,6 +20,7 @@ matplotlib.rcParams['toolbar'] = 'None'
 logger = logging.getLogger(__name__)
 
 def warp_flow(img, flow):
+    """tansform image with flow field"""
     h, w = flow.shape[:2]
     flow = -flow
     flow[:, :, 0] += np.arange(w)
@@ -44,6 +46,7 @@ class Visualization():
         self.L_nodes = None
         self.L_cells = None
         self.lic = None
+        self.counter = itertools.count()
 
     def initialize(self, data):
         # create plots here
@@ -114,7 +117,7 @@ class Visualization():
         self.im_flow = self.ax.imshow(
             self.lic,
             cmap='Greys',
-            alpha=0.8
+            alpha=0.5
         )
 
         self.ax.set_xlim(xlim[0] + 80, xlim[1] - 80)
@@ -122,8 +125,18 @@ class Visualization():
         self.ax.axis('tight')
         # self.ax.axis('off')
 
+        u_t, v_t = transform(u.ravel().astype('float32'), v.ravel().astype('float32'), data['box2model'])
+        tree = scipy.spatial.cKDTree(np.c_[data['xzw'], data['yzw']])
+        _, ravensburger_cells = tree.query(np.c_[u_t, v_t])
+        data['ravensburger_cells'] = ravensburger_cells.reshape(HEIGHT, WIDTH)
+        tree = scipy.spatial.cKDTree(np.c_[data['xk'], data['yk']])
+        _, ravensburger_nodes = tree.query(np.c_[u_t, v_t])
+        data['ravensburger_nodes'] = ravensburger_nodes.reshape(HEIGHT, WIDTH)
+
+
     # @profile
     def update(self, data):
+        i = next(self.counter)
         self.im_kinect.set_data(data['kinect'])
 
         xzw_box, yzw_box = transform(data['xzw'], data['yzw'], data['model2box'])
@@ -134,25 +147,34 @@ class Visualization():
             data['yzw'] + data['ucy'],
             data['model2box']
         )
-        ucx_in_img = xzw_ucx_box - xzw_box
-        ucy_in_img = yzw_ucy_box - yzw_box
+        # ucx_in_img = xzw_ucx_box - xzw_box
+        # ucy_in_img = yzw_ucy_box - yzw_box
 
-        cell_vars = np.c_[data['s1'], ucx_in_img, ucy_in_img, data['bl']]
-        self.L_cells.values = cell_vars
+        # cell_vars = np.c_[data['s1'], ucx_in_img, ucy_in_img, data['bl']]
+        # self.L_cells.values = cell_vars
 
-        # row, column indices
-        v, u = np.mgrid[:HEIGHT, :WIDTH]
-        values_in_img = self.L_cells(np.c_[u.ravel(), v.ravel()])
-        s1_img = values_in_img[:, 0].reshape((HEIGHT, WIDTH))
-        ucx_img = values_in_img[:, 1].reshape((HEIGHT, WIDTH))
-        ucy_img = values_in_img[:, 2].reshape((HEIGHT, WIDTH))
-        bl_img = values_in_img[:, 3].reshape((HEIGHT, WIDTH))
+        # # row, column indices
+        # v, u = np.mgrid[:HEIGHT, :WIDTH]
+        # values_in_img = self.L_cells(np.c_[u.ravel(), v.ravel()])
+        # s1_img = values_in_img[:, 0].reshape((HEIGHT, WIDTH))
+        # ucx_img = values_in_img[:, 1].reshape((HEIGHT, WIDTH))
+        # ucy_img = values_in_img[:, 2].reshape((HEIGHT, WIDTH))
+        # bl_img = values_in_img[:, 3].reshape((HEIGHT, WIDTH))
+        s1_img = data['s1'][data['ravensburger_cells']]
+        ucx_img = data['ucx'][data['ravensburger_cells']]
+        ucy_img = data['ucy'][data['ravensburger_cells']]
+        bl_img = data['bl'][data['ravensburger_cells']]
+        self.im_s1.set_data(s1_img)
+        self.im_bl.set_data(bl_img)
 
         scale = 10.0
         flow = np.dstack([ucx_img, ucy_img]) * scale
         self.lic = warp_flow(self.lic.astype('float32'), flow.astype('float32'))
         self.im_flow.set_data(np.ma.masked_array(self.lic, mask=s1_img <= bl_img))
 
+        if i % 10 == 0:
+            for r in [100, 200, 300, 400, 500, 600]:
+                self.lic[skimage.draw.line(0, r, HEIGHT-1, r)] = 1.0
         # # interpolate water levels
         # pts = np.ascontiguousarray(data['xy_img'][:,:2].copy())
         # # set the values to s1
