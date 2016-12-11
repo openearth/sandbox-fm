@@ -122,7 +122,7 @@ class Visualization():
         self.ax.axis('tight')
         # self.ax.axis('off')
 
-    @profile
+    # @profile
     def update(self, data):
         self.im_kinect.set_data(data['kinect'])
 
