@@ -2,7 +2,6 @@ import logging
 import collections
 import itertools
 import pathlib
-import pkgutil
 
 
 import matplotlib.pyplot as plt
@@ -18,13 +17,14 @@ logger = logging.getLogger(__name__)
 class MockupFreenect(object):
     """mockup freenect in case you have no connection"""
     def __init__(self):
-        data_dir = 'data'
+        data_dir = pathlib.Path(__file__).parent.parent / 'data'
+
         # TODO: pkgutil.get_data('data', '*')
         self.videos = itertools.cycle(
-            pathlib.Path(data_dir).glob('video_*.png')
+            data_dir.glob('video_*.png')
         )
         self.depths = itertools.cycle(
-            pathlib.Path(data_dir).glob('depth_*.png')
+            data_dir.glob('depth_*.png')
         )
 
     def sync_get_video(self):
@@ -36,6 +36,7 @@ class MockupFreenect(object):
         """keep yielding depths"""
         depth = next(self.depths)
         img = plt.imread(str(depth))[..., 0]
+        # fake 11 bitx
         return (img * 2**10).astype('uint16'), 3
 
 

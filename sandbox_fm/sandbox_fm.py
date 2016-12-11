@@ -48,3 +48,4 @@ def update_delft3d_vars(data, model):
             # data should be off consistent shape now
         else:
             raise ValueError("unexpected data shape %s for variable %s" % (arr.shape, name) )
+    data['is_wet'] = data['s1'] > data['bl']

@@ -33,6 +33,7 @@ Notes about the coordinate systems:
 
 """
 import numpy as np
+import cv2
 import matplotlib.transforms
 
 # Width and height
@@ -151,3 +152,19 @@ def compute_affines(rect, shape):
     model2img = img2model.inverted()
 
     return img2model.get_matrix(), model2img.get_matrix()
+
+
+def transform(x, y, M):
+    """perspective transform x,y with M"""
+    xy_t = np.squeeze(
+        cv2.perspectiveTransform(
+            np.dstack(
+                [
+                    x,
+                    y
+                ]
+            ),
+            np.asarray(M)
+        )
+    )
+    return xy_t[:, 0], xy_t[:, 1]
