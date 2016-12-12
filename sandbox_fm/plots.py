@@ -66,7 +66,7 @@ class Visualization():
         self.lic[..., 3] = 0.0
         self.im_kinect = self.ax.imshow(
             warped_kinect,
-            cmap='Greys',
+            cmap='viridis',
             alpha=1
         )
         # get the xlim from the kinect image
@@ -114,7 +114,7 @@ class Visualization():
             # np.ma.masked_less(bl_img, s1_img),
             zk_img,
             cmap='gist_earth',
-            alpha=1.0,
+            alpha=0,
             vmin=-12,
             vmax=24
 
@@ -123,7 +123,7 @@ class Visualization():
         self.im_s1 = self.ax.imshow(
             np.ma.masked_less_equal(s1_img, bl_img),
             cmap=cmocean.cm.deep,
-            alpha=0.2,
+            alpha=0.0,
             vmin=1.3,
             vmax=1.7
         )
@@ -160,6 +160,12 @@ class Visualization():
         ucx_in_img = xzw_ucx_box - xzw_box
         ucy_in_img = yzw_ucy_box - yzw_box
 
+        warped_kinect = cv2.warpPerspective(
+            data['kinect'],
+            np.array(data['img2box']),
+            data['kinect'].shape[::-1]
+        )
+        self.im_kinect.set_data(warped_kinect)
         zk_img = data['zk'][data['ravensburger_nodes']]
 
         s1_img = data['s1'][data['ravensburger_cells']]
@@ -189,10 +195,10 @@ class Visualization():
         self.lic[bl_img >= s1_img, 3] = 0.0
 
         # TODO: this can be faster, this also redraws axis
-        # self.fig.canvas.draw()
-        for artist in [self.im_zk, self.im_s1, self.im_flow]:
-            self.ax.draw_artist(artist)
-        self.fig.canvas.blit(self.ax.bbox)
+        self.fig.canvas.draw()
+        # for artist in [self.im_zk, self.im_s1, self.im_flow]:
+        #     self.ax.draw_artist(artist)
+        # self.fig.canvas.blit(self.ax.bbox)
         # self.ax.redraw_in_frame()
         # interact with window and click events
         try:
