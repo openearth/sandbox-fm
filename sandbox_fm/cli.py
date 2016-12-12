@@ -26,7 +26,8 @@ from .plots import Visualization
 from .sandbox_fm import (
     update_delft3d_initial_vars,
     update_delft3d_vars,
-    compute_delta_bl
+    compute_delta_bl,
+    compute_delta_zk
 )
 
 logger = logging.getLogger(__name__)
@@ -269,7 +270,7 @@ def run(schematization):
     update_delft3d_vars(data, model)
     vis.initialize(data)
 
-    for i in range(100):
+    for i in range(10):
         model.update(dt)
 
 
@@ -280,7 +281,17 @@ def run(schematization):
         # only change bathymetry of wet cells
         idx = np.logical_and(data['cell_in_box'], data['is_wet']) #
         # idx = data['cell_in_box']
-        data['bl'][idx] += compute_delta_bl(data, idx)
+
+        if i % 100 == 0:
+            # data['bl'][idx] += compute_delta_bl(data, idx)
+            idx = data['node_in_box']
+            zk_copy = data['zk'].copy()
+            zk_copy[idx] += compute_delta_zk(data, idx)
+            # replace the part that changed
+            for i in np.where(idx)[0]:
+                if data['zk'][i] != zk_copy[i]:
+                    # TODO: bug in zk
+                    model.set_var_slice('zk', [i+1], [1], zk_copy[i:i+1])
 
         vis.update(data)
         tic = time.time()

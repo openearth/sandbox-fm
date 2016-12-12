@@ -56,6 +56,7 @@ class Visualization():
         self.lic = np.ones(data['kinect'].shape + (4, ), dtype='float32')
         # transparent, white background
         self.lic[...,3] = 0.0
+        # self.lic = np.random.random(data['kinect'].shape + (4, )).astype('float32')
 
         self.im_kinect = self.ax.imshow(
             warped_kinect,
@@ -115,7 +116,8 @@ class Visualization():
 
 
         self.im_bl = self.ax.imshow(
-            np.ma.masked_less(bl_img, s1_img),
+            # np.ma.masked_less(bl_img, s1_img),
+            bl_img,
             cmap='gist_earth',
             alpha=1.0
         )
@@ -123,7 +125,7 @@ class Visualization():
         self.im_s1 = self.ax.imshow(
             np.ma.masked_less_equal(s1_img, bl_img),
             cmap=cmocean.cm.deep,
-            alpha=1.0,
+            alpha=0.8,
             vmin=1.3,
             vmax=1.7
         )
@@ -137,7 +139,7 @@ class Visualization():
         self.ax.set_ylim(ylim[0] + 80, ylim[1] - 80)
         self.ax.axis('tight')
         # self.ax.axis('off')
-
+        self.fig.canvas.draw()
 
     def update(self, data):
         i = next(self.counter)
@@ -175,13 +177,14 @@ class Visualization():
         ucy_img = ucy_in_img[data['ravensburger_cells']]
         bl_img = data['bl'][data['ravensburger_cells']]
         self.im_s1.set_data(np.ma.masked_less_equal(s1_img, bl_img))
-        self.im_bl.set_data(np.ma.masked_less(bl_img, s1_img))
+        # self.im_bl.set_data(np.ma.masked_less(bl_img, s1_img))
+        self.im_bl.set_data(bl_img)
         print(np.ma.masked_less_equal(s1_img, bl_img).min(), np.ma.masked_less_equal(s1_img, bl_img).max())
-        scale = 10.0
+        scale = 50.0
         flow = np.dstack([ucx_img, ucy_img]) * scale
         self.lic = warp_flow(self.lic.astype('float32'), flow.astype('float32'))
         # fade out
-        self.lic[..., 3] -= 0.01
+        # self.lic[..., 3] -= 0.01
         # but not < 0
         self.lic[..., 3][self.lic[..., 3] < 0] = 0
         self.im_flow.set_data(self.lic)
@@ -217,6 +220,9 @@ class Visualization():
         # self.im.set_data(data['kinect'])
         # self.contour.set_data(data['kinect'])
         self.fig.canvas.draw()
+        # for artist in [self.im_bl, self.im_s1, self.im_flow]:
+        #     self.ax.draw_artist(artist)
+        # self.ax.redraw_in_frame()
         try:
             self.fig.canvas.flush_events()
         except NotImplementedError:
