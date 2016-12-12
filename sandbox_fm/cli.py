@@ -278,8 +278,8 @@ def run(schematization):
         data['kinect'] = depth
 
         # only change bathymetry of wet cells
-        # idx = np.logical_and(data['cell_in_box'], data['is_wet']) #
-        idx = data['cell_in_box']
+        idx = np.logical_and(data['cell_in_box'], data['is_wet']) #
+        # idx = data['cell_in_box']
         data['bl'][idx] += compute_delta_bl(data, idx)
 
         vis.update(data)
