@@ -179,7 +179,6 @@ class Visualization():
         self.im_s1.set_data(np.ma.masked_less_equal(s1_img, bl_img))
         # self.im_bl.set_data(np.ma.masked_less(bl_img, s1_img))
         self.im_bl.set_data(bl_img)
-        print(np.ma.masked_less_equal(s1_img, bl_img).min(), np.ma.masked_less_equal(s1_img, bl_img).max())
         scale = 50.0
         flow = np.dstack([ucx_img, ucy_img]) * scale
         self.lic = warp_flow(self.lic.astype('float32'), flow.astype('float32'))

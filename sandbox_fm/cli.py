@@ -12,6 +12,7 @@ import numpy as np
 import matplotlib.path
 import matplotlib.pyplot as plt
 
+import mpi4py.MPI
 import bmi.wrapper
 
 from .depth import (
@@ -262,6 +263,12 @@ def run(schematization):
     depths = depth_images()
     # load model library
     depth = next(depths)
+    depth = cv2.warpPerspective(
+        depth,
+        np.array(data['img2box'], dtype='float32'),
+        (640, 480)
+    )
+    
     data['kinect_0'] = depth.copy()
     data['kinect'] = depth
 
@@ -276,6 +283,11 @@ def run(schematization):
 
     for i, depth in enumerate(tqdm.tqdm(depths)):
         update_delft3d_vars(data, model)
+        depth = cv2.warpPerspective(
+            depth,
+            np.array(data['img2box'], dtype='float32'),
+            (640, 480)
+        )
         data['kinect'] = depth
 
         # only change bathymetry of wet cells

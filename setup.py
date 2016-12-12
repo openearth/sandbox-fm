@@ -12,6 +12,12 @@ with open('HISTORY.rst') as history_file:
 requirements = [
     'Click>=6.0',
     # TODO: put package requirements here
+    # for python 2.7 pathlib
+    # scikit-image
+    # opencv
+    # tqdm
+    # https://github.com/openearth/bmi-python/archive/master.zip (make a package)
+    # cmocean
 ]
 
 test_requirements = [
