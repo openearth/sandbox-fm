@@ -63,7 +63,8 @@ class Visualization():
         self.lic[..., 3] = 0.0
         self.im_kinect = self.ax.imshow(
             warped_kinect,
-            cmap='viridis',
+            # cmap='viridis_r',
+            cmap='viridis_r',
             alpha=1
         )
         # get the xlim from the kinect image
@@ -163,7 +164,13 @@ class Visualization():
             np.array(data['img2box']),
             (640, 480)
         )
+        warped_kinect = np.ma.masked_less(
+            np.ma.masked_greater(warped_kinect, 100),
+            -3
+        )
         self.im_kinect.set_data(warped_kinect)
+        print(warped_kinect.min(), warped_kinect.max())
+        self.im_kinect.set_clim(-0.5, 1.5)
         zk_img = data['zk'][data['ravensburger_nodes']]
 
         s1_img = data['s1'][data['ravensburger_cells']]
