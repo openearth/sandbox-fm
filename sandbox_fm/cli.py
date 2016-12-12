@@ -72,7 +72,7 @@ def calibrate(schematization):
 
     fig, axes = plt.subplots(2, 2)
     # sic show instructions in the title
-    fig.suptitle('select 4 points (counter clockwise in both figures)')
+    fig.suptitle('select 4 points (clockwise start at top left)')
 
     # show the depth and video in the left window
     axes[0, 0].imshow(video)
@@ -87,9 +87,9 @@ def calibrate(schematization):
     # define fixed box coordinate system (what will be on the screen)
     box = np.array([
         [0, 0],
-        [0, 480],
+        [640, 0],
         [640, 480],
-        [640, 0]
+        [0, 480]
     ], dtype='float32')
 
     # pointer event
@@ -129,6 +129,7 @@ def calibrate(schematization):
             np.array(model_points, dtype='float32'),
             box
         )
+        print(img_points, box)
         img2box = cv2.getPerspectiveTransform(
             np.array(img_points, dtype='float32'),
             box
@@ -302,11 +303,6 @@ def run(schematization):
     depths = calibrated_depth_images(tck)
     # load model library
     depth = next(depths)
-    depth = cv2.warpPerspective(
-        depth,
-        np.array(data['img2box'], dtype='float32'),
-        (640, 480)
-    )
 
     data['kinect_0'] = depth.copy()
     data['kinect'] = depth
@@ -322,11 +318,6 @@ def run(schematization):
 
     for i, depth in enumerate(tqdm.tqdm(depths)):
         update_delft3d_vars(data, model)
-        depth = cv2.warpPerspective(
-            depth,
-            np.array(data['img2box'], dtype='float32'),
-            (640, 480)
-        )
         data['kinect'] = depth
 
         # only change bathymetry of wet cells
