@@ -35,7 +35,11 @@ class MockupFreenect(object):
     def sync_get_depth(self):
         """keep yielding depths"""
         depth = next(self.depths)
-        img = plt.imread(str(depth))[..., 0]
+        arr = plt.imread(str(depth))
+        if len(arr.shape) == 3:
+            img = arr[..., 0]
+        else:
+            img = arr
         # fake 11 bitx
         return (img * 2**10).astype('uint16'), 3
 
@@ -71,15 +75,26 @@ def video_images():
         yield img
 
 
-def depth_images():
+def depth_images(raw=False):
     """generate depth images"""
     while True:
         depth, _ = freenect.sync_get_depth()
-        depth = uint11_to_uint8(depth)
+        if not raw:
+            depth = uint11_to_uint8(depth)
+        else:
+            depth = np.ma.masked_equal(depth, (2 ** 11) - 1)
+
         yield depth
 
+def calibrated_depth_images(tck):
+    for raw in depth_images(raw=True):
+        # TODO: fix this....
+        vals = scipy.interpolate.splev(raw.astype('double'), tck)
+        vals = (raw - 707.0)/(716 - 692.0)
+        depth = np.ma.masked_array(vals, mask=raw.mask)
+        yield depth
 
-def calibrated_depth_images(extent=None):
+def calibrated_depth_images_old(extent=None):
     """generate depth images on a fixed grid """
     v, u = np.mgrid[:HEIGHT, :WIDTH]
     images = percentile_depth_images()

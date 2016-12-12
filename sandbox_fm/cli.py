@@ -5,6 +5,7 @@ import logging
 import time
 import json
 
+import scipy.interpolate
 import cv2
 import tqdm
 import click
@@ -60,24 +61,28 @@ def calibrate(schematization):
     # raw images
     videos = video_images()
     depths = depth_images()
+    raws = depth_images(raw=True)
     # get video and depth image
     video = next(videos)
     depth = next(depths)
+    raw = next(raws)
 
     # save the current working directory
     curdir = pathlib.Path.cwd()
 
-    fig, axes = plt.subplots(1, 2)
+    fig, axes = plt.subplots(2, 2)
     # sic show instructions in the title
     fig.suptitle('select 4 points (counter clockwise in both figures)')
 
     # show the depth and video in the left window
-    axes[0].imshow(video)
-    axes[0].imshow(depth, alpha=0.3, cmap='Reds')
+    axes[0, 0].imshow(video)
+    axes[0, 0].imshow(depth, alpha=0.3, cmap='Reds')
+    axes[1, 0].imshow(raw)
 
     # keep track of the selected points
     img_points = []
     model_points = []
+    height_points = []
 
     # define fixed box coordinate system (what will be on the screen)
     box = np.array([
@@ -92,17 +97,28 @@ def calibrate(schematization):
 
     # define the point selector
     def picker(event):
-        if (event.inaxes == axes[0] and len(img_points) < 4):
+        if (event.inaxes == axes[0, 0] and len(img_points) < 4):
             img_points.append((event.xdata, event.ydata))
             event.inaxes.set_title('%s points selected' % (
                 len(img_points), )
             )
-        elif (event.inaxes == axes[1] and len(model_points) < 4):
+        elif (event.inaxes == axes[0, 1] and len(model_points) < 4):
             model_points.append((event.xdata, event.ydata))
             event.inaxes.set_title('%s points selected' % (
                 len(model_points), )
             )
-        if len(img_points) == 4 and len(model_points) == 4:
+        elif (event.inaxes == axes[1, 0] and len(height_points) < 4):
+            height_points.append((event.xdata, event.ydata))
+            title = "%s points selected" % (len(height_points), )
+            if (len(height_points) == 0):
+                title = "select a point at -8m"
+            elif (len(height_points) == 1):
+                title = "select a point at 0m"
+            elif (len(height_points) == 2):
+                title = "select a point at 12m"
+            event.inaxes.set_title(title)
+            event.inaxes.plot(event.xdata, event.ydata, 'ko')
+        if len(img_points) == 4 and len(model_points) == 4 and len(height_points) == 3:
             # stop listening we're done
             fig.canvas.mpl_disconnect(pid)
             save_and_show_result()
@@ -134,6 +150,13 @@ def calibrate(schematization):
             np.array(img_points, dtype='float32')
         )
 
+        values = raw[np.array(height_points, dtype='int')[:, 1], np.array(height_points, dtype='int')[:, 0]].filled().astype('double')
+        z = np.array([-12, 0, 8], dtype='double')
+        idx = np.argsort(values)
+        # parameters of interpolation
+        tck_a, tck_b, tck_c = scipy.interpolate.splrep(values[idx], z[idx], k=1, s=0)
+
+
         comment = """
         This file contains calibrations for model %s.
         It is generated with the perspective transform from opencv.
@@ -147,6 +170,10 @@ def calibrate(schematization):
             "box2img": box2img.tolist(),
             "img_points": img_points,
             "model_points": model_points,
+            "height_points": height_points,
+            "tck_a": tck_a.tolist(),
+            "tck_b": tck_b.tolist(),
+            "tck_c": tck_c,
             "_comment": comment
 
         }
@@ -202,7 +229,7 @@ def calibrate(schematization):
     ].astype('float32')
 
 
-    axes[1].scatter(data['xk'].ravel(), data['yk'].ravel(), c=data['zk'].ravel(), cmap='Greens', edgecolor='none')
+    axes[0, 1].scatter(data['xk'].ravel(), data['yk'].ravel(), c=data['zk'].ravel(), cmap='Greens', edgecolor='none')
     plt.ion()
     pid = fig.canvas.mpl_connect('button_press_event', picker)
     plt.show(block=True)
@@ -211,7 +238,14 @@ def calibrate(schematization):
 @cli.command()
 def view():
     """view raw kinect images"""
-    images = calibrated_depth_images()
+    with open("calibration.json") as f:
+        calibration = json.load(f)
+    tck = (
+        np.array(calibration['tck_a']),
+        np.array(calibration['tck_b']),
+        calibration['tck_c']
+    )
+    images = calibrated_depth_images(tck)
     origin = 'bottom'
 
     fig, ax = plt.subplots(frameon=False)
@@ -227,7 +261,7 @@ def view():
     ax.set_frame_on(False)
     im = ax.imshow(next(images), origin='upper', cmap='terrain')
     plt.ion()
-    plt.show()
+    plt.show(block=False)
     for img in tqdm.tqdm(images):
         im.set_data(img)
         fig.canvas.draw()
@@ -258,9 +292,14 @@ def run(schematization):
     data['node_in_box'] = model_bbox.contains_points(np.c_[data['xk'], data['yk']])
     data['cell_in_box'] = model_bbox.contains_points(np.c_[data['xzw'], data['yzw']])
 
+    tck = (
+        np.array(calibration['tck_a']),
+        np.array(calibration['tck_b']),
+        calibration['tck_c']
+    )
 
     # images
-    depths = depth_images()
+    depths = calibrated_depth_images(tck)
     # load model library
     depth = next(depths)
     depth = cv2.warpPerspective(
@@ -268,7 +307,7 @@ def run(schematization):
         np.array(data['img2box'], dtype='float32'),
         (640, 480)
     )
-    
+
     data['kinect_0'] = depth.copy()
     data['kinect'] = depth
 

@@ -107,18 +107,23 @@ class Visualization():
         ucx_img = ucx_in_img[data['ravensburger_cells']]
         ucy_img = ucy_in_img[data['ravensburger_cells']]
         bl_img = data['bl'][data['ravensburger_cells']]
+        zk_img = data['zk'][data['ravensburger_nodes']]
 
-        self.im_bl = self.ax.imshow(
+
+        self.im_zk = self.ax.imshow(
             # np.ma.masked_less(bl_img, s1_img),
-            bl_img,
+            zk_img,
             cmap='gist_earth',
-            alpha=1.0
+            alpha=1.0,
+            vmin=-12,
+            vmax=24
+
         )
 
         self.im_s1 = self.ax.imshow(
             np.ma.masked_less_equal(s1_img, bl_img),
             cmap=cmocean.cm.deep,
-            alpha=0.8,
+            alpha=0.2,
             vmin=1.3,
             vmax=1.7
         )
@@ -155,15 +160,15 @@ class Visualization():
         ucx_in_img = xzw_ucx_box - xzw_box
         ucy_in_img = yzw_ucy_box - yzw_box
 
-        zk_img = data['xk'][data['ravensburger_nodes']]
+        zk_img = data['zk'][data['ravensburger_nodes']]
+
         s1_img = data['s1'][data['ravensburger_cells']]
         ucx_img = ucx_in_img[data['ravensburger_cells']]
         ucy_img = ucy_in_img[data['ravensburger_cells']]
         bl_img = data['bl'][data['ravensburger_cells']]
         self.im_s1.set_data(np.ma.masked_less_equal(s1_img, bl_img))
-        # self.im_bl.set_data(np.ma.masked_less(bl_img, s1_img))
-        self.im_bl.set_data(bl_img)
-        self.im_bl.set_clim(bl_img.min(), bl_img.max())
+        self.im_zk.set_data(zk_img)
+
         scale = 50.0
         flow = np.dstack([ucx_img, ucy_img]) * scale
         self.lic = warp_flow(self.lic.astype('float32'), flow.astype('float32'))
@@ -176,6 +181,7 @@ class Visualization():
         for u, v in zip(np.random.random(4), np.random.random(4)):
             hue = np.random.random()
             rgb = matplotlib.colors.hsv_to_rgb((hue, 0.2, 1.0))
+            rgb = (0, 0, 0)
             # make sure outline has the same color
             # create a little dot
             r, c = skimage.draw.circle(v * HEIGHT, u * WIDTH, 4, shape=(HEIGHT, WIDTH))
@@ -184,7 +190,7 @@ class Visualization():
 
         # TODO: this can be faster, this also redraws axis
         # self.fig.canvas.draw()
-        for artist in [self.im_bl, self.im_s1, self.im_flow]:
+        for artist in [self.im_zk, self.im_s1, self.im_flow]:
             self.ax.draw_artist(artist)
         self.fig.canvas.blit(self.ax.bbox)
         # self.ax.redraw_in_frame()

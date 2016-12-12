@@ -89,10 +89,12 @@ def compute_delta_zk(data, idx):
     u = np.clip(np.round(yk_box[idx]).astype('int'), 0, HEIGHT-1)
     v = np.clip(np.round(xk_box[idx]).astype('int'), 0, WIDTH-1)
     # define the interpolation function from depth to meters
-    depth2meters = scipy.interpolate.interp1d([0, 127, 255], [-8, 0, 12])
-    cell_depth = depth2meters(depth[u, v].ravel())
+    # depth2meters = scipy.interpolate.interp1d([0, 127, 255], [-8, 0, 12])
 
-    delta_zk = cell_depth - data['zk'][idx]
+    # cell_depth = depth2meters(depth[u, v].ravel())
+    node_depth = depth[u, v].ravel()
+
+    delta_zk = node_depth - data['zk'][idx]
     max_delta_zk = np.max(np.abs(delta_zk))
     normalized_delta_zk = delta_zk/max_delta_zk
     # limit the bathymetry change per timestep to 0.1
