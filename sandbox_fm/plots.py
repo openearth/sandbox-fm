@@ -183,10 +183,12 @@ class Visualization():
         self.lic[bl_img >= s1_img, 3] = 0.0
 
         # TODO: this can be faster, this also redraws axis
-        self.fig.canvas.draw()
-        # for artist in [self.im_bl, self.im_s1, self.im_flow]:
-        #     self.ax.draw_artist(artist)
+        # self.fig.canvas.draw()
+        for artist in [self.im_bl, self.im_s1, self.im_flow]:
+            self.ax.draw_artist(artist)
+        self.fig.canvas.blit(self.ax.bbox)
         # self.ax.redraw_in_frame()
+        # interact with window and click events
         try:
             self.fig.canvas.flush_events()
         except NotImplementedError:
