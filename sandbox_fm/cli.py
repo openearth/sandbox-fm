@@ -5,6 +5,7 @@ import logging
 import time
 import json
 
+import skimage.io
 import scipy.interpolate
 import cv2
 import tqdm
@@ -45,10 +46,12 @@ def record():
     """record 10 frames, for testing"""
     videos = video_images()
     depths = depth_images()
-    for i, (video, depth) in enumerate(zip(videos, depths)):
-        plt.imsave("video_%06d.png" % (i, ), video)
-        plt.imsave("depth_%06d.png" % (i, ), depth, cmap='Greys')
-        if i > 10:
+    raws = depth_images(raw=True)
+    for i, (video, depth, raw) in enumerate(zip(videos, depths, raws)):
+        skimage.io.imsave("video_%06d.png" % (i, ), video)
+        skimage.io.imsave("depth_%06d.png" % (i, ), depth)
+        raw.dump("raw_%06d.npy" % (i, ))
+        if i > 5:
             break
 
 
@@ -238,12 +241,7 @@ def view():
     """view raw kinect images"""
     with open("calibration.json") as f:
         calibration = json.load(f)
-    tck = (
-        np.array(calibration['tck_a']),
-        np.array(calibration['tck_b']),
-        calibration['tck_c']
-    )
-    images = calibrated_depth_images(tck)
+    images = calibrated_height_images(calibration["z_values"], calibration["z"])
     origin = 'bottom'
 
     fig, ax = plt.subplots(frameon=False)
@@ -278,6 +276,9 @@ def run(schematization):
     with open('calibration.json') as f:
         calibration = json.load(f)
     data.update(calibration)
+    with open('config.json') as f:
+        configuration = json.load(f)
+    data.update(configuration)
 
     # model
     model = bmi.wrapper.BMIWrapper('dflowfm')

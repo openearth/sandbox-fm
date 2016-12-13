@@ -115,26 +115,26 @@ class Visualization():
             vmax=data['z'][-1]
         )
 
-        self.ct_zk = self.ax.contour(zk_img, colors='k')
-        self.ax.clabel(self.ct_zk, inline=1, fontsize=10)
+        if data.get('debug'):
+            self.im_zk = self.ax.imshow(
+                zk_img,
+                cmap='jet',
+                alpha=1,
+                vmin=data['z'][0],
+                vmax=data['z'][-1]
+            )
 
-        self.im_zk = self.ax.imshow(
-            # np.ma.masked_less(bl_img, s1_img),
-            zk_img,
-            cmap='gist_earth',
-            alpha=0,
-            vmin=-12,
-            vmax=24
+            self.ct_zk = self.ax.contour(zk_img, colors='k')
+            self.ax.clabel(self.ct_zk, inline=1, fontsize=10)
 
-        )
 
-        self.im_s1 = self.ax.imshow(
-            np.ma.masked_less_equal(s1_img, bl_img),
-            cmap=cmocean.cm.deep,
-            alpha=0.0,
-            vmin=1.3,
-            vmax=1.7
-        )
+            self.im_s1 = self.ax.imshow(
+                np.ma.masked_less_equal(s1_img, bl_img),
+                cmap=cmocean.cm.deep,
+                alpha=0.2,
+                vmin=1.3,
+                vmax=1.7
+            )
 
         self.im_flow = self.ax.imshow(
             self.lic,
@@ -187,11 +187,12 @@ class Visualization():
         ucy_img = ucy_in_img[data['ravensburger_cells']]
         bl_img = data['bl'][data['ravensburger_cells']]
 
-        for c in self.ct_zk.collections:
-            c.remove()
-        self.ct_zk = plt.contour(zk_img)
-        self.im_zk.set_data(zk_img)
-        self.im_s1.set_data(np.ma.masked_less_equal(s1_img, bl_img))
+        if data.get('debug'):
+            for c in self.ct_zk.collections:
+                c.remove()
+            self.ct_zk = plt.contour(zk_img)
+            self.im_zk.set_data(zk_img)
+            self.im_s1.set_data(np.ma.masked_less_equal(s1_img, bl_img))
 
         scale = 50.0
         flow = np.dstack([ucx_img, ucy_img]) * scale
