@@ -9,7 +9,7 @@ import scipy.interpolate
 import numpy as np
 import skimage.draw
 
-from .cm import terrajet
+from .cm import terrajet2
 
 from .calibrate import (
     transform,
@@ -51,10 +51,12 @@ class Visualization():
     def initialize(self, data):
         # create plots here (not sure why shape is reversed)
         warped_height = cv2.warpPerspective(
-            data['height'],
+            data['height'].filled(0),
             np.array(data['img2box']),
             data['height'].shape[::-1]
         )
+
+
 
         # rgba image
         self.lic = np.ones(
@@ -63,11 +65,7 @@ class Visualization():
         )
         # transparent, white background
         self.lic[..., 3] = 0.0
-        self.im_height = self.ax.imshow(
-            warped_height,
-            cmap=terrajet,
-            alpha=1
-        )
+
         # get the xlim from the height image
         xlim = self.ax.get_xlim()
         ylim = self.ax.get_ylim()
@@ -109,6 +107,17 @@ class Visualization():
         zk_img = data['zk'][data['ravensburger_nodes']]
 
 
+        self.im_height = self.ax.imshow(
+            warped_height,
+            cmap=terrajet2,
+            alpha=1,
+            vmin=data['z'][0],
+            vmax=data['z'][-1]
+        )
+
+        self.ct_zk = self.ax.contour(zk_img, colors='k')
+        self.ax.clabel(self.ct_zk, inline=1, fontsize=10)
+
         self.im_zk = self.ax.imshow(
             # np.ma.masked_less(bl_img, s1_img),
             zk_img,
@@ -143,7 +152,7 @@ class Visualization():
 
         i = next(self.counter)
         warped_height = cv2.warpPerspective(
-            data['height'],
+            data['height'].filled(0),
             np.array(data['img2box']),
             data['height'].shape[::-1]
         )
@@ -165,26 +174,24 @@ class Visualization():
         ucx_in_img = xzw_ucx_box - xzw_box
         ucy_in_img = yzw_ucy_box - yzw_box
 
-        warped_kinect = cv2.warpPerspective(
-            data['kinect'],
+        warped_height = cv2.warpPerspective(
+            data['height'],
             np.array(data['img2box']),
-            (640, 480)
+            data['height'].shape[::-1]
         )
-        warped_kinect = np.ma.masked_less(
-            np.ma.masked_greater(warped_kinect, 100),
-            -3
-        )
-        self.im_kinect.set_data(warped_kinect)
-        print(warped_kinect.min(), warped_kinect.max())
-        self.im_kinect.set_clim(-0.5, 1.5)
+        self.im_height.set_data(warped_height)
         zk_img = data['zk'][data['ravensburger_nodes']]
 
         s1_img = data['s1'][data['ravensburger_cells']]
         ucx_img = ucx_in_img[data['ravensburger_cells']]
         ucy_img = ucy_in_img[data['ravensburger_cells']]
         bl_img = data['bl'][data['ravensburger_cells']]
-        self.im_s1.set_data(np.ma.masked_less_equal(s1_img, bl_img))
+
+        for c in self.ct_zk.collections:
+            c.remove()
+        self.ct_zk = plt.contour(zk_img)
         self.im_zk.set_data(zk_img)
+        self.im_s1.set_data(np.ma.masked_less_equal(s1_img, bl_img))
 
         scale = 50.0
         flow = np.dstack([ucx_img, ucy_img]) * scale

@@ -25,7 +25,7 @@ class MockupFreenect(object):
             data_dir.glob('video_*.png')
         )
         self.depths = itertools.cycle(
-            data_dir.glob('depth_*.png')
+            data_dir.glob('raw_*.npy')
         )
 
     def sync_get_video(self):
@@ -36,13 +36,8 @@ class MockupFreenect(object):
     def sync_get_depth(self):
         """keep yielding depths"""
         depth = next(self.depths)
-        arr = plt.imread(str(depth))
-        if len(arr.shape) == 3:
-            img = arr[..., 0]
-        else:
-            img = arr
-        # fake 11 bitx
-        return (img * 2**10).astype('uint16'), 3
+        arr = np.load(str(depth))
+        return arr, 3
 
 
 # try if we can read images, use mockup if not

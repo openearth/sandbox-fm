@@ -1,5 +1,42 @@
 from matplotlib.colors import ListedColormap
+from matplotlib.colors import hex2color, rgb2hex
+import colormap
 from numpy import nan, inf
+
+
+def make_cmap(colors, position=None, bit=False, name='my_colormap'):
+    '''
+    make_cmap takes a list of tuples which contain RGB values. The RGB
+    values may either be in 8-bit [0 to 255] (in which bit must be set to
+    True when called) or arithmetic [0 to 1] (default). make_cmap returns
+    a cmap with equally spaced colors.
+    Arrange your tuples so that the first color is the lowest value for the
+    colorbar and the last is the highest.
+    position contains values from 0 to 1 to dictate the location of each color.
+    '''
+    import matplotlib as mpl
+    import numpy as np
+    bit_rgb = np.linspace(0, 1, 256)
+    if position == None:
+        position = np.linspace(0, 1, len(colors))
+    else:
+        if len(position) != len(colors):
+            raise ValueError("position length must be the same as colors")
+        elif position[0] != 0 or position[-1] != 1:
+            raise ValueError("position must start with 0 and end with 1")
+    if bit:
+        for i in range(len(colors)):
+            colors[i] = (bit_rgb[colors[i][0]],
+                         bit_rgb[colors[i][1]],
+                         bit_rgb[colors[i][2]])
+    cdict = {'red':[], 'green':[], 'blue':[]}
+    for pos, color in zip(position, colors):
+        cdict['red'].append((pos, color[0], color[0]))
+        cdict['green'].append((pos, color[1], color[1]))
+        cdict['blue'].append((pos, color[2], color[2]))
+
+    cmap = mpl.colors.LinearSegmentedColormap(name, cdict, 256)
+    return cmap
 
 # Used to reconstruct the colormap in viscm
 parameters = {'xp': [-4.3306605284902275, -12.121422910237584, -3.3568152307718151, 30.727770189372848],
@@ -265,7 +302,8 @@ cm_data = [[ 0.05054409, 0.04310382, 0.51367225],
            [ 0.93444147, 0.33284891, 0.31420449]]
 
 terrajet = ListedColormap(cm_data, name=__file__)
-
+colors = [hex2color(hex) for hex in ('#2F3360', '#00C1FF', '#366032', '#BAA838', '#BA5C21')]
+terrajet2 = make_cmap(colors)
 
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
