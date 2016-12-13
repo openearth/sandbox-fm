@@ -2,6 +2,7 @@ import logging
 import collections
 import itertools
 import pathlib
+import functools
 
 
 import matplotlib.pyplot as plt
@@ -86,13 +87,19 @@ def depth_images(raw=False):
 
         yield depth
 
-def calibrated_depth_images(tck):
+
+def calibrated_height_images(values, z):
+    """convert values (from kinect 11 bit) to z values in m"""
+    assert values[0] > values[1], "please click deeper point first next time"
+
+    def values2height(x, values, z):
+        return (x - (values[0] + values[1])/2.0) / (values[1] - values[0])*(z[1] - z[0]) + (z[0] + z[1])/2.0
+    f = functools.partial(values2height, z=z, values=values)
+
     for raw in depth_images(raw=True):
-        # TODO: fix this....
-        vals = scipy.interpolate.splev(raw.astype('double'), tck)
-        vals = (raw - 707.0)/(716 - 692.0)
-        depth = np.ma.masked_array(vals, mask=raw.mask)
-        yield depth
+        height = f(raw)
+        yield height
+
 
 def calibrated_depth_images_old(extent=None):
     """generate depth images on a fixed grid """

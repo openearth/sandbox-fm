@@ -51,25 +51,25 @@ class Visualization():
 
     def initialize(self, data):
         # create plots here (not sure why shape is reversed)
-        warped_kinect = cv2.warpPerspective(
-            data['kinect'],
+        warped_height = cv2.warpPerspective(
+            data['height'],
             np.array(data['img2box']),
-            data['kinect'].shape[::-1]
+            data['height'].shape[::-1]
         )
 
         # rgba image
         self.lic = np.ones(
-            data['kinect'].shape + (4, ),
+            data['height'].shape + (4, ),
             dtype='float32'
         )
         # transparent, white background
         self.lic[..., 3] = 0.0
-        self.im_kinect = self.ax.imshow(
-            warped_kinect,
+        self.im_height = self.ax.imshow(
+            warped_height,
             cmap='Greys',
             alpha=1
         )
-        # get the xlim from the kinect image
+        # get the xlim from the height image
         xlim = self.ax.get_xlim()
         ylim = self.ax.get_ylim()
 
@@ -142,8 +142,13 @@ class Visualization():
     def update(self, data):
 
         i = next(self.counter)
+        warped_height = cv2.warpPerspective(
+            data['height'],
+            np.array(data['img2box']),
+            data['height'].shape[::-1]
+        )
 
-        self.im_kinect.set_data(data['kinect'])
+        self.im_height.set_data(data['height'])
 
         xzw_box, yzw_box = transform(
             data['xzw'],
