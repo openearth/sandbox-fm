@@ -26,7 +26,7 @@ def warp_flow(img, flow):
     flow = -flow
     flow[:, :, 0] += np.arange(w)
     flow[:, :, 1] += np.arange(h)[:, np.newaxis]
-    res = cv2.remap(img, flow, None, cv2.INTER_LINEAR)
+    res = cv2.remap(img, flow, None, cv2.INTER_LINEAR, borderValue=(1.0, 1.0, 1.0, 0.0))
     return res
 
 
@@ -40,12 +40,9 @@ class Visualization():
             bottom=0,
             top=1
         )
-        self.ax.axis('tight')
         self.ax.axis('off')
         plt.ion()
         plt.show(block=False)
-        self.L_nodes = None
-        self.L_cells = None
         self.lic = None
         self.counter = itertools.count()
 
@@ -54,7 +51,7 @@ class Visualization():
         warped_kinect = cv2.warpPerspective(
             data['kinect'],
             np.array(data['img2box']),
-            data['kinect'].shape[::-1]
+            (640, 480)
         )
 
         # rgba image
@@ -66,7 +63,8 @@ class Visualization():
         self.lic[..., 3] = 0.0
         self.im_kinect = self.ax.imshow(
             warped_kinect,
-            cmap='Greys',
+            # cmap='viridis_r',
+            cmap='viridis_r',
             alpha=1
         )
         # get the xlim from the kinect image
@@ -114,7 +112,7 @@ class Visualization():
             # np.ma.masked_less(bl_img, s1_img),
             zk_img,
             cmap='gist_earth',
-            alpha=1.0,
+            alpha=0,
             vmin=-12,
             vmax=24
 
@@ -123,18 +121,19 @@ class Visualization():
         self.im_s1 = self.ax.imshow(
             np.ma.masked_less_equal(s1_img, bl_img),
             cmap=cmocean.cm.deep,
-            alpha=0.2,
+            alpha=0.0,
             vmin=1.3,
             vmax=1.7
         )
 
         self.im_flow = self.ax.imshow(
             self.lic,
-            alpha=0.5
+            alpha=0.8,
+            interpolation='none'
         )
 
-        self.ax.set_xlim(xlim[0] + 80, xlim[1] - 80)
-        self.ax.set_ylim(ylim[0] + 80, ylim[1] - 80)
+        # self.ax.set_xlim(xlim[0] + 80, xlim[1] - 80)
+        # self.ax.set_ylim(ylim[0] + 80, ylim[1] - 80)
         self.ax.axis('tight')
         # self.ax.axis('off')
         self.fig.canvas.draw()
@@ -160,6 +159,18 @@ class Visualization():
         ucx_in_img = xzw_ucx_box - xzw_box
         ucy_in_img = yzw_ucy_box - yzw_box
 
+        warped_kinect = cv2.warpPerspective(
+            data['kinect'],
+            np.array(data['img2box']),
+            (640, 480)
+        )
+        warped_kinect = np.ma.masked_less(
+            np.ma.masked_greater(warped_kinect, 100),
+            -3
+        )
+        self.im_kinect.set_data(warped_kinect)
+        print(warped_kinect.min(), warped_kinect.max())
+        self.im_kinect.set_clim(-0.5, 1.5)
         zk_img = data['zk'][data['ravensburger_nodes']]
 
         s1_img = data['s1'][data['ravensburger_cells']]
@@ -181,7 +192,7 @@ class Visualization():
         for u, v in zip(np.random.random(4), np.random.random(4)):
             hue = np.random.random()
             rgb = matplotlib.colors.hsv_to_rgb((hue, 0.2, 1.0))
-            rgb = (0, 0, 0)
+            rgb = (1.0, 1.0, 1.0)
             # make sure outline has the same color
             # create a little dot
             r, c = skimage.draw.circle(v * HEIGHT, u * WIDTH, 4, shape=(HEIGHT, WIDTH))
@@ -189,10 +200,10 @@ class Visualization():
         self.lic[bl_img >= s1_img, 3] = 0.0
 
         # TODO: this can be faster, this also redraws axis
-        # self.fig.canvas.draw()
-        for artist in [self.im_zk, self.im_s1, self.im_flow]:
-            self.ax.draw_artist(artist)
-        self.fig.canvas.blit(self.ax.bbox)
+        self.fig.canvas.draw()
+        # for artist in [self.im_zk, self.im_s1, self.im_flow]:
+        #     self.ax.draw_artist(artist)
+        # self.fig.canvas.blit(self.ax.bbox)
         # self.ax.redraw_in_frame()
         # interact with window and click events
         try:
