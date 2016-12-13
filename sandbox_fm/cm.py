@@ -1,4 +1,3 @@
-
 from matplotlib.colors import ListedColormap
 from numpy import nan, inf
 
@@ -265,7 +264,7 @@ cm_data = [[ 0.05054409, 0.04310382, 0.51367225],
            [ 0.92984877, 0.33431601, 0.31051201],
            [ 0.93444147, 0.33284891, 0.31420449]]
 
-test_cm = ListedColormap(cm_data, name=__file__)
+terrajet = ListedColormap(cm_data, name=__file__)
 
 
 if __name__ == "__main__":

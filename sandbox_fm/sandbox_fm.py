@@ -60,29 +60,22 @@ def update_delft3d_vars(data, model):
 def compute_delta_bl(data, idx):
     """compute the bathymetry change, normalized a bit and only for cells in idx"""
 
-    depth = data['kinect']
-
-
+    height = data['height']
     xzw_box, yzw_box = transform(data['xzw'], data['yzw'], data['model2box'])
 
     u = np.clip(np.round(yzw_box[idx]).astype('int'), 0, HEIGHT-1)
     v = np.clip(np.round(xzw_box[idx]).astype('int'), 0, WIDTH-1)
     # define the interpolation function from depth to meters
-    depth2meters = scipy.interpolate.interp1d([0, 127, 255], [-8, 0, 12])
-    cell_depth = depth2meters(depth[u, v].ravel())
+    cell_height = depth[u, v].ravel()
 
-    delta_bl = cell_depth - data['bl'][idx]
-    max_delta_bl = np.max(np.abs(delta_bl))
-    normalized_delta_bl = delta_bl/max_delta_bl
-    # limit the bathymetry change per timestep to 0.1
-    normalized_delta_bl *= min(max_delta_bl, 0.1)
-    return normalized_delta_bl
+    delta_bl = cell_height - data['bl'][idx]
+    return delta_bl
 
 
 def compute_delta_zk(data, idx):
     """compute the bathymetry change, normalized a bit and only for cells in idx"""
 
-    depth = data['kinect']
+    height = data['height']
 
     xk_box, yk_box = transform(data['xk'], data['yk'], data['model2box'])
 
@@ -92,11 +85,7 @@ def compute_delta_zk(data, idx):
     # depth2meters = scipy.interpolate.interp1d([0, 127, 255], [-8, 0, 12])
 
     # cell_depth = depth2meters(depth[u, v].ravel())
-    node_depth = depth[u, v].ravel()
+    node_height = height[u, v].ravel()
 
-    delta_zk = node_depth - data['zk'][idx]
-    max_delta_zk = np.max(np.abs(delta_zk))
-    normalized_delta_zk = delta_zk/max_delta_zk
-    # limit the bathymetry change per timestep to 0.1
-    normalized_delta_zk *= min(max_delta_zk, 5.0)
-    return normalized_delta_zk
+    delta_zk = node_height - data['zk'][idx]
+    return delta_zk

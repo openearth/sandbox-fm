@@ -18,7 +18,7 @@ import bmi.wrapper
 
 from .depth import (
     depth_images,
-    calibrated_depth_images,
+    calibrated_height_images,
     video_images
 )
 from .calibrate import (
@@ -83,6 +83,7 @@ def calibrate(schematization):
     img_points = []
     model_points = []
     height_points = []
+    z_values = []
 
     # define fixed box coordinate system (what will be on the screen)
     box = np.array([
@@ -107,23 +108,27 @@ def calibrate(schematization):
             event.inaxes.set_title('%s points selected' % (
                 len(model_points), )
             )
-        elif (event.inaxes == axes[1, 0] and len(height_points) < 4):
+        elif (event.inaxes == axes[1, 0] and len(height_points) < 2):
             height_points.append((event.xdata, event.ydata))
+            z_values.append(float(raw[int(event.ydata), int(event.xdata)]))
             title = "%s points selected" % (len(height_points), )
             if (len(height_points) == 0):
                 title = "select a point at -8m"
             elif (len(height_points) == 1):
-                title = "select a point at 0m"
-            elif (len(height_points) == 2):
                 title = "select a point at 12m"
             event.inaxes.set_title(title)
             event.inaxes.plot(event.xdata, event.ydata, 'ko')
-        if len(img_points) == 4 and len(model_points) == 4 and len(height_points) == 3:
+            event.inaxes.text(
+                event.xdata + 0.5,
+                event.ydata + 0.5,
+                "d: %.2f\n(%s, %s)" % (raw[int(event.ydata), int(event.xdata)], int(event.xdata), int(event.ydata))
+            )
+        if len(img_points) == 4 and len(model_points) == 4 and len(height_points) == 2:
             # stop listening we're done
             fig.canvas.mpl_disconnect(pid)
-            save_and_show_result()
+            save_and_show_result(axes[1, 1])
 
-    def save_and_show_result():
+    def save_and_show_result(ax):
         # we should have results by now
         model2box = cv2.getPerspectiveTransform(
             np.array(model_points, dtype='float32'),
@@ -151,13 +156,6 @@ def calibrate(schematization):
             np.array(img_points, dtype='float32')
         )
 
-        values = raw[np.array(height_points, dtype='int')[:, 1], np.array(height_points, dtype='int')[:, 0]].filled().astype('double')
-        z = np.array([-12, 0, 8], dtype='double')
-        idx = np.argsort(values)
-        # parameters of interpolation
-        tck_a, tck_b, tck_c = scipy.interpolate.splrep(values[idx], z[idx], k=1, s=0)
-
-
         comment = """
         This file contains calibrations for model %s.
         It is generated with the perspective transform from opencv.
@@ -172,9 +170,8 @@ def calibrate(schematization):
             "img_points": img_points,
             "model_points": model_points,
             "height_points": height_points,
-            "tck_a": tck_a.tolist(),
-            "tck_b": tck_b.tolist(),
-            "tck_c": tck_c,
+            "z_values": z_values,
+            "z": [-8, 12],
             "_comment": comment
 
         }
@@ -184,7 +181,6 @@ def calibrate(schematization):
 
 
         # now for showing results
-        fig, ax = plt.subplots()
         xy_nodes_in_img = np.squeeze(
             cv2.perspectiveTransform(
                 np.dstack([
@@ -214,6 +210,7 @@ def calibrate(schematization):
             cmap='Reds',
             alpha=0.5
         )
+        ax.set_title('You are done (result below)')
         plt.show()
 
     # start the model (changes directory)
@@ -293,19 +290,14 @@ def run(schematization):
     data['node_in_box'] = model_bbox.contains_points(np.c_[data['xk'], data['yk']])
     data['cell_in_box'] = model_bbox.contains_points(np.c_[data['xzw'], data['yzw']])
 
-    tck = (
-        np.array(calibration['tck_a']),
-        np.array(calibration['tck_b']),
-        calibration['tck_c']
-    )
 
     # images
-    depths = calibrated_depth_images(tck)
+    heights = calibrated_height_images(calibration["z_values"], calibration["z"])
     # load model library
-    depth = next(depths)
+    height = next(heights)
 
-    data['kinect_0'] = depth.copy()
-    data['kinect'] = depth
+    data['height'] = height.copy()
+    data['height'] = height
 
 
     vis = Visualization()
@@ -316,9 +308,9 @@ def run(schematization):
         model.update(dt)
 
 
-    for i, depth in enumerate(tqdm.tqdm(depths)):
+    for i, height in enumerate(tqdm.tqdm(heights)):
         update_delft3d_vars(data, model)
-        data['kinect'] = depth
+        data['height'] = height
 
         # only change bathymetry of wet cells
         idx = np.logical_and(data['cell_in_box'], data['is_wet']) #
