@@ -209,7 +209,7 @@ class Visualization():
             self.im_zk.set_data(zk_img)
             self.im_s1.set_data(np.ma.masked_less_equal(s1_img, bl_img))
 
-        scale = 50.0
+        scale = 20.0
         flow = np.dstack([ucx_img, ucy_img]) * scale
         self.lic = warp_flow(self.lic.astype('float32'), flow.astype('float32'))
         # fade out
@@ -218,13 +218,16 @@ class Visualization():
         self.lic[..., 3][self.lic[..., 3] < 0] = 0
         self.im_flow.set_data(self.lic)
 
-        for u, v in zip(np.random.random(4), np.random.random(4)):
+        for u, v in zip(np.random.random(8), np.random.random(8)):
             hue = np.random.random()
-            rgb = matplotlib.colors.hsv_to_rgb((hue, 0.2, 1.0))
+            rgb = matplotlib.colors.hsv_to_rgb((hue, 0.8, 1.0))
             rgb = (1.0, 1.0, 1.0)
             # make sure outline has the same color
             # create a little dot
             r, c = skimage.draw.circle(v * HEIGHT, u * WIDTH, 4, shape=(HEIGHT, WIDTH))
+            # Don't plot on high cells
+            if zk_img[int(v * HEIGHT), int(u * WIDTH)] > 0:
+                continue
             self.lic[r, c, :] = tuple(rgb) + (1, )
         # and some dots at fixed locations
         hues = [0.3, 0.5, 0.7, 0.9]

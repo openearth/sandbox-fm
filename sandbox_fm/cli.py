@@ -25,7 +25,8 @@ from .depth import (
     video_images
 )
 from .calibrate import (
-    compute_affines
+    compute_affines,
+    transform
 )
 from .plots import Visualization
 from .sandbox_fm import (
@@ -292,8 +293,23 @@ def run(schematization):
     model_bbox = matplotlib.path.Path(data['model_points'])
     data['node_in_box'] = model_bbox.contains_points(np.c_[data['xk'], data['yk']])
     data['cell_in_box'] = model_bbox.contains_points(np.c_[data['xzw'], data['yzw']])
-
-
+    
+    img_bbox = matplotlib.path.Path([
+        (40, 40),
+        (40, 480),
+        (600, 480),
+        (600, 40)
+    ])
+    xzw_box, yzw_box = transform(data['xzw'], data['yzw'], data['model2box'])
+    xk_box, yk_box = transform(data['xk'], data['yk'], data['model2box'])
+    print(xzw_box.min(), xzw_box.max())
+    data['cell_in_img_bbox'] = img_bbox.contains_points(np.c_[xzw_box, yzw_box])
+    data['node_in_img_bbox'] = img_bbox.contains_points(np.c_[xk_box, yk_box])
+    if data.get('debug'):
+        plt.scatter(data['xzw'], data['yzw'], c=data['cell_in_img_bbox'], edgecolor='none')
+        plt.show()
+        plt.scatter(data['xzw'], data['yzw'], c=data['cell_in_box'], edgecolor='none')
+        plt.show()
     # images
     heights = calibrated_height_images(calibration["z_values"], calibration["z"])
     # load model library
@@ -349,8 +365,6 @@ def run(schematization):
         #     delta_s1 = compute_delta_s1(data, idx)
         #     print(delta_s1.max(), delta_s1.min())
         #     data['s1'][idx] += delta_s1
-
-
 
         vis.update(data)
         tic = time.time()

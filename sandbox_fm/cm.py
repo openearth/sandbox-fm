@@ -302,6 +302,7 @@ cm_data = [[ 0.05054409, 0.04310382, 0.51367225],
 
 terrajet = ListedColormap(cm_data, name=__file__)
 colors = [hex2color(hex) for hex in ('#2F3360', '#00C1FF', '#366032', '#BAA838', '#BA5C21')]
+# colors = [hex2color(hex) for hex in ('#111160', '#00FFFF', '#11DD00', '#FFFF00', '#DD3322')]
 terrajet2 = make_cmap(colors)
 
 if __name__ == "__main__":
