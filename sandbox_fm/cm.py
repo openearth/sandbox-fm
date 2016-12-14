@@ -1,6 +1,5 @@
 from matplotlib.colors import ListedColormap
 from matplotlib.colors import hex2color, rgb2hex
-import colormap
 from numpy import nan, inf
 
 
