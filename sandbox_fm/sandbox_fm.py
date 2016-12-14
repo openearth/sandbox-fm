@@ -57,20 +57,6 @@ def update_delft3d_vars(data, model):
 
 
 
-def compute_delta_bl(data, idx):
-    """compute the bathymetry change, normalized a bit and only for cells in idx"""
-
-    height = data['height']
-    xzw_box, yzw_box = transform(data['xzw'], data['yzw'], data['model2box'])
-
-    u = np.clip(np.round(yzw_box[idx]).astype('int'), 0, HEIGHT-1)
-    v = np.clip(np.round(xzw_box[idx]).astype('int'), 0, WIDTH-1)
-    # define the interpolation function from depth to meters
-    cell_height = depth[u, v].ravel()
-
-    delta_bl = cell_height - data['bl'][idx]
-    return delta_bl
-
 
 def compute_delta_zk(data, idx):
     """compute the bathymetry change, normalized a bit and only for cells in idx"""
@@ -89,3 +75,21 @@ def compute_delta_zk(data, idx):
 
     delta_zk = node_height - data['zk'][idx]
     return delta_zk
+
+def compute_delta_s1(data, idx):
+    """compute the bathymetry change, normalized a bit and only for cells in idx"""
+
+    height = data['height']
+
+    xzw_box, yzw_box = transform(data['xzw'], data['yzw'], data['model2box'])
+
+    u = np.clip(np.round(yzw_box[idx]).astype('int'), 0, HEIGHT-1)
+    v = np.clip(np.round(xzw_box[idx]).astype('int'), 0, WIDTH-1)
+    # define the interpolation function from depth to meters
+    cell_height = height[u, v].ravel()
+
+    delta_s1 = np.zeros_like(cell_height)
+
+    delta_s1[cell_height > 20] = (cell_height[cell_height > 20] - 20)/4000.0
+
+    return delta_s1

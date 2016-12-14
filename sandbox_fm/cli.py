@@ -4,6 +4,7 @@ import pathlib
 import logging
 import time
 import json
+import functools
 
 import skimage.io
 import scipy.interpolate
@@ -12,6 +13,7 @@ import tqdm
 import click
 import numpy as np
 import matplotlib.path
+import matplotlib.backend_bases
 import matplotlib.pyplot as plt
 
 import mpi4py.MPI
@@ -29,8 +31,8 @@ from .plots import Visualization
 from .sandbox_fm import (
     update_delft3d_initial_vars,
     update_delft3d_vars,
-    compute_delta_bl,
-    compute_delta_zk
+    compute_delta_zk,
+    compute_delta_s1
 )
 
 logger = logging.getLogger(__name__)
@@ -305,6 +307,32 @@ def run(schematization):
     update_delft3d_vars(data, model)
     vis.initialize(data)
 
+
+    def callback(evt, data, model, vis=vis):
+        if not isinstance(evt, matplotlib.backend_bases.KeyEvent):
+            return
+        if evt.key == 'b':
+            # data['bl'][idx] += compute_delta_bl(data, idx)
+            idx = data['node_in_box']
+            zk_copy = data['zk'].copy()
+            zk_copy[idx] += compute_delta_zk(data, idx)
+            # replace the part that changed
+            for i in np.where(idx)[0]:
+                if data['zk'][i] != zk_copy[i]:
+                    # TODO: bug in zk
+                    model.set_var_slice('zk', [i+1], [1], zk_copy[i:i+1])
+        if evt.key == 's':
+            if not vis.im_flow.get_visible():
+                vis.lic[:, :, :3] = 1.0
+                vis.lic[:, :, 3] = 0.0
+            vis.im_flow.set_visible(not vis.im_flow.get_visible())
+
+
+    vis.subscribers.append(
+        # fill in the data parameter and subscribe to events
+        functools.partial(callback, data=data, model=model, vis=vis)
+    )
+
     for i in range(10):
         model.update(dt)
 
@@ -315,18 +343,14 @@ def run(schematization):
 
         # only change bathymetry of wet cells
         idx = np.logical_and(data['cell_in_box'], data['is_wet']) #
-        # idx = data['cell_in_box']
 
-        if i % 100 == 0:
-            # data['bl'][idx] += compute_delta_bl(data, idx)
-            idx = data['node_in_box']
-            zk_copy = data['zk'].copy()
-            zk_copy[idx] += compute_delta_zk(data, idx)
-            # replace the part that changed
-            for i in np.where(idx)[0]:
-                if data['zk'][i] != zk_copy[i]:
-                    # TODO: bug in zk
-                    model.set_var_slice('zk', [i+1], [1], zk_copy[i:i+1])
+        # if vis.im_flow.get_visible():
+        #     # idx = data['cell_in_box']
+        #     delta_s1 = compute_delta_s1(data, idx)
+        #     print(delta_s1.max(), delta_s1.min())
+        #     data['s1'][idx] += delta_s1
+
+
 
         vis.update(data)
         tic = time.time()

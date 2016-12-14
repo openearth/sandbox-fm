@@ -47,6 +47,11 @@ class Visualization():
         plt.show(block=False)
         self.lic = None
         self.counter = itertools.count()
+        self.subscribers = []
+
+    def notify(self, event):
+        for subscriber in self.subscribers:
+            subscriber(event)
 
     def initialize(self, data):
         # create plots here (not sure why shape is reversed)
@@ -115,10 +120,13 @@ class Visualization():
             vmax=data['z'][-1]
         )
 
+        self.ct_height = self.ax.contour(warped_height, colors='k')
+
+
         if data.get('debug'):
             self.im_zk = self.ax.imshow(
                 zk_img,
-                cmap='jet',
+                cmap=terrajet,
                 alpha=1,
                 vmin=data['z'][0],
                 vmax=data['z'][-1]
@@ -141,12 +149,15 @@ class Visualization():
             alpha=0.8,
             interpolation='none'
         )
-
+        # don't show at start
+        self.im_flow.set_visible(False)
         # self.ax.set_xlim(xlim[0] + 80, xlim[1] - 80)
         # self.ax.set_ylim(ylim[0] + 80, ylim[1] - 80)
         self.ax.axis('tight')
         # self.ax.axis('off')
         self.fig.canvas.draw()
+        self.fig.canvas.mpl_connect('button_press_event', self.notify)
+        self.fig.canvas.mpl_connect('key_press_event', self.notify)
 
     def update(self, data):
 
@@ -187,6 +198,10 @@ class Visualization():
         ucy_img = ucy_in_img[data['ravensburger_cells']]
         bl_img = data['bl'][data['ravensburger_cells']]
 
+        for c in self.ct_height.collections:
+            c.remove()
+        self.ct_height = self.ax.contour(warped_height, levels=(-6, -3, 0, 3, 6))
+
         if data.get('debug'):
             for c in self.ct_zk.collections:
                 c.remove()
@@ -211,6 +226,18 @@ class Visualization():
             # create a little dot
             r, c = skimage.draw.circle(v * HEIGHT, u * WIDTH, 4, shape=(HEIGHT, WIDTH))
             self.lic[r, c, :] = tuple(rgb) + (1, )
+        # and some dots at fixed locations
+        hues = [0.3, 0.5, 0.7, 0.9]
+        rgbs = matplotlib.colors.hsv_to_rgb([(hue, 0.5, 1.0) for hue in hues])
+        for u, v, rgb in zip(
+                [10, 10, WIDTH-10, WIDTH-10],
+                [100, HEIGHT-100, 100, HEIGHT-100],
+                rgbs
+                ):
+            # make sure outline has the same color
+            # create a little dot
+            r, c = skimage.draw.circle(v, u, 4, shape=(HEIGHT, WIDTH))
+            self.lic[r, c, :] = tuple(rgb) + (0.8, )
         self.lic[bl_img >= s1_img, 3] = 0.0
 
         # TODO: this can be faster, this also redraws axis
