@@ -7,7 +7,6 @@ import json
 import functools
 
 import skimage.io
-import scipy.interpolate
 import cv2
 import tqdm
 import click
@@ -16,8 +15,8 @@ import matplotlib.path
 import matplotlib.backend_bases
 import matplotlib.pyplot as plt
 
-import mpi4py.MPI
 import bmi.wrapper
+import mpi4py.MPI
 
 from .depth import (
     depth_images,
@@ -25,17 +24,21 @@ from .depth import (
     video_images
 )
 from .calibrate import (
-    compute_affines,
     transform
 )
-from .plots import Visualization
-from .sandbox_fm import (
-    update_delft3d_initial_vars,
-    update_delft3d_vars,
-    compute_delta_zk,
-    compute_delta_s1
+from .calibration_tool import Calibration
+from .plots import (
+    Visualization,
+    process_events
 )
 
+from .sandbox_fm import (
+    update_delft3d_initial_vars,
+    update_delft3d_vars
+)
+
+# initialize mpi
+mpi4py.MPI.COMM_WORLD
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
@@ -48,11 +51,9 @@ def cli():
 def record():
     """record 10 frames, for testing"""
     videos = video_images()
-    depths = depth_images()
     raws = depth_images(raw=True)
     for i, (video, depth, raw) in enumerate(zip(videos, depths, raws)):
         skimage.io.imsave("video_%06d.png" % (i, ), video)
-        skimage.io.imsave("depth_%06d.png" % (i, ), depth)
         raw.dump("raw_%06d.npy" % (i, ))
         if i > 5:
             break
@@ -66,178 +67,14 @@ def calibrate(schematization):
 
     # raw images
     videos = video_images()
-    depths = depth_images()
     raws = depth_images(raw=True)
-    # get video and depth image
-    video = next(videos)
-    depth = next(depths)
-    raw = next(raws)
-
-    # save the current working directory
-    curdir = pathlib.Path.cwd()
-
-    fig, axes = plt.subplots(2, 2)
-    # sic show instructions in the title
-    fig.suptitle('select 4 points (clockwise start at top left)')
-
-    # show the depth and video in the left window
-    axes[0, 0].imshow(video)
-    axes[0, 0].imshow(depth, alpha=0.3, cmap='Reds')
-    axes[1, 0].imshow(raw)
-
-    # keep track of the selected points
-    img_points = []
-    model_points = []
-    height_points = []
-    z_values = []
-
-    # define fixed box coordinate system (what will be on the screen)
-    box = np.array([
-        [0, 0],
-        [640, 0],
-        [640, 480],
-        [0, 480]
-    ], dtype='float32')
-
-    # pointer event
-    pid = None
-
-    # define the point selector
-    def picker(event):
-        if (event.inaxes == axes[0, 0] and len(img_points) < 4):
-            img_points.append((event.xdata, event.ydata))
-            event.inaxes.set_title('%s points selected' % (
-                len(img_points), )
-            )
-        elif (event.inaxes == axes[0, 1] and len(model_points) < 4):
-            model_points.append((event.xdata, event.ydata))
-            event.inaxes.set_title('%s points selected' % (
-                len(model_points), )
-            )
-        elif (event.inaxes == axes[1, 0] and len(height_points) < 2):
-            height_points.append((event.xdata, event.ydata))
-            z_values.append(float(raw[int(event.ydata), int(event.xdata)]))
-            title = "%s points selected" % (len(height_points), )
-            if (len(height_points) == 0):
-                title = "select a point at -8m"
-            elif (len(height_points) == 1):
-                title = "select a point at 12m"
-            event.inaxes.set_title(title)
-            event.inaxes.plot(event.xdata, event.ydata, 'ko')
-            event.inaxes.text(
-                event.xdata + 0.5,
-                event.ydata + 0.5,
-                "d: %.2f\n(%s, %s)" % (raw[int(event.ydata), int(event.xdata)], int(event.xdata), int(event.ydata))
-            )
-        if len(img_points) == 4 and len(model_points) == 4 and len(height_points) == 2:
-            # stop listening we're done
-            fig.canvas.mpl_disconnect(pid)
-            save_and_show_result(axes[1, 1])
-
-    def save_and_show_result(ax):
-        # we should have results by now
-        model2box = cv2.getPerspectiveTransform(
-            np.array(model_points, dtype='float32'),
-            box
-        )
-        print(img_points, box)
-        img2box = cv2.getPerspectiveTransform(
-            np.array(img_points, dtype='float32'),
-            box
-        )
-        img2model = cv2.getPerspectiveTransform(
-            np.array(img_points, dtype='float32'),
-            np.array(model_points, dtype='float32')
-        )
-        model2img = cv2.getPerspectiveTransform(
-            np.array(model_points, dtype='float32'),
-            np.array(img_points, dtype='float32')
-        )
-        box2model = cv2.getPerspectiveTransform(
-            np.array(box, dtype='float32'),
-            np.array(model_points, dtype='float32')
-        )
-        box2img = cv2.getPerspectiveTransform(
-            np.array(box, dtype='float32'),
-            np.array(img_points, dtype='float32')
-        )
-
-        comment = """
-        This file contains calibrations for model %s.
-        It is generated with the perspective transform from opencv.
-        """ % (schematization_path, )
-        result = {
-            "model2box": model2box.tolist(),
-            "img2box": img2box.tolist(),
-            "img2model": img2model.tolist(),
-            "model2img": model2img.tolist(),
-            "box2model": box2model.tolist(),
-            "box2img": box2img.tolist(),
-            "img_points": img_points,
-            "model_points": model_points,
-            "height_points": height_points,
-            "z_values": z_values,
-            "z": [-8, 12],
-            "_comment": comment
-
-        }
-        # save the calibration info
-        with open(str(curdir / 'calibration.json'), 'w') as f:
-            json.dump(result, f, indent=2)
-
-
-        # now for showing results
-        xy_nodes_in_img = np.squeeze(
-            cv2.perspectiveTransform(
-                np.dstack([
-                    xy_node[:, np.newaxis, 0],
-                    xy_node[:, np.newaxis, 1]
-                ]).astype('float32'),
-                model2box
-            )
-        )
-        # scatter plot
-        ax.scatter(
-            xy_nodes_in_img[:, 0],
-            xy_nodes_in_img[:, 1],
-            c=data['zk'].ravel(),
-            cmap='Greens',
-            edgecolor='none',
-            s=20,
-            alpha=0.5
-        )
-        # transformed video on top
-        ax.imshow(
-            cv2.warpPerspective(
-                video,
-                img2box,
-                (640, 480)
-            ),
-            cmap='Reds',
-            alpha=0.5
-        )
-        ax.set_title('You are done (result below)')
-        plt.show()
-
     # start the model (changes directory)
     model = bmi.wrapper.BMIWrapper('dflowfm')
     schematization_path = pathlib.Path(schematization.name)
     model.initialize(str(schematization_path.absolute()))
-    data = {}
-    update_delft3d_initial_vars(data, model)
-    # convert to array we can feed into opencv
-    xy_node = np.c_[
-        data['xk'],
-        data['yk'],
-        np.ones_like(data['xk'])
-    ].astype('float32')
 
-
-    axes[0, 1].scatter(data['xk'].ravel(), data['yk'].ravel(), c=data['zk'].ravel(), cmap='Greens', edgecolor='none')
-    plt.ion()
-    pid = fig.canvas.mpl_connect('button_press_event', picker)
-    plt.show(block=True)
-
+    calibration = Calibration(videos, raws, model)
+    calibration.run()
 
 @cli.command()
 def view():
@@ -281,6 +118,8 @@ def run(schematization):
     data.update(calibration)
     with open('config.json') as f:
         configuration = json.load(f)
+
+
     data.update(configuration)
 
     # model
@@ -293,7 +132,7 @@ def run(schematization):
     model_bbox = matplotlib.path.Path(data['model_points'])
     data['node_in_box'] = model_bbox.contains_points(np.c_[data['xk'], data['yk']])
     data['cell_in_box'] = model_bbox.contains_points(np.c_[data['xzw'], data['yzw']])
-    
+
     img_bbox = matplotlib.path.Path([
         (40, 40),
         (40, 480),
@@ -324,49 +163,27 @@ def run(schematization):
     vis.initialize(data)
 
 
-    def callback(evt, data, model, vis=vis):
-        if not isinstance(evt, matplotlib.backend_bases.KeyEvent):
-            return
-        if evt.key == 'b':
-            # data['bl'][idx] += compute_delta_bl(data, idx)
-            idx = data['node_in_box']
-            zk_copy = data['zk'].copy()
-            zk_copy[idx] += compute_delta_zk(data, idx)
-            # replace the part that changed
-            for i in np.where(idx)[0]:
-                if data['zk'][i] != zk_copy[i]:
-                    # TODO: bug in zk
-                    model.set_var_slice('zk', [i+1], [1], zk_copy[i:i+1])
-        if evt.key == 'c':
-            if not vis.im_flow.get_visible():
-                vis.lic[:, :, :3] = 1.0
-                vis.lic[:, :, 3] = 0.0
-            vis.im_flow.set_visible(not vis.im_flow.get_visible())
+    # we can define this callback here
 
 
     vis.subscribers.append(
         # fill in the data parameter and subscribe to events
-        functools.partial(callback, data=data, model=model, vis=vis)
+        functools.partial(process_events, data=data, model=model, vis=vis)
     )
 
+    # start model and run for a bit
     for i in range(10):
         model.update(dt)
 
 
-    for i, height in enumerate(tqdm.tqdm(heights)):
+    for height in tqdm.tqdm(heights):
+        # update delft3d
         update_delft3d_vars(data, model)
+        # update kinect
         data['height'] = height
-
-        # only change bathymetry of wet cells
-        idx = np.logical_and(data['cell_in_box'], data['is_wet']) #
-
-        # if vis.im_flow.get_visible():
-        #     # idx = data['cell_in_box']
-        #     delta_s1 = compute_delta_s1(data, idx)
-        #     print(delta_s1.max(), delta_s1.min())
-        #     data['s1'][idx] += delta_s1
-
+        # update visualization
         vis.update(data)
+        # update model
         tic = time.time()
         model.update(dt)
         toc = time.time()

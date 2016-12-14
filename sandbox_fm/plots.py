@@ -10,6 +10,7 @@ import numpy as np
 import skimage.draw
 
 from .cm import terrajet2
+from .sandbox_fm import compute_delta_zk
 
 from .calibrate import (
     transform,
@@ -31,6 +32,25 @@ def warp_flow(img, flow):
     res = cv2.remap(img, flow, None, cv2.INTER_LINEAR, borderValue=(1.0, 1.0, 1.0, 0.0))
     return res
 
+
+def process_events(evt, data, model, vis):
+    if not isinstance(evt, matplotlib.backend_bases.KeyEvent):
+        return
+    if evt.key == 'b':
+        # data['bl'][idx] += compute_delta_bl(data, idx)
+        idx = data['node_in_box']
+        zk_copy = data['zk'].copy()
+        zk_copy[idx] += compute_delta_zk(data, idx)
+        # replace the part that changed
+        for i in np.where(idx)[0]:
+            if data['zk'][i] != zk_copy[i]:
+                # TODO: bug in zk
+                model.set_var_slice('zk', [i+1], [1], zk_copy[i:i+1])
+    if evt.key == 'c':
+        if not vis.im_flow.get_visible():
+            vis.lic[:, :, :3] = 1.0
+            vis.lic[:, :, 3] = 0.0
+        vis.im_flow.set_visible(not vis.im_flow.get_visible())
 
 class Visualization():
     def __init__(self):
@@ -159,6 +179,7 @@ class Visualization():
         self.fig.canvas.mpl_connect('button_press_event', self.notify)
         self.fig.canvas.mpl_connect('key_press_event', self.notify)
 
+    #@profile
     def update(self, data):
 
         i = next(self.counter)
@@ -244,11 +265,11 @@ class Visualization():
         self.lic[bl_img >= s1_img, 3] = 0.0
 
         # TODO: this can be faster, this also redraws axis
-        self.fig.canvas.draw()
+        # self.fig.canvas.draw()
         # for artist in [self.im_zk, self.im_s1, self.im_flow]:
         #     self.ax.draw_artist(artist)
         # self.fig.canvas.blit(self.ax.bbox)
-        # self.ax.redraw_in_frame()
+        self.ax.redraw_in_frame()
         # interact with window and click events
         try:
             self.fig.canvas.flush_events()
