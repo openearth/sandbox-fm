@@ -337,7 +337,7 @@ def run(schematization):
                 if data['zk'][i] != zk_copy[i]:
                     # TODO: bug in zk
                     model.set_var_slice('zk', [i+1], [1], zk_copy[i:i+1])
-        if evt.key == 's':
+        if evt.key == 'c':
             if not vis.im_flow.get_visible():
                 vis.lic[:, :, :3] = 1.0
                 vis.lic[:, :, 3] = 0.0
