@@ -5,6 +5,7 @@ import logging
 import time
 import json
 import functools
+import itertools
 
 import skimage.io
 import scipy.interpolate
@@ -312,11 +313,14 @@ def run(schematization):
         plt.show()
     # images
     heights = calibrated_height_images(calibration["z_values"], calibration["z"])
+    videos = video_images()
     # load model library
     height = next(heights)
+    video = next(videos)
 
     data['height'] = height.copy()
     data['height'] = height
+    data['video'] = video
 
 
     vis = Visualization()
@@ -341,6 +345,16 @@ def run(schematization):
             if not vis.im_flow.get_visible():
                 vis.lic[:, :, :3] = 1.0
                 vis.lic[:, :, 3] = 0.0
+                print(data['video'].dtype)
+                vis.lic = cv2.warpPerspective(
+                    data['video'].astype('float32')/255.0,
+                    np.array(data['img2box']),
+                    data['height'].shape[::-1]
+                )
+                if vis.lic.shape[-1] == 3:
+                    # add depth channel
+                    vis.lic = np.dstack([vis.lic, np.ones_like(vis.lic[:, :, 0])])
+                
             vis.im_flow.set_visible(not vis.im_flow.get_visible())
 
 
@@ -353,9 +367,10 @@ def run(schematization):
         model.update(dt)
 
 
-    for i, height in enumerate(tqdm.tqdm(heights)):
+    for i, (video, height) in enumerate(tqdm.tqdm(itertools.izip(videos, heights))):
         update_delft3d_vars(data, model)
         data['height'] = height
+        data['video'] = video
 
         # only change bathymetry of wet cells
         idx = np.logical_and(data['cell_in_box'], data['is_wet']) #
