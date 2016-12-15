@@ -5,6 +5,7 @@ import logging
 import time
 import json
 import functools
+import itertools
 
 import skimage.io
 import cv2
@@ -151,20 +152,19 @@ def run(schematization):
         plt.show()
     # images
     heights = calibrated_height_images(calibration["z_values"], calibration["z"])
+    videos = video_images()
     # load model library
     height = next(heights)
+    video = next(videos)
 
     data['height'] = height.copy()
     data['height'] = height
+    data['video'] = video
 
 
     vis = Visualization()
     update_delft3d_vars(data, model)
     vis.initialize(data)
-
-
-    # we can define this callback here
-
 
     vis.subscribers.append(
         # fill in the data parameter and subscribe to events
@@ -176,11 +176,12 @@ def run(schematization):
         model.update(dt)
 
 
-    for height in tqdm.tqdm(heights):
-        # update delft3d
+    for i, (video, height) in enumerate(tqdm.tqdm(itertools.izip(videos, heights))):
         update_delft3d_vars(data, model)
         # update kinect
         data['height'] = height
+        data['video'] = video
+
         # update visualization
         vis.update(data)
         # update model

@@ -38,7 +38,7 @@ def process_events(evt, data, model, vis):
         return
     if evt.key == 'b':
         # data['bl'][idx] += compute_delta_bl(data, idx)
-        idx = data['node_in_box']
+        idx = np.logical_and(data['node_in_box'], data['node_in_img_bbox'])
         zk_copy = data['zk'].copy()
         zk_copy[idx] += compute_delta_zk(data, idx)
         # replace the part that changed
@@ -50,7 +50,18 @@ def process_events(evt, data, model, vis):
         if not vis.im_flow.get_visible():
             vis.lic[:, :, :3] = 1.0
             vis.lic[:, :, 3] = 0.0
-        vis.im_flow.set_visible(not vis.im_flow.get_visible())
+            vis.lic = cv2.warpPerspective(
+                data['video'].astype('float32')/255.0,
+                np.array(data['img2box']),
+                data['height'].shape[::-1]
+            )
+            if vis.lic.shape[-1] == 3:
+                # add depth channel
+                vis.lic = np.dstack([
+                    vis.lic,
+                    np.ones_like(vis.lic[:, :, 0])
+                ])
+            vis.im_flow.set_visible(not vis.im_flow.get_visible())
 
 class Visualization():
     def __init__(self):
@@ -88,8 +99,16 @@ class Visualization():
             data['height'].shape + (4, ),
             dtype='float32'
         )
+        self.lic = cv2.warpPerspective(
+            data['video'],
+            np.array(data['img2box']),
+            data['height'].shape[::-1]
+        )
+        if self.lic.shape[-1] == 3:
+            # add depth channel
+            self.lic = np.dstack([self.lic, np.zeros_like(self.lic[:, :, 0])])
         # transparent, white background
-        self.lic[..., 3] = 0.0
+        # self.lic[..., 3] = 0.0
 
         # get the xlim from the height image
         xlim = self.ax.get_xlim()
@@ -219,9 +238,13 @@ class Visualization():
         ucy_img = ucy_in_img[data['ravensburger_cells']]
         bl_img = data['bl'][data['ravensburger_cells']]
 
-        for c in self.ct_height.collections:
-            c.remove()
-        self.ct_height = self.ax.contour(warped_height, levels=(-6, -3, 0, 3, 6))
+        if not self.im_flow.get_visible():
+            try:
+                for c in self.ct_height.collections:
+                    c.remove()
+            except:
+                pass
+            self.ct_height = self.ax.contour(warped_height, levels=(-4.5, -1.5, 1.5, 4.5, 7.5))
 
         if data.get('debug'):
             for c in self.ct_zk.collections:
@@ -230,7 +253,7 @@ class Visualization():
             self.im_zk.set_data(zk_img)
             self.im_s1.set_data(np.ma.masked_less_equal(s1_img, bl_img))
 
-        scale = 20.0
+        scale = 40.0
         flow = np.dstack([ucx_img, ucy_img]) * scale
         self.lic = warp_flow(self.lic.astype('float32'), flow.astype('float32'))
         # fade out
@@ -239,7 +262,7 @@ class Visualization():
         self.lic[..., 3][self.lic[..., 3] < 0] = 0
         self.im_flow.set_data(self.lic)
 
-        for u, v in zip(np.random.random(8), np.random.random(8)):
+        for u, v in zip(np.random.random(4), np.random.random(4)):
             hue = np.random.random()
             rgb = matplotlib.colors.hsv_to_rgb((hue, 0.8, 1.0))
             rgb = (1.0, 1.0, 1.0)
@@ -250,19 +273,9 @@ class Visualization():
             if zk_img[int(v * HEIGHT), int(u * WIDTH)] > 0:
                 continue
             self.lic[r, c, :] = tuple(rgb) + (1, )
-        # and some dots at fixed locations
-        hues = [0.3, 0.5, 0.7, 0.9]
-        rgbs = matplotlib.colors.hsv_to_rgb([(hue, 0.5, 1.0) for hue in hues])
-        for u, v, rgb in zip(
-                [10, 10, WIDTH-10, WIDTH-10],
-                [100, HEIGHT-100, 100, HEIGHT-100],
-                rgbs
-                ):
-            # make sure outline has the same color
-            # create a little dot
-            r, c = skimage.draw.circle(v, u, 4, shape=(HEIGHT, WIDTH))
-            self.lic[r, c, :] = tuple(rgb) + (0.8, )
+        
         self.lic[bl_img >= s1_img, 3] = 0.0
+        self.lic[zk_img >= s1_img, 3] = 0.0
 
         # TODO: this can be faster, this also redraws axis
         # self.fig.canvas.draw()
