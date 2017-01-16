@@ -74,15 +74,20 @@ def record():
 def calibrate(schematization):
     """calibrate the sandbox by selecting both 4 points in box and in model"""
 
+    path = pathlib.Path('calibration.json').absolute()
     # raw images
     videos = video_images()
     raws = depth_images(raw=True)
     # start the model (changes directory)
     model = bmi.wrapper.BMIWrapper('dflowfm')
+    # this stores current path
+
+    # this changes directory
     schematization_path = pathlib.Path(schematization.name)
     model.initialize(str(schematization_path.absolute()))
 
-    calibration = Calibration(videos, raws, model)
+    
+    calibration = Calibration(path, videos, raws, model)
     calibration.run()
 
 @cli.command()

@@ -171,7 +171,9 @@ class PolygonInteractor(object):
 
 
 class Calibration(object):
-    def __init__(self, videos, raws, model):
+    def __init__(self, path, videos, raws, model):
+        # absolute path to calibration.json
+        self.path = path
         self.videos = videos
         self.raws = raws
         self.model = model
@@ -204,7 +206,7 @@ class Calibration(object):
         self.axes[1, 1].set_title("result")
 
     def save(self):
-        with open(str(self.curdir / 'calibration.json'), 'w') as f:
+        with open(str(self.path), 'w') as f:
             json.dump(self.result, f, indent=2, cls=NumpyEncoder)
 
     @property

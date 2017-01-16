@@ -165,7 +165,7 @@ class Visualization():
         if data.get('debug'):
             self.im_zk = self.ax.imshow(
                 zk_img,
-                cmap=terrajet,
+                cmap=terrajet2,
                 alpha=1,
                 vmin=data['z'][0],
                 vmax=data['z'][-1]
