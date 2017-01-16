@@ -18,6 +18,18 @@ from .sandbox_fm import (
 logger = logging.getLogger(__name__)
 
 
+class NumpyEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, np.integer):
+            return int(obj)
+        elif isinstance(obj, np.floating):
+            return float(obj)
+        elif isinstance(obj, np.ndarray):
+            return obj.tolist()
+        else:
+            return super(NumpyEncoder, self).default(obj)
+
+
 class PolygonInteractor(object):
     """
     An polygon editor.
@@ -193,7 +205,7 @@ class Calibration(object):
 
     def save(self):
         with open(str(self.curdir / 'calibration.json'), 'w') as f:
-            json.dump(self.result, f, indent=2)
+            json.dump(self.result, f, indent=2, cls=NumpyEncoder)
 
     @property
     def z(self):
