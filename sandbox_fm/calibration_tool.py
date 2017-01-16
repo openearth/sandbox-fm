@@ -255,7 +255,7 @@ class Calibration(object):
         }
         return result
 
-    def save_and_show_result(self, ax):
+    def show_result(self, ax):
         # we should have results by now
         # save the calibration info
         data = self.data
@@ -402,7 +402,8 @@ class Calibration(object):
                     self.height_points = list(reversed(self.height_points))
 
                 fig.canvas.mpl_disconnect(pid)
-                self.save_and_show_result(axes[1, 1])
+                self.save()
+                self.show_result(axes[1, 1])
 
 
         plt.ion()

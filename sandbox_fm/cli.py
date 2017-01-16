@@ -7,6 +7,14 @@ import json
 import functools
 import itertools
 
+try:
+    from itertools import izip as zip
+except ImportError:
+    # python3 has it builtin
+    pass
+
+
+
 import skimage.io
 import cv2
 import tqdm
@@ -182,7 +190,7 @@ def run(schematization):
         model.update(dt)
 
 
-    for i, (video, height) in enumerate(tqdm.tqdm(itertools.izip(videos, heights))):
+    for i, (video, height) in enumerate(tqdm.tqdm(zip(videos, heights))):
         update_delft3d_vars(data, model)
         # update kinect
         data['height'] = height
