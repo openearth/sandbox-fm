@@ -183,6 +183,7 @@ class Calibration(object):
         self.img_points = []
         self.z_values = []
         # define fixed box coordinate system (what will be on the screen)
+        # 0 at bottom
         self.box = np.array([
             [0, 0],
             [640, 0],
@@ -195,6 +196,11 @@ class Calibration(object):
         self.make_window()
         # get data from model
         update_delft3d_initial_vars(self.data, self.model)
+        if self.path.exists():
+            with open(str(self.path)) as f:
+                self.old_calibration = json.load(f)
+        else:
+            self.old_calibration = {}
 
     def make_window(self):
         self.fig, self.axes = plt.subplots(2, 2)
@@ -323,13 +329,17 @@ class Calibration(object):
         dy = ymax - ymin
         ymin += 0.1 * dy
         ymax -= 0.1 * dy
-        if points == 4:
-            # same order as self.box
-            xs = [xmin, xmax, xmax, xmin]
-            ys = [ymin, ymin, ymax, ymax]
-        elif points == 2:
-            xs = [xmin, xmax]
-            ys = [ymin, ymax]
+        if isinstance(points, int):
+            if points == 4:
+                # same order as self.box
+                xs = [xmin, xmax, xmax, xmin]
+                ys = [ymin, ymin, ymax, ymax]
+            elif points == 2:
+                xs = [xmin, xmax]
+                ys = [ymin, ymax]
+        elif isinstance(points, list):
+            xs = [point[0] for point in points]
+            ys = [point[1] for point in points]
         else:
             raise ValueError('I only understand 2 or 4 points')
 
@@ -342,7 +352,7 @@ class Calibration(object):
         )
         ax.add_patch(poly)
         markevery = None
-        if points == 2:
+        if len(xs) == 2:
             markevery = [1]
         p = PolygonInteractor(ax, poly, markevery=markevery)
         return p
@@ -368,9 +378,13 @@ class Calibration(object):
             edgecolor='none'
         )
 
-        img_poly = self.add_edit_polygon(axes[0, 0])
-        model_poly = self.add_edit_polygon(axes[0, 1])
+        img_points = self.old_calibration.get("img_points", 4)
+        img_poly = self.add_edit_polygon(axes[0, 0], points=img_points)
+        model_points = self.old_calibration.get("model_points", 4)
+        model_poly = self.add_edit_polygon(axes[0, 1], points=model_points)
+        height_points = self.old_calibration.get("height_points", 2)
         height_poly = self.add_edit_polygon(axes[1, 0], points=2)
+        
 
         # keep track of the selected points
 
