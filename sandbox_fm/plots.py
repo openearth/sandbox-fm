@@ -61,7 +61,7 @@ def process_events(evt, data, model, vis):
                     vis.lic,
                     np.ones_like(vis.lic[:, :, 0])
                 ])
-            vis.im_flow.set_visible(not vis.im_flow.get_visible())
+        vis.im_flow.set_visible(not vis.im_flow.get_visible())
 
 class Visualization():
     def __init__(self):
@@ -244,7 +244,7 @@ class Visualization():
                     c.remove()
             except:
                 pass
-            self.ct_height = self.ax.contour(warped_height, levels=(-4.5, -1.5, 1.5, 4.5, 7.5))
+            self.ct_height = self.ax.contour(warped_height, levels=np.linspace(-7, 10, num=10))
 
         if data.get('debug'):
             for c in self.ct_zk.collections:
@@ -273,6 +273,17 @@ class Visualization():
             if zk_img[int(v * HEIGHT), int(u * WIDTH)] > 0:
                 continue
             self.lic[r, c, :] = tuple(rgb) + (1, )
+
+        # for u in range(0, 300, 30):
+        #     for v in range(0, 400, 10):
+        #         r, c = skimage.draw.circle(v, u, 2, shape=(HEIGHT, WIDTH))
+        #         rgb = (0.1, 0.2, 1.0)
+        #         # Don't plot on high cellsc
+        #         if zk_img[int(v ), int(u )] > 0:
+        #             continue
+        #         self.lic[r, c, :] = tuple(rgb) + (1, )
+                
+            
         
         self.lic[bl_img >= s1_img, 3] = 0.0
         self.lic[zk_img >= s1_img, 3] = 0.0
