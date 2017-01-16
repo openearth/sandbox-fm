@@ -20,9 +20,41 @@ Sandbox Delft3D Flexible Mesh
 
 Sandbox combined with a Delft3D Flexbile Mesh simulation
 
-
 * Free software: GNU General Public License v3
 * Documentation: https://sandbox-fm.readthedocs.io.
+
+Install
+-------
+After you have created a sandbox you can hook up the software. Before you can use the software you have to install some prerequisites.
+These include the following packages:
+* python (tested with 2.7 and 3.5)
+
+You preferably want to install these from the package manager (tested with ubuntu and osx + macports):
+* libfreenect (available by default in linux and there are instructions for use with .. _macports: macports, make sure you build the python bindings, it is also available in homebrew)
+* opencv (available in linux and osx (macports/homebrew)
+
+Several python libraries:
+* pip install -r requirements.txt
+
+Running
+-------
+
+sandbox-fm --help
+sandbox-fm calibrate  calibrate the sandbox by selecting both 4...
+sandbox-fm record     record 10 frames, for testing
+sandbox-fm run        Console script for sandbox_fm
+sandbox-fm view       view raw kinect images
+
+
+Calibration
+-----------
+
+Calibration transforms between the different quads.
+
+- Photo from kinect (video)
+- Depth from kinect (img)
+- Beamer (box, default 640x480)
+- Model extract (model)
 
 
 Features
@@ -37,4 +69,4 @@ This package was created with Cookiecutter_ and the `audreyr/cookiecutter-pypack
 
 .. _Cookiecutter: https://github.com/audreyr/cookiecutter
 .. _`audreyr/cookiecutter-pypackage`: https://github.com/audreyr/cookiecutter-pypackage
-
+.. _macports: https://github.com/OpenKinect/libfreenect#fetch-build
