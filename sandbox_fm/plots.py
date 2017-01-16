@@ -253,7 +253,7 @@ class Visualization():
             self.im_zk.set_data(zk_img)
             self.im_s1.set_data(np.ma.masked_less_equal(s1_img, bl_img))
 
-        scale = 40.0
+        scale = data.get('scale', 10.0)
         flow = np.dstack([ucx_img, ucy_img]) * scale
 
         # compute new flow timestep
