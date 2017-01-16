@@ -130,7 +130,9 @@ def run(schematization):
     update_delft3d_initial_vars(data, model)
     dt = model.get_time_step()
 
+    # compute the model bounding box that is shown on the screen
     model_bbox = matplotlib.path.Path(data['model_points'])
+    # create an index to see which points/cells are visualized
     data['node_in_box'] = model_bbox.contains_points(np.c_[data['xk'], data['yk']])
     data['cell_in_box'] = model_bbox.contains_points(np.c_[data['xzw'], data['yzw']])
 
@@ -143,13 +145,17 @@ def run(schematization):
     xzw_box, yzw_box = transform(data['xzw'], data['yzw'], data['model2box'])
     xk_box, yk_box = transform(data['xk'], data['yk'], data['model2box'])
     print(xzw_box.min(), xzw_box.max())
+
+    # for transformed coordinates see if they are on the screen
     data['cell_in_img_bbox'] = img_bbox.contains_points(np.c_[xzw_box, yzw_box])
     data['node_in_img_bbox'] = img_bbox.contains_points(np.c_[xk_box, yk_box])
+
     if data.get('debug'):
         plt.scatter(data['xzw'], data['yzw'], c=data['cell_in_img_bbox'], edgecolor='none')
         plt.show()
         plt.scatter(data['xzw'], data['yzw'], c=data['cell_in_box'], edgecolor='none')
         plt.show()
+
     # images
     heights = calibrated_height_images(calibration["z_values"], calibration["z"])
     videos = video_images()

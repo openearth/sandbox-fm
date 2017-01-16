@@ -255,6 +255,8 @@ class Visualization():
 
         scale = 40.0
         flow = np.dstack([ucx_img, ucy_img]) * scale
+
+        # compute new flow timestep
         self.lic = warp_flow(self.lic.astype('float32'), flow.astype('float32'))
         # fade out
         # self.lic[..., 3] -= 0.01
@@ -262,9 +264,8 @@ class Visualization():
         self.lic[..., 3][self.lic[..., 3] < 0] = 0
         self.im_flow.set_data(self.lic)
 
+        # put in white dots
         for u, v in zip(np.random.random(4), np.random.random(4)):
-            hue = np.random.random()
-            rgb = matplotlib.colors.hsv_to_rgb((hue, 0.8, 1.0))
             rgb = (1.0, 1.0, 1.0)
             # make sure outline has the same color
             # create a little dot
