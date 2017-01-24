@@ -1,1 +1,1 @@
--e git@github.com:openearth/bmi-python.git
+git+git://github.com/openearth/bmi-python.git
