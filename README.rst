@@ -40,7 +40,9 @@ Several python libraries:
 Windows Install
 ----------------
 - Download anaconda (3.5)
+- Install git
 - Start the anaconda command window (from your start menu)
+- Download the source code (`git clone git@github.com:openearth/sandbox-fm.git`)
 - Update anaconda: `conda update conda`
 - Create an environment: `conda create --name main python=3`
 - Activate the new environment `activate main`
