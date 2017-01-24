@@ -6,10 +6,8 @@ import functools
 
 
 import matplotlib.pyplot as plt
-import freenect
 import numpy as np
 import scipy.interpolate
-
 from .calibrate import HEIGHT, WIDTH, depth2xyzuv
 
 logger = logging.getLogger(__name__)
@@ -40,12 +38,19 @@ class MockupFreenect(object):
         return arr, 3
 
 
-# try if we can read images, use mockup if not
-test_depth = freenect.sync_get_depth()
-if test_depth is None:
-    logger.warn("No kinect found, using test images")
+HAVE_FREENECT = False
+try:
+    import freenect
+    test_depth = freenect.sync_get_depth()
+    if test_depth is not None:
+        HAVE_FREENECT = True
+except ImportError:
+    pass
+
+if not HAVE_FREENECT:
+    logging.warn('Using mockup keenect')
+    # try if we can read images, use mockup if not
     freenect = MockupFreenect()
-del test_depth
 
 
 def uint11_to_uint8(arr):
