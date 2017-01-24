@@ -1,0 +1,2 @@
+-e git+git@github.com:openearth/sandbox-fm.git
+-e git@github.com:openearth/bmi-python.git
