@@ -36,6 +36,19 @@ You preferably want to install these from the package manager (tested with ubunt
 Several python libraries:
 * pip install -r requirements.txt
 
+
+Windows Install
+----------------
+- Download anaconda (3.5)
+- Start the anaconda command window (from your start menu)
+- Update anaconda: `conda update conda`
+- Create an environment: `conda create --name main python=3`
+- Activate the new environment `activate main`
+- Install development dependencies `pip install -r requirements_dev.txt`
+- Install dependencies `pip install -r requirements.txt`
+- Install the sandbox-fm software in develop mode `pip install -e .` (from the sandbox-fm directory)
+- Make sure the dflowfm.dll is somewhere in your PATH
+
 Running
 -------
 
