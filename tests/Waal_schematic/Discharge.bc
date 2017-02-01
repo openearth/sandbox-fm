@@ -1,0 +1,11 @@
+[forcing]
+Name                            = Discharge_0001
+Function                        = astronomic
+Quantity                        = astronomic component
+Unit                            = -
+Quantity                        = dischargebnd amplitude
+Unit                            = m³/s
+Quantity                        = dischargebnd phase
+Unit                            = deg
+A0  2000  0
+

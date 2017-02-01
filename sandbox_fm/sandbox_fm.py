@@ -52,21 +52,19 @@ def update_delft3d_vars(data, model):
             data[name] = arr[:data['ndxi']]
             # data should be off consistent shape now
         else:
-            raise ValueError("unexpected data shape %s for variable %s" % (arr.shape, name) )
+            raise ValueError("unexpected data shape %s for variable %s" % (arr.shape, name))
     data['is_wet'] = data['s1'] > data['bl']
 
 
-
-
 def compute_delta_zk(data, idx):
-    """compute the bathymetry change, normalized a bit and only for cells in idx"""
+    """compute the bed level change, normalized a bit and only for cells in idx"""
 
     height = data['height']
 
     xk_box, yk_box = transform(data['xk'], data['yk'], data['model2box'])
 
-    u = np.clip(np.round(yk_box[idx]).astype('int'), 0, HEIGHT-1)
-    v = np.clip(np.round(xk_box[idx]).astype('int'), 0, WIDTH-1)
+    u = np.clip(np.round(yk_box[idx]).astype('int'), 0, HEIGHT - 1)
+    v = np.clip(np.round(xk_box[idx]).astype('int'), 0, WIDTH - 1)
     # define the interpolation function from depth to meters
     # depth2meters = scipy.interpolate.interp1d([0, 127, 255], [-8, 0, 12])
 
@@ -75,6 +73,7 @@ def compute_delta_zk(data, idx):
 
     delta_zk = node_height - data['zk'][idx]
     return delta_zk
+
 
 def compute_delta_s1(data, idx):
     """compute the bathymetry change, normalized a bit and only for cells in idx"""

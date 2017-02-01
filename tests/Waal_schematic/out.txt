@@ -1,0 +1,40 @@
+** INFO   : Opened file : ISOCOLOUR.hls
+** INFO   : Using Local FileISOCOLOUR.hls
+** INFO   : Closed file : ISOCOLOUR.hls
+** INFO   : Opened file : ISOCOLOUR.hls
+** INFO   : Using Local FileISOCOLOUR.hls
+** INFO   : Closed file : ISOCOLOUR.hls
+** INFO   :  MAXIMUM NUMBER OF LINKS         :            2
+** INFO   :  MAXIMUM NUMBER OF NODES         :            0
+** INFO   :  RESOLUTION GRAPHICS SCREEN      :         1600         990
+** INFO   :  RESOLUTION TEXT     SCREEN      :          200          66
+** INFO   :  NUMBER OF COLOURS AVAILABLE     :          256
+** INFO   : Initializing flow model geometry...
+** WARNING: Could not read net cells from NetCDF file '149x100_net.nc' (is not critical). Details follow:
+** WARNING: NetCDF error: Variable not found (NetElemNode)
+** WARNING: NetCDF error: Variable not found (NetElemLink)
+** WARNING: NetCDF error: Invalid dimension id or name (nNetElemMaxNode)
+** INFO   : Opened file : FlowFM.ext
+** INFO   : Opened file : Discharge.pli
+** INFO   : Closed file : Discharge.pli
+** INFO   : boundary: 'Discharge.pli' opened 66 cells.
+** INFO   : dischargebnd Discharge.pli      66 nr of open bndcells
+** INFO   : Opened file : WaterLevel.pli
+** INFO   : Closed file : WaterLevel.pli
+** INFO   : boundary: 'WaterLevel.pli' opened 66 cells.
+** INFO   : waterlevelbnd WaterLevel.pli      66 nr of open bndcells
+** INFO   : Done initializing flow model geometry.
+** INFO   : Start initializing external forcings...
+** INFO   : External Forcing or Initialising 'frictioncoefficient' from file 'frictioncoefficient_Set_value_1.pol'.
+** INFO   : Opened file : frictioncoefficient_Set_value_1.pol
+** INFO   : Closed file : frictioncoefficient_Set_value_1.pol
+** INFO   : Opened file : DFM_interpreted_values_frictioncoefficient_Set_value_1.xyz
+** INFO   : Closed file : DFM_interpreted_values_frictioncoefficient_Set_value_1.xyz
+** INFO   : Closed file : FlowFM.ext
+** INFO   : No wind, so waves is switched off
+** INFO   : Done initializing external forcings.
+** INFO   : nogauss , nocg :           3404          3262
+** INFO   : Modelinit finished   at: 20:15:46, 26-01-2017
+** INFO   : ** Model initialization was successful **
+** INFO   : * Active Model definition:
+** INFO   : **

@@ -36,13 +36,28 @@ You preferably want to install these from the package manager (tested with ubunt
 Several python libraries:
 * pip install -r requirements.txt
 
+
+Windows Install
+----------------
+- Download anaconda (3.5)
+- Install git
+- Start the anaconda command window (from your start menu)
+- Download the source code (`git clone git@github.com:openearth/sandbox-fm.git`)
+- Update anaconda: `conda update conda`
+- Create an environment: `conda create --name main python=3`
+- Activate the new environment `activate main`
+- Install development dependencies `pip install -r requirements_dev.txt`
+- Install dependencies `pip install -r requirements.txt`
+- Install the sandbox-fm software in develop mode `pip install -e .` (from the sandbox-fm directory)
+- Make sure the dflowfm.dll is somewhere in your PATH
+
 Running
 -------
 
 sandbox-fm --help
-sandbox-fm calibrate  calibrate the sandbox by selecting both 4...
+sandbox-fm calibrate  calibrate the sandbox by selecting a quad in the box, a quad in the model and a high and low point.
 sandbox-fm record     record 10 frames, for testing
-sandbox-fm run        Console script for sandbox_fm
+sandbox-fm run        run the sandbox program.
 sandbox-fm view       view raw kinect images
 
 
@@ -56,6 +71,11 @@ Calibration transforms between the different quads.
 - Beamer (box, default 640x480)
 - Model extract (model)
 
+In the top left window select the extent of the beamer.
+In the top right window select a corresponding extent in the model.
+In the bottom left model select a low and a high point.
+Press [ENTER].
+Done.
 
 Features
 --------

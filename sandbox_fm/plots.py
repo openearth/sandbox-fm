@@ -4,11 +4,12 @@ import itertools
 import cv2
 import matplotlib.pyplot as plt
 import matplotlib
-import cmocean.cm
-import cmocean
+# import cmocean
 import scipy.interpolate
 import numpy as np
 import skimage.draw
+import sys
+import time
 
 from .cm import terrajet2
 from .sandbox_fm import compute_delta_zk
@@ -25,19 +26,20 @@ logger = logging.getLogger(__name__)
 
 
 def warp_flow(img, flow):
-    """tansform image with flow field"""
+    """transform image with flow field"""
     h, w = flow.shape[:2]
     flow = -flow
     flow[:, :, 0] += np.arange(w)
     flow[:, :, 1] += np.arange(h)[:, np.newaxis]
-    res = cv2.remap(img, flow, None, cv2.INTER_LINEAR, borderValue=(1.0, 1.0, 1.0, 0.0))
+    res = cv2.remap(img, flow, None, cv2.INTER_LINEAR,
+                    borderValue=(1.0, 1.0, 1.0, 0.0))
     return res
 
 
 def process_events(evt, data, model, vis):
     if not isinstance(evt, matplotlib.backend_bases.KeyEvent):
         return
-    if evt.key == 'b':
+    if evt.key == 'b':  # Set bed level to current camera bed level
         # data['bl'][idx] += compute_delta_bl(data, idx)
         idx = np.logical_and(data['node_in_box'], data['node_in_img_bbox'])
         zk_copy = data['zk'].copy()
@@ -47,13 +49,18 @@ def process_events(evt, data, model, vis):
         for i in np.where(idx)[0]:
             if data['zk'][i] != zk_copy[i]:
                 # TODO: bug in zk
-                model.set_var_slice('zk', [i+1], [1], zk_copy[i:i+1])
+                model.set_var_slice('zk', [i + 1], [1], zk_copy[i:i + 1])
+    if evt.key == 'r':  # Reset to original bed level
+        for i in range(0, len(data['zk_original'])):
+            if data['zk'][i] != data['zk_original'][i]:
+                model.set_var_slice('zk', [i + 1], [1],
+                                    data['zk_original'][i:i + 1])
     if evt.key == 'c':
         if not vis.im_flow.get_visible():
             vis.lic[:, :, :3] = 1.0
             vis.lic[:, :, 3] = 0.0
             vis.lic = cv2.warpPerspective(
-                data['video'].astype('float32')/255.0,
+                data['video'].astype('float32') / 255.0,
                 np.array(data['img2box']),
                 data['height'].shape[::-1]
             )
@@ -64,6 +71,21 @@ def process_events(evt, data, model, vis):
                     np.ones_like(vis.lic[:, :, 0])
                 ])
         vis.im_flow.set_visible(not vis.im_flow.get_visible())
+    if evt.key == 'q':  # Quit
+        sys.exit()
+    if evt.key == '1':  # Visualisation preset 1. Show bed level from camera
+        vis.im_s1.set_visible(False)
+        vis.im_height.set_visible(True)
+        vis.im_zk.set_visible(False)
+    if evt.key == '2':  # Visualisation preset 2. Show water level in model
+        vis.im_s1.set_visible(True)
+        vis.im_height.set_visible(False)
+        vis.im_zk.set_visible(False)
+    if evt.key == '3':  # Visualisation preset 3. Show bed level in model
+        vis.im_s1.set_visible(False)
+        vis.im_height.set_visible(False)
+        vis.im_zk.set_visible(True)
+
 
 class Visualization():
     def __init__(self):
@@ -93,8 +115,6 @@ class Visualization():
             np.array(data['img2box']),
             data['height'].shape[::-1]
         )
-
-
 
         # rgba image
         self.lic = np.ones(
@@ -152,7 +172,7 @@ class Visualization():
         bl_img = data['bl'][data['ravensburger_cells']]
         zk_img = data['zk'][data['ravensburger_nodes']]
 
-
+        # Plot scanned height
         self.im_height = self.ax.imshow(
             warped_height,
             'jet', 
@@ -160,40 +180,57 @@ class Visualization():
  #           cmap=summer,
             alpha=1,
             vmin=data['z'][0],
-            vmax=data['z'][-1]
+            vmax=data['z'][-1],
+            visible=False
         )
 
-        self.ct_height = self.ax.contour(warped_height, colors='k')
+        # Plot waterdepth
+        self.im_s1 = self.ax.imshow(
+            (s1_img - bl_img),
+            cmap='Blues',
+            alpha=1,
+            vmin=0,
+            vmax=3,
+            visible=True
+        )
+        # self.fig.colorbar(self.im_s1)
+        # self.im_s1.colorbar(self.im_s1, inline=1, fontsize=10)
 
+        # Plot bed level
+        self.im_zk = self.ax.imshow(
+            bl_img,
+            cmap=terrajet2,  # 'gist_earth',
+            alpha=1,
+            vmin=data['z'][0],
+            vmax=data['z'][-1],
+            visible=False
+        )
+
+        # Plot contours of scanned height
+        # self.ct_height = self.ax.contour(warped_height,
+        #     colors='k')
+
+        # Plot contours of height in model
+        # self.ct_zk = self.ax.contour(
+        #     zk_img,
+        #     cmap=terrajet2,
+        #     alpha=1,
+        #     vmin=data['z'][0],
+        #     vmax=data['z'][-1]
+        # )
 
         if data.get('debug'):
-            self.im_zk = self.ax.imshow(
-                zk_img,
-                cmap=terrajet2,
-                alpha=1,
-                vmin=data['z'][0],
-                vmax=data['z'][-1]
-            )
-
             self.ct_zk = self.ax.contour(zk_img, colors='k')
             self.ax.clabel(self.ct_zk, inline=1, fontsize=10)
 
-
-            self.im_s1 = self.ax.imshow(
-                np.ma.masked_less_equal(s1_img, bl_img),
-                cmap=cmocean.cm.deep,
-                alpha=0.2,
-                vmin=1.3,
-                vmax=1.7
-            )
-
+        # Plot particles
         self.im_flow = self.ax.imshow(
             self.lic,
             alpha=0.8,
-            interpolation='none'
+            interpolation='none',
+            visible=True
         )
-        # don't show at start
-        self.im_flow.set_visible(False)
+
         # self.ax.set_xlim(xlim[0] + 80, xlim[1] - 80)
         # self.ax.set_ylim(ylim[0] + 80, ylim[1] - 80)
         self.ax.axis('tight')
@@ -204,16 +241,23 @@ class Visualization():
 
     #@profile
     def update(self, data):
-
         i = next(self.counter)
+
+        #############################################
+        # Update camera visualisation
         warped_height = cv2.warpPerspective(
-            data['height'].filled(0),
+            data['height'],
             np.array(data['img2box']),
             data['height'].shape[::-1]
         )
 
-        self.im_height.set_data(data['height'])
+        # Update scanned height
+        self.im_height.set_data(warped_height)
 
+        #############################################
+        # Update model parameters
+        #
+        # Transform velocity
         xzw_box, yzw_box = transform(
             data['xzw'],
             data['yzw'],
@@ -229,59 +273,82 @@ class Visualization():
         ucx_in_img = xzw_ucx_box - xzw_box
         ucy_in_img = yzw_ucy_box - yzw_box
 
-        warped_height = cv2.warpPerspective(
-            data['height'],
-            np.array(data['img2box']),
-            data['height'].shape[::-1]
-        )
-        self.im_height.set_data(warped_height)
+        # Convert to simple arrays
         zk_img = data['zk'][data['ravensburger_nodes']]
-
         s1_img = data['s1'][data['ravensburger_cells']]
         ucx_img = ucx_in_img[data['ravensburger_cells']]
         ucy_img = ucy_in_img[data['ravensburger_cells']]
         bl_img = data['bl'][data['ravensburger_cells']]
 
-        if not self.im_flow.get_visible():
-            try:
-                for c in self.ct_height.collections:
-                    c.remove()
-            except:
-                pass
-            self.ct_height = self.ax.contour(warped_height, levels=np.linspace(-7, 10, num=10))
+        # Update raster plots
+        self.im_s1.set_data(s1_img - bl_img)
+        self.im_zk.set_data(bl_img)
+
+        # # Update contour plots
+        # # When particles get disabled, update contour plot
+        # if not self.im_flow.get_visible():
+        #     try:
+        #         for c in self.ct_height.collections:
+        #             c.remove()
+        #     except:
+        #         pass
+        #     self.ct_height = self.ax.contour(
+        #         warped_height,
+        #         levels=np.linspace(-7, 10, num=10)
+        #     )
+        #     self.ct_zk = self.ax.contour(
+        #         warped_height,
+        #         levels=np.linspace(-7, 10, num=10)
+        #     )
 
         if data.get('debug'):
             for c in self.ct_zk.collections:
                 c.remove()
-            self.ct_zk = plt.contour(zk_img)
             self.im_zk.set_data(zk_img)
             self.im_s1.set_data(np.ma.masked_less_equal(s1_img, bl_img))
 
+        #################################################
+        # Compute liquid added to the model
+        #
+        # Multiplier on the flow velocities
         scale = data.get('scale', 10.0)
         flow = np.dstack([ucx_img, ucy_img]) * scale
 
         # compute new flow timestep
-        self.lic = warp_flow(self.lic.astype('float32'), flow.astype('float32'))
+        self.lic = warp_flow(self.lic.astype('float32'),
+                             flow.astype('float32'))
         # fade out
         # self.lic[..., 3] -= 0.01
         # but not < 0
         self.lic[..., 3][self.lic[..., 3] < 0] = 0
+
+        # Update liquid
         self.im_flow.set_data(self.lic)
 
-        # put in white dots
+        # Put in new white dots (to be plotted next time step)
         for u, v in zip(np.random.random(4), np.random.random(4)):
             rgb = (1.0, 1.0, 1.0)
             # make sure outline has the same color
             # create a little dot
-            r, c = skimage.draw.circle(v * HEIGHT, u * WIDTH, 4, shape=(HEIGHT, WIDTH))
-            # Don't plot on high cells
-            if zk_img[int(v * HEIGHT), int(u * WIDTH)] > 0:
+            r, c = skimage.draw.circle(v * HEIGHT, u * WIDTH, 4,
+                                       shape=(HEIGHT, WIDTH))
+            # Don't plot on (nearly) dry cells
+            if (s1_img[int(v * HEIGHT), int(u * WIDTH)] - zk_img[int(v * HEIGHT), int(u * WIDTH)]) < 0.5:
                 continue
+            # if zk_img[int(v * HEIGHT), int(u * WIDTH)] > 0:
+            #     continue
             self.lic[r, c, :] = tuple(rgb) + (1, )
 
+        # Remove liquid on dry places
         self.lic[bl_img >= s1_img, 3] = 0.0
         self.lic[zk_img >= s1_img, 3] = 0.0
+        self.lic[(s1_img - bl_img) < 0.05, 3] -= 0.01
+        self.lic[(s1_img - zk_img) < 0.05, 3] -= 0.01
 
+
+        #################################################
+        # Draw updated canvas
+        #
         # TODO: this can be faster, this also redraws axis
         # self.fig.canvas.draw()
         # for artist in [self.im_zk, self.im_s1, self.im_flow]:
@@ -293,3 +360,4 @@ class Visualization():
             self.fig.canvas.flush_events()
         except NotImplementedError:
             pass
+
