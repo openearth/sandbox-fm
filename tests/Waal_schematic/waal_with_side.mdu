@@ -9,7 +9,7 @@ GuiVersion        = 1.2.0.36055
 AutoStart         = 0
 
 [geometry]
-NetFile           = 300x200_net.nc
+NetFile           = 300x200_2_net.nc
 BathymetryFile    =
 DryPointsFile     =
 WaterLevIniFile   =
@@ -135,9 +135,9 @@ Gammax            = 1
 [time]
 RefDate           = 20010101
 Tzone             = 0
-DtUser            = 10
+DtUser            = 1
 DtNodal           =
-DtMax             = 10
+DtMax             = 1
 DtInit            = 1
 Tunit             = S
 TStart            = 0
