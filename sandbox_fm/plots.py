@@ -71,7 +71,7 @@ def process_events(evt, data, model, vis):
                     np.ones_like(vis.lic[:, :, 0])
                 ])
         vis.im_flow.set_visible(not vis.im_flow.get_visible())
-    if evt.key == 'q':  # Quit
+    if evt.key == 'q':  # Quit (on windows)
         sys.exit()
     if evt.key == '1':  # Visualisation preset 1. Show bed level from camera
         vis.im_s1.set_visible(False)
