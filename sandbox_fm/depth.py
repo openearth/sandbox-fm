@@ -34,7 +34,7 @@ class MockupFreenect(object):
     def sync_get_depth(self):
         """keep yielding depths"""
         depth = next(self.depths)
-        arr = np.load(str(depth))
+        arr = np.load(str(depth), encoding='latin1')
         return arr, 3
 
 
