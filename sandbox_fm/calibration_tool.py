@@ -365,8 +365,8 @@ class Calibration(object):
         raw = next(self.raws)
 
         # show the depth and video in the left window
-        axes[0, 0].imshow(raw, cmap='viridis')
-        axes[0, 0].imshow(video, cmap='Greys', alpha=0.5)
+        
+        axes[0, 0].imshow(raw) #, cmap='jet', vmin=650, vmax=800)
         axes[1, 0].imshow(raw)
         # convert to array we can feed into opencv
         data = self.data

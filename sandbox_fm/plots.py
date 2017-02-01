@@ -4,6 +4,7 @@ import itertools
 import cv2
 import matplotlib.pyplot as plt
 import matplotlib
+import cmocean.cm
 import cmocean
 import scipy.interpolate
 import numpy as np
@@ -42,6 +43,7 @@ def process_events(evt, data, model, vis):
         zk_copy = data['zk'].copy()
         zk_copy[idx] += compute_delta_zk(data, idx)
         # replace the part that changed
+        print(np.where(idx))
         for i in np.where(idx)[0]:
             if data['zk'][i] != zk_copy[i]:
                 # TODO: bug in zk
@@ -153,7 +155,9 @@ class Visualization():
 
         self.im_height = self.ax.imshow(
             warped_height,
-            cmap=terrajet2,
+            'jet', 
+            #cmap=terrajet2,
+ #           cmap=summer,
             alpha=1,
             vmin=data['z'][0],
             vmax=data['z'][-1]
@@ -283,7 +287,7 @@ class Visualization():
         # for artist in [self.im_zk, self.im_s1, self.im_flow]:
         #     self.ax.draw_artist(artist)
         # self.fig.canvas.blit(self.ax.bbox)
-        self.ax.redraw_in_frame()
+        # self.ax.redraw_in_frame()
         # interact with window and click events
         try:
             self.fig.canvas.flush_events()

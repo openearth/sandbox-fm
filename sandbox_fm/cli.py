@@ -61,7 +61,7 @@ def record():
     """record 10 frames, for testing"""
     videos = video_images()
     raws = depth_images(raw=True)
-    for i, (video, depth, raw) in enumerate(zip(videos, depths, raws)):
+    for i, (video, raw) in enumerate(zip(videos, raws)):
         skimage.io.imsave("video_%06d.png" % (i, ), video)
         raw.dump("raw_%06d.npy" % (i, ))
         if i > 5:
