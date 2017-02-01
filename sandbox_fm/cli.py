@@ -13,10 +13,8 @@ except ImportError:
     # python3 has it builtin
     pass
 
-
-
 import skimage.io
-import cv2
+import cv2    
 import tqdm
 import click
 import numpy as np
@@ -25,7 +23,13 @@ import matplotlib.backend_bases
 import matplotlib.pyplot as plt
 
 import bmi.wrapper
-import mpi4py.MPI
+
+HAVE_MPI = False
+try:
+    import mpi4py.MPI
+    HAVE_MPI = True
+except ImportError:
+    pass
 
 from .depth import (
     depth_images,
@@ -46,11 +50,14 @@ from .sandbox_fm import (
     update_delft3d_vars
 )
 
-# initialize mpi
-mpi4py.MPI.COMM_WORLD
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
+# initialize mpi
+if HAVE_MPI:
+    mpi4py.MPI.COMM_WORLD
+else:
+    logging.warn('MPI not initialized')
 
 @click.group()
 def cli():
@@ -179,6 +186,7 @@ def run(schematization):
     data['height'] = height.copy()
     data['height'] = height
     data['video'] = video
+    data['zk_original']=data['zk'].copy()
 
 
     vis = Visualization()
@@ -191,23 +199,33 @@ def run(schematization):
     )
 
     # start model and run for a bit
-    for i in range(10):
+    for i in range(5):
         model.update(dt)
 
 
     for i, (video, height) in enumerate(tqdm.tqdm(zip(videos, heights))):
+
+        tic = time.time()
+        # Get data from model
         update_delft3d_vars(data, model)
         # update kinect
         data['height'] = height
         data['video'] = video
+        toc = time.time()
+        time_get=toc-tic
 
         # update visualization
+        tic = time.time()
         vis.update(data)
+        toc = time.time()
+        time_vis=toc-tic
+
         # update model
         tic = time.time()
         model.update(dt)
         toc = time.time()
-        print(toc - tic)
+        time_model=toc-tic
+        print('get',time_get,';vis',time_vis,';model',time_model)
 
 if __name__ == "__main__":
     main()
