@@ -40,15 +40,15 @@ Several python libraries:
 Windows Install
 ----------------
 - Download anaconda (3.5)
-- Install git
-- Start the anaconda command window (from your start menu)
-- Download the source code (`git clone git@github.com:openearth/sandbox-fm.git`)
-- Update anaconda: `conda update conda`
-- Create an environment: `conda create --name main python=3`
-- Activate the new environment `activate main`
-- Install development dependencies `pip install -r requirements_dev.txt`
-- Install dependencies `pip install -r requirements.txt`
+- Start the anaconda command window (from your start menu). If you do not have adminstrator rights (%windir%\system32\cmd.exe "/K" "C:\Program Files\Anaconda3\Scripts\activate.bat" "C:\Program Files\Anaconda3")
+- conda update conda 
+- conda create --name main --file package-list-win.txt
+- activate main  (You should now see a (main) at the start of your command line)
+- conda install -c https://conda.binstar.org/menpo opencv3
 - Install the sandbox-fm software in develop mode `pip install -e .` (from the sandbox-fm directory)
+- pip install tqdm
+- pip install -r requirements.txt
+- pip install cmocean
 - Make sure the dflowfm.dll is somewhere in your PATH
 
 Running
