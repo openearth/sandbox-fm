@@ -183,10 +183,10 @@ def run(schematization):
     height = next(heights)
     video = next(videos)
 
-    data['height'] = height.copy()
     data['height'] = height
     data['video'] = video
     data['zk_original']=data['zk'].copy()
+    data['height_original']=data['height'].copy()
 
 
     vis = Visualization()
@@ -199,8 +199,8 @@ def run(schematization):
     )
 
     # start model and run for a bit
-    for i in range(5):
-        model.update(dt)
+    # for i in range(5):
+    #     model.update(dt)
 
 
     for i, (video, height) in enumerate(tqdm.tqdm(zip(videos, heights))):

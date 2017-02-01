@@ -7,5 +7,5 @@ Quantity                        = waterlevelbnd amplitude
 Unit                            = m
 Quantity                        = waterlevelbnd phase
 Unit                            = deg
-A0  5.5  0
+A0  5.0  0
 
