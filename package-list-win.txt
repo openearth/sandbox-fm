@@ -1,0 +1,34 @@
+# This file may be used to create an environment using:
+# $ conda create --name main --file package-list.txt
+# platform: win-64
+bzip2=1.0.6=vc14_3
+cycler=0.10.0=py35_0
+decorator=4.0.11=py35_0
+freetype=2.5.5=vc14_2
+icu=57.1=vc14_0
+jpeg=9b=vc14_0
+libpng=1.6.27=vc14_0
+libtiff=4.0.6=vc14_3
+matplotlib=2.0.0=np111py35_0
+mkl=2017.0.1=0
+networkx=1.11=py35_0
+numpy=1.11.3=py35_0
+openssl=1.0.2j=vc14_0
+pillow=4.0.0=py35_0
+pip=9.0.1=py35_1
+pyparsing=2.1.4=py35_0
+pyqt=5.6.0=py35_2
+python=3.5.2=0
+python-dateutil=2.6.0=py35_0
+pytz=2016.10=py35_0
+pywin32=220=py35_2
+qt=5.6.2=vc14_3
+scikit-image=0.12.3=np111py35_1
+scipy=0.18.1=np111py35_1
+setuptools=27.2.0=py35_1
+sip=4.18=py35_0
+six=1.10.0=py35_0
+tk=8.5.18=vc14_0
+vs2015_runtime=14.0.25123=0
+wheel=0.29.0=py35_0
+zlib=1.2.8=vc14_3
