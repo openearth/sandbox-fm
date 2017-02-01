@@ -9,7 +9,7 @@ GuiVersion        = 1.2.0.36055
 AutoStart         = 0
 
 [geometry]
-NetFile           = 149x100_net.nc
+NetFile           = 300x200_net.nc
 BathymetryFile    =
 DryPointsFile     =
 WaterLevIniFile   =
