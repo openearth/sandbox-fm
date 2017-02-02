@@ -55,21 +55,22 @@ def process_events(evt, data, model, vis):
             if data['zk'][i] != data['zk_original'][i]:
                 model.set_var_slice('zk', [i + 1], [1],
                                     data['zk_original'][i:i + 1])
+    if evt.key == 'p':
+        vis.lic[:, :, :3] = 1.0
+        vis.lic[:, :, 3] = 0.0
+        vis.lic = cv2.warpPerspective(
+            data['video'].astype('float32') / 255.0,
+            np.array(data['img2box']),
+            data['height'].shape[::-1]
+        )
+        if vis.lic.shape[-1] == 3:
+            # add depth channel
+            vis.lic = np.dstack([
+                vis.lic,
+                np.ones_like(vis.lic[:, :, 0])
+            ])
+        
     if evt.key == 'c':
-        if not vis.im_flow.get_visible():
-            vis.lic[:, :, :3] = 1.0
-            vis.lic[:, :, 3] = 0.0
-            vis.lic = cv2.warpPerspective(
-                data['video'].astype('float32') / 255.0,
-                np.array(data['img2box']),
-                data['height'].shape[::-1]
-            )
-            if vis.lic.shape[-1] == 3:
-                # add depth channel
-                vis.lic = np.dstack([
-                    vis.lic,
-                    np.ones_like(vis.lic[:, :, 0])
-                ])
         vis.im_flow.set_visible(not vis.im_flow.get_visible())
     if evt.key == 'q':  # Quit (on windows)
         sys.exit()

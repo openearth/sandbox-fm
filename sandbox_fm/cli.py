@@ -61,6 +61,15 @@ else:
 
 @click.group()
 def cli():
+    """
+    keys:
+     - 1, 2, 3 -> switch views
+     - f -> fullscreen
+     - c -> toggle currents
+     - p -> make picture
+     - r -> reset bathymethry
+     - b -> set bed level
+    """
     pass
 
 @cli.command()
@@ -129,7 +138,16 @@ def view():
 @cli.command()
 @click.argument('schematization', type=click.File('rb'))
 def run(schematization):
-    """Console script for sandbox_fm"""
+    """Console script for sandbox_fm
+
+    keys:
+     - 1, 2, 3 -> switch views
+     - f -> fullscreen
+     - c -> toggle currents
+     - p -> make picture
+     - r -> reset bathymethry
+     - b -> set bed level
+    """
     click.echo("Make sure you start the SARndbox first")
 
     # calibration info
