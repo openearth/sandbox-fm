@@ -81,15 +81,15 @@ Run
 
 While running the simulation you can update the display using the following keys:
 
-1 - Show bed level from camera
-2 - Show water level in model
-3 - Show bed level in model
-B – Set bed level to current camera bed level
-C – Currents on/off
-P – Photo
-F – Full screen view 
-Q – Quit (windows only)
-R – Reset to original bathy
+- 1 - Show bed level from camera
+- 2 - Show water level in model
+- 3 - Show bed level in model
+- B – Set bed level to current camera bed level
+- C – Currents on/off
+- P – Photo
+- F – Full screen view 
+- Q – Quit (windows only)
+- R – Reset to original bathy
 
 Features
 --------
