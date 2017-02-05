@@ -43,7 +43,7 @@ def process_events(evt, data, model, vis):
         # data['bl'][idx] += compute_delta_bl(data, idx)
         idx = np.logical_and(data['node_in_box'], data['node_in_img_bbox'])
         zk_copy = data['zk'].copy()
-        zk_copy[idx] += compute_delta_zk(data, idx,mode='relative')
+        zk_copy[idx] += compute_delta_zk(data, idx)
         # replace the part that changed
         print(np.where(idx))
         for i in np.where(idx)[0]:

@@ -7,5 +7,5 @@ Quantity                        = dischargebnd amplitude
 Unit                            = m³/s
 Quantity                        = dischargebnd phase
 Unit                            = deg
-A0  1600  0
+A0  1000  0
 
