@@ -39,6 +39,12 @@ import matplotlib.transforms
 # Width and height
 WIDTH, HEIGHT = 640, 480
 
+DEFAULT_BOX = np.array([
+    [0, 0],
+    [640, 0],
+    [640, 480],
+    [0, 480]
+], dtype='float32')
 
 def depth2xyzuv(depth, u=None, v=None):
     """
@@ -168,3 +174,43 @@ def transform(x, y, M):
         )
     )
     return xy_t[:, 0], xy_t[:, 1]
+
+def compute_transforms(calibration):
+    """compute transformation matrices based on calibration data"""
+    model_points = np.array(calibration["model_points"], dtype="float32")
+    img_points = np.array(calibration["img_points"], dtype="float32")
+    box = np.array(calibration.get("box", DEFAULT_BOX), dtype="float32")
+
+    model2box = cv2.getPerspectiveTransform(
+        np.array(model_points, dtype='float32'),
+        box
+    )
+    img2box = cv2.getPerspectiveTransform(
+        np.array(img_points, dtype='float32'),
+        box
+    )
+    img2model = cv2.getPerspectiveTransform(
+        np.array(img_points, dtype='float32'),
+        np.array(model_points, dtype='float32')
+    )
+    model2img = cv2.getPerspectiveTransform(
+        np.array(model_points, dtype='float32'),
+        np.array(img_points, dtype='float32')
+    )
+    box2model = cv2.getPerspectiveTransform(
+        np.array(box, dtype='float32'),
+        np.array(model_points, dtype='float32')
+    )
+    box2img = cv2.getPerspectiveTransform(
+        np.array(box, dtype='float32'),
+        np.array(img_points, dtype='float32')
+    )
+    transforms = {
+        "model2box": model2box,
+        "img2box": img2box,
+        "img2model": img2model,
+        "model2img": model2img,
+        "box2model": box2model,
+        "box2img": box2img
+    }
+    return transforms

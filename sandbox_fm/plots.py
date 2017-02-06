@@ -45,6 +45,7 @@ def process_events(evt, data, model, vis):
         zk_copy = data['zk'].copy()
         zk_copy[idx] += compute_delta_zk(data, idx)
         # replace the part that changed
+        print(np.where(idx))
         for i in np.where(idx)[0]:
             if data['zk'][i] != zk_copy[i]:
                 # TODO: bug in zk
@@ -54,23 +55,24 @@ def process_events(evt, data, model, vis):
             if data['zk'][i] != data['zk_original'][i]:
                 model.set_var_slice('zk', [i + 1], [1],
                                     data['zk_original'][i:i + 1])
+    if evt.key == 'p':
+        vis.lic[:, :, :3] = 1.0
+        vis.lic[:, :, 3] = 0.0
+        vis.lic = cv2.warpPerspective(
+            data['video'].astype('float32') / 255.0,
+            np.array(data['img2box']),
+            data['height'].shape[::-1]
+        )
+        if vis.lic.shape[-1] == 3:
+            # add depth channel
+            vis.lic = np.dstack([
+                vis.lic,
+                np.ones_like(vis.lic[:, :, 0])
+            ])
+
     if evt.key == 'c':
-        if not vis.im_flow.get_visible():
-            vis.lic[:, :, :3] = 1.0
-            vis.lic[:, :, 3] = 0.0
-            vis.lic = cv2.warpPerspective(
-                data['video'].astype('float32') / 255.0,
-                np.array(data['img2box']),
-                data['height'].shape[::-1]
-            )
-            if vis.lic.shape[-1] == 3:
-                # add depth channel
-                vis.lic = np.dstack([
-                    vis.lic,
-                    np.ones_like(vis.lic[:, :, 0])
-                ])
         vis.im_flow.set_visible(not vis.im_flow.get_visible())
-    if evt.key == 'q':  # Quit
+    if evt.key == 'q':  # Quit (on windows)
         sys.exit()
     if evt.key == '1':  # Visualisation preset 1. Show bed level from camera
         vis.im_s1.set_visible(False)
@@ -116,12 +118,8 @@ class Visualization():
         )
 
         # rgba image
-        self.lic = np.ones(
-            data['height'].shape + (4, ),
-            dtype='float32'
-        )
         self.lic = cv2.warpPerspective(
-            data['video'],
+            data['video'].astype('float32'),
             np.array(data['img2box']),
             data['height'].shape[::-1]
         )
@@ -177,7 +175,9 @@ class Visualization():
         # Plot scanned height
         self.im_height = self.ax.imshow(
             warped_height,
-            cmap=terrajet2,
+            'jet',
+            #cmap=terrajet2,
+ #           cmap=summer,
             alpha=1,
             vmin=data['z'][0],
             vmax=data['z'][-1],
@@ -186,7 +186,9 @@ class Visualization():
         
         # plot satellite image background
         self.im_background = self.ax.imshow(
-                self.background, extent = [0, 640, 480, 0])
+            self.background, 
+            extent=[0, 640, 480, 0]
+        )
         
         # Plot waterdepth
         self.im_s1 = self.ax.imshow(
@@ -210,19 +212,6 @@ class Visualization():
             visible=False
         )
 
-        # Plot contours of scanned height
-        # self.ct_height = self.ax.contour(warped_height,
-        #     colors='k')
-
-        # Plot contours of height in model
-        # self.ct_zk = self.ax.contour(
-        #     zk_img,
-        #     cmap=terrajet2,
-        #     alpha=1,
-        #     vmin=data['z'][0],
-        #     vmax=data['z'][-1]
-        # )
-
         if data.get('debug'):
             self.ct_zk = self.ax.contour(zk_img, colors='k')
             self.ax.clabel(self.ct_zk, inline=1, fontsize=10)
@@ -245,8 +234,6 @@ class Visualization():
 
     #@profile
     def update(self, data):
-        tic = [time.time()]
-
         i = next(self.counter)
 
         #############################################
@@ -259,8 +246,6 @@ class Visualization():
 
         # Update scanned height
         self.im_height.set_data(warped_height)
-
-        tic.append(time.time())
 
         #############################################
         # Update model parameters
@@ -292,29 +277,6 @@ class Visualization():
         self.im_s1.set_data(s1_img - bl_img)
         self.im_zk.set_data(bl_img)
 
-        tic.append(time.time())
-        # # Update contour plots
-        # # When particles get disabled, update contour plot
-        # if not self.im_flow.get_visible():
-        #     try:
-        #         for c in self.ct_height.collections:
-        #             c.remove()
-        #     except:
-        #         pass
-        #     self.ct_height = self.ax.contour(
-        #         warped_height,
-        #         levels=np.linspace(-7, 10, num=10)
-        #     )
-        #     self.ct_zk = self.ax.contour(
-        #         warped_height,
-        #         levels=np.linspace(-7, 10, num=10)
-        #     )
-
-        if data.get('debug'):
-            for c in self.ct_zk.collections:
-                c.remove()
-            self.im_zk.set_data(zk_img)
-            self.im_s1.set_data(np.ma.masked_less_equal(s1_img, bl_img))
 
         #################################################
         # Compute liquid added to the model
@@ -353,10 +315,6 @@ class Visualization():
         # Remove liquid on dry places
         self.lic[bl_img >= s1_img, 3] = 0.0
         self.lic[zk_img >= s1_img, 3] = 0.0
-        self.lic[(s1_img - bl_img) < 0.05, 3] -= 0.01
-        self.lic[(s1_img - zk_img) < 0.05, 3] -= 0.01
-
-        tic.append(time.time())
 
         #################################################
         # Draw updated canvas
@@ -367,14 +325,8 @@ class Visualization():
         #     self.ax.draw_artist(artist)
         # self.fig.canvas.blit(self.ax.bbox)
         # self.ax.redraw_in_frame()
-
-        tic.append(time.time())
-
         # interact with window and click events
         try:
             self.fig.canvas.flush_events()
         except NotImplementedError:
-            pass
-
-        tic.append(time.time())
-        print(np.diff(tic))
+            self.ax.redraw_in_frame()

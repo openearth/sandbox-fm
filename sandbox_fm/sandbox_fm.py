@@ -56,23 +56,36 @@ def update_delft3d_vars(data, model):
     data['is_wet'] = data['s1'] > data['bl']
 
 
-def compute_delta_zk(data, idx):
+def compute_delta_zk(data, idx, mode='absolute'):
     """compute the bed level change, normalized a bit and only for cells in idx"""
+    if mode=='absolute':
+        height = data['height']
 
-    height = data['height']
+        xk_box, yk_box = transform(data['xk'], data['yk'], data['model2box'])
 
-    xk_box, yk_box = transform(data['xk'], data['yk'], data['model2box'])
+        u = np.clip(np.round(yk_box[idx]).astype('int'), 0, HEIGHT - 1)
+        v = np.clip(np.round(xk_box[idx]).astype('int'), 0, WIDTH - 1)
+        # define the interpolation function from depth to meters
+        # depth2meters = scipy.interpolate.interp1d([0, 127, 255], [-8, 0, 12])
 
-    u = np.clip(np.round(yk_box[idx]).astype('int'), 0, HEIGHT - 1)
-    v = np.clip(np.round(xk_box[idx]).astype('int'), 0, WIDTH - 1)
-    # define the interpolation function from depth to meters
-    # depth2meters = scipy.interpolate.interp1d([0, 127, 255], [-8, 0, 12])
+        # cell_depth = depth2meters(depth[u, v].ravel())
+        node_height = height[u, v].ravel()
+        delta_zk = node_height - data['zk'][idx]
+        return delta_zk
+    elif mode=='relative':
+        height = np.array(data['height']) - np.array(data['height_original'])
 
-    # cell_depth = depth2meters(depth[u, v].ravel())
-    node_height = height[u, v].ravel()
+        xk_box, yk_box = transform(data['xk'], data['yk'], data['model2box'])
 
-    delta_zk = node_height - data['zk'][idx]
-    return delta_zk
+        u = np.clip(np.round(yk_box[idx]).astype('int'), 0, HEIGHT - 1)
+        v = np.clip(np.round(xk_box[idx]).astype('int'), 0, WIDTH - 1)
+        # define the interpolation function from depth to meters
+        # depth2meters = scipy.interpolate.interp1d([0, 127, 255], [-8, 0, 12])
+
+        # cell_depth = depth2meters(depth[u, v].ravel())
+        node_height = height[u, v].ravel()
+        delta_zk = node_height
+        return delta_zk
 
 
 def compute_delta_s1(data, idx):

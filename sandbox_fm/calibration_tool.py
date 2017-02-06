@@ -11,6 +11,9 @@ from matplotlib.mlab import dist_point_to_segment
 import matplotlib.pyplot as plt
 
 
+from .calibrate import (
+    compute_transforms
+)
 from .sandbox_fm import (
     update_delft3d_initial_vars
 )
@@ -173,7 +176,7 @@ class PolygonInteractor(object):
 class Calibration(object):
     def __init__(self, path, videos, raws, model):
         # absolute path to calibration.json
-        self.path = path
+        self.path = path.absolute()
         self.videos = videos
         self.raws = raws
         self.model = model
@@ -228,43 +231,13 @@ class Calibration(object):
         box = self.box
         z_values = self.z_values
 
-        model2box = cv2.getPerspectiveTransform(
-            np.array(model_points, dtype='float32'),
-            box
-        )
-        print(img_points, box)
-        img2box = cv2.getPerspectiveTransform(
-            np.array(img_points, dtype='float32'),
-            box
-        )
-        img2model = cv2.getPerspectiveTransform(
-            np.array(img_points, dtype='float32'),
-            np.array(model_points, dtype='float32')
-        )
-        model2img = cv2.getPerspectiveTransform(
-            np.array(model_points, dtype='float32'),
-            np.array(img_points, dtype='float32')
-        )
-        box2model = cv2.getPerspectiveTransform(
-            np.array(box, dtype='float32'),
-            np.array(model_points, dtype='float32')
-        )
-        box2img = cv2.getPerspectiveTransform(
-            np.array(box, dtype='float32'),
-            np.array(img_points, dtype='float32')
-        )
 
         comment = """
         This file contains calibrations for model %s.
         It is generated with the perspective transform from opencv.
         """ % (self.model.configfile, )
         result = {
-            "model2box": model2box.tolist(),
-            "img2box": img2box.tolist(),
-            "img2model": img2model.tolist(),
-            "model2img": model2img.tolist(),
-            "box2model": box2model.tolist(),
-            "box2img": box2img.tolist(),
+            "box": box,
             "img_points": img_points,
             "model_points": model_points,
             "height_points": height_points,
@@ -280,6 +253,10 @@ class Calibration(object):
         # save the calibration info
         data = self.data
         result = self.result
+
+        # add the transforms
+        result.update(compute_transforms(result))
+
         xy_node = np.c_[
             data['xk'],
             data['yk'],
@@ -365,8 +342,8 @@ class Calibration(object):
         raw = next(self.raws)
 
         # show the depth and video in the left window
-        axes[0, 0].imshow(raw, cmap='viridis')
-        axes[0, 0].imshow(video, cmap='Greys', alpha=0.5)
+
+        axes[0, 0].imshow(raw) #, cmap='jet', vmin=650, vmax=800)
         axes[1, 0].imshow(raw)
         # convert to array we can feed into opencv
         data = self.data
@@ -384,7 +361,7 @@ class Calibration(object):
         model_poly = self.add_edit_polygon(axes[0, 1], points=model_points)
         height_points = self.old_calibration.get("height_points", 2)
         height_poly = self.add_edit_polygon(axes[1, 0], points=2)
-        
+
 
         # keep track of the selected points
 

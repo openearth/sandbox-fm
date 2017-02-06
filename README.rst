@@ -34,35 +34,36 @@ You preferably want to install these from the package manager (tested with ubunt
 * opencv (available in linux and osx (macports/homebrew)
 
 Several python libraries:
-* pip install -r requirements.txt
+* ``pip install -r requirements.txt``
 
 
 Windows Install
 ----------------
 - Download anaconda (3.5)
-- Install git
-- Start the anaconda command window (from your start menu)
-- Download the source code (`git clone git@github.com:openearth/sandbox-fm.git`)
-- Update anaconda: `conda update conda`
-- Create an environment: `conda create --name main python=3`
-- Activate the new environment `activate main`
-- Install development dependencies `pip install -r requirements_dev.txt`
-- Install dependencies `pip install -r requirements.txt`
-- Install the sandbox-fm software in develop mode `pip install -e .` (from the sandbox-fm directory)
-- Make sure the dflowfm.dll is somewhere in your PATH
+- Start the anaconda command window (from your start menu). If you do not have adminstrator rights you should start a command window using the following command (``%windir%\system32\cmd.exe "/K" "C:\Program Files\Anaconda3\Scripts\activate.bat" "C:\Program Files\Anaconda3"``)
+- ``conda update conda``
+- ``conda create --name main --file package-list-win.txt``
+- ``activate main``  (You should now see a (main) at the start of your command line)
+- ``conda install -c https://conda.binstar.org/menpo opencv3``
+- Install the sandbox-fm software in develop mode ``pip install -e .`` (from the sandbox-fm directory)
+- ``pip install tqdm``
+- ``pip install -r requirements.txt``
+- ``pip install cmocean``
+- Make sure the dflowfm.dll is somewhere in your PATH definition
 
 Running
 -------
 
-sandbox-fm --help
-sandbox-fm calibrate  calibrate the sandbox by selecting a quad in the box, a quad in the model and a high and low point.
-sandbox-fm record     record 10 frames, for testing
-sandbox-fm run        run the sandbox program.
-sandbox-fm view       view raw kinect images
-
+- ``sandbox-fm --help``
+- ``sandbox-fm calibrate``  calibrate the sandbox by selecting a quad in the box, a quad in the model and a high and low point.
+- ``sandbox-fm record``     record 10 frames, for testing
+- ``sandbox-fm run``        run the sandbox program.
+- ``sandbox-fm anomaly``    store the vertical anomaly for a plane in anomaly.npy
+- ``sandbox-fm view``       view raw kinect images
 
 Calibration
 -----------
+First run the command `sandbox-fm anomaly` with an empty sandbox to store the deviation from a plane.
 
 Calibration transforms between the different quads.
 
@@ -76,6 +77,21 @@ In the top right window select a corresponding extent in the model.
 In the bottom left model select a low and a high point.
 Press [ENTER].
 Done.
+
+Run
+---
+
+While running the simulation you can update the display using the following keys:
+
+- 1 - Show bed level from camera
+- 2 - Show water level in model
+- 3 - Show bed level in model
+- B – Set bed level to current camera bed level
+- C – Currents on/off
+- P – Photo
+- F – Full screen view
+- Q – Quit (windows only)
+- R – Reset to original bathy
 
 Features
 --------

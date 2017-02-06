@@ -37,7 +37,8 @@ from .depth import (
     video_images
 )
 from .calibrate import (
-    transform
+    transform,
+    compute_transforms
 )
 from .calibration_tool import Calibration
 from .plots import (
@@ -61,6 +62,15 @@ else:
 
 @click.group()
 def cli():
+    """
+    keys:
+     - 1, 2, 3 -> switch views
+     - f -> fullscreen
+     - c -> toggle currents
+     - p -> make picture
+     - r -> reset bathymethry
+     - b -> set bed level
+    """
     pass
 
 @cli.command()
@@ -68,12 +78,21 @@ def record():
     """record 10 frames, for testing"""
     videos = video_images()
     raws = depth_images(raw=True)
-    for i, (video, depth, raw) in enumerate(zip(videos, depths, raws)):
+    for i, (video, raw) in enumerate(zip(videos, raws)):
         skimage.io.imsave("video_%06d.png" % (i, ), video)
         raw.dump("raw_%06d.npy" % (i, ))
         if i > 5:
             break
 
+
+@cli.command()
+def anomaly():
+    """calibrate the kinect anomaly for a flat surface"""
+
+    raws = depth_images(raw=True)
+    raw = next(raws)
+    anomaly = raw - raw.mean()
+    anomaly.dump('anomaly.npy')
 
 
 @cli.command()
@@ -81,7 +100,8 @@ def record():
 def calibrate(schematization):
     """calibrate the sandbox by selecting both 4 points in box and in model"""
 
-    path = pathlib.Path('calibration.json').absolute()
+    schematization_path = pathlib.Path(schematization.name)
+    path = schematization_path.with_name('calibration.json').absolute()
     # raw images
     videos = video_images()
     raws = depth_images(raw=True)
@@ -90,10 +110,8 @@ def calibrate(schematization):
     # this stores current path
 
     # this changes directory
-    schematization_path = pathlib.Path(schematization.name)
     model.initialize(str(schematization_path.absolute()))
 
-    
     calibration = Calibration(path, videos, raws, model)
     calibration.run()
 
@@ -129,18 +147,32 @@ def view():
 @cli.command()
 @click.argument('schematization', type=click.File('rb'))
 def run(schematization):
-    """Console script for sandbox_fm"""
+    """Console script for sandbox_fm
+
+    keys:
+     - 1, 2, 3 -> switch views
+     - f -> fullscreen
+     - c -> toggle currents
+     - p -> make picture
+     - r -> reset bathymethry
+     - b -> set bed level
+    """
     click.echo("Make sure you start the SARndbox first")
+
+    schematization_name = pathlib.Path(schematization.name)
+    # keep absolute path so model can change directory
+    calibration_name = schematization_name.with_name('calibration.json').absolute()
+    config_name = schematization_name.with_name('config.json').absolute()
+    anomaly_name = pathlib.Path('anomaly.npy').absolute()
 
     # calibration info
     data = {}
-    with open('calibration.json') as f:
+    with open(str(calibration_name)) as f:
         calibration = json.load(f)
     data.update(calibration)
-    with open('config.json') as f:
+    data.update(compute_transforms(data))
+    with open(str(config_name)) as f:
         configuration = json.load(f)
-
-
     data.update(configuration)
 
     # model
@@ -148,8 +180,7 @@ def run(schematization):
     # initialize model schematization, changes directory
     background_name = pathlib.Path(schematization.name).with_suffix('.jpg').absolute()
     data['background_name'] = background_name
-    model.initialize(str(pathlib.Path(schematization.name).absolute()))
-    
+    model.initialize(str(schematization_name.absolute()))
     update_delft3d_initial_vars(data, model)
     dt = model.get_time_step()
 
@@ -180,15 +211,20 @@ def run(schematization):
         plt.show()
 
     # images
-    heights = calibrated_height_images(calibration["z_values"], calibration["z"])
+    heights = calibrated_height_images(
+        calibration["z_values"],
+        calibration["z"],
+        anomaly_name=anomaly_name
+    )
     videos = video_images()
     # load model library
     height = next(heights)
     video = next(videos)
 
-    data['height'] = height.copy()
     data['height'] = height
     data['video'] = video
+    data['zk_original']=data['zk'].copy()
+    data['height_original']=data['height'].copy()
 
 
     vis = Visualization()
@@ -201,23 +237,33 @@ def run(schematization):
     )
 
     # start model and run for a bit
-    for i in range(10):
-        model.update(dt)
+    # for i in range(5):
+    #     model.update(dt)
 
 
     for i, (video, height) in enumerate(tqdm.tqdm(zip(videos, heights))):
+
+        tic = time.time()
+        # Get data from model
         update_delft3d_vars(data, model)
         # update kinect
         data['height'] = height
         data['video'] = video
+        toc = time.time()
+        time_get=toc-tic
 
         # update visualization
+        tic = time.time()
         vis.update(data)
+        toc = time.time()
+        time_vis=toc-tic
+
         # update model
         tic = time.time()
         model.update(dt)
         toc = time.time()
-        print(toc - tic)
+        time_model=toc-tic
+        print('get',time_get,';vis',time_vis,';model',time_model)
 
 if __name__ == "__main__":
     import sandbox_fm.cli
