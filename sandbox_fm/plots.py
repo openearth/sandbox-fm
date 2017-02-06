@@ -123,7 +123,7 @@ class Visualization():
             np.array(data['img2box']),
             data['height'].shape[::-1]
         )
-        
+
         if self.lic.shape[-1] == 3:
             # add depth channel
             self.lic = np.dstack([self.lic, np.zeros_like(self.lic[:, :, 0])])
@@ -131,7 +131,7 @@ class Visualization():
         # self.lic[..., 3] = 0.0
 
         self.background = plt.imread(data['background_name'])
-                  
+
         # get the xlim from the height image
         xlim = self.ax.get_xlim()
         ylim = self.ax.get_ylim()
@@ -160,11 +160,16 @@ class Visualization():
             data['box2model']
         )
         tree = scipy.spatial.cKDTree(np.c_[data['xzw'], data['yzw']])
-        _, ravensburger_cells = tree.query(np.c_[u_t, v_t])
+        distances_cells, ravensburger_cells = tree.query(np.c_[u_t, v_t])
         data['ravensburger_cells'] = ravensburger_cells.reshape(HEIGHT, WIDTH)
+        data['distances_cells'] = distances_cells
         tree = scipy.spatial.cKDTree(np.c_[data['xk'], data['yk']])
-        _, ravensburger_nodes = tree.query(np.c_[u_t, v_t])
+        distances_nodes, ravensburger_nodes = tree.query(np.c_[u_t, v_t])
         data['ravensburger_nodes'] = ravensburger_nodes.reshape(HEIGHT, WIDTH)
+        data['distances_nodes'] = distances_nodes
+
+        data['node_mask'] = data['distances_nodes'] > 500
+        data['cell_mask'] = data['distances_cells'] > 500
 
         s1_img = data['s1'][data['ravensburger_cells']]
         ucx_img = ucx_in_img[data['ravensburger_cells']]
@@ -183,13 +188,13 @@ class Visualization():
             vmax=data['z'][-1],
             visible=False
         )
-        
+
         # plot satellite image background
         self.im_background = self.ax.imshow(
-            self.background, 
+            self.background,
             extent=[0, 640, 480, 0]
         )
-        
+
         # Plot waterdepth
         self.im_s1 = self.ax.imshow(
             (s1_img - bl_img),
@@ -285,15 +290,17 @@ class Visualization():
         scale = data.get('scale', 10.0)
         flow = np.dstack([ucx_img, ucy_img]) * scale
 
-        tic.append(time.time())
 
         # compute new flow timestep
-        self.lic = warp_flow(self.lic.astype('float32'),
-                             flow.astype('float32'))
+        self.lic = warp_flow(
+            self.lic.astype('float32'),
+            flow.astype('float32')
+        )
         # fade out
         # self.lic[..., 3] -= 0.01
         # but not < 0
         self.lic[..., 3][self.lic[..., 3] < 0] = 0
+        self.lic[..., 3][data['cell_mask']] = 0
 
         # Update liquid
         self.im_flow.set_data(self.lic)
