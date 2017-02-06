@@ -88,16 +88,24 @@ def depth_images(raw=False):
         yield depth
 
 
-def calibrated_height_images(values, z):
+def calibrated_height_images(values, z, anomaly_name='anomaly.npy'):
     """convert values (from kinect 11 bit) to z values in m"""
     assert values[0] > values[1], "please click deeper point first next time"
+
+    anomaly = 0.0
+    try:
+        anomaly = np.load(anomaly_name)
+    except:
+        logger.exception('Cannot read anomaly file %s', anomaly_name)
+
 
     def values2height(x, values, z):
         return (x - (values[0] + values[1])/2.0) / (values[1] - values[0])*(z[1] - z[0]) + (z[0] + z[1])/2.0
     f = functools.partial(values2height, z=z, values=values)
 
     for raw in depth_images(raw=True):
-        height = f(raw)
+        # correct for anomaly
+        height = f(raw - anomaly)
         yield height
 
 

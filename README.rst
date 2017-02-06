@@ -41,7 +41,7 @@ Windows Install
 ----------------
 - Download anaconda (3.5)
 - Start the anaconda command window (from your start menu). If you do not have adminstrator rights you should start a command window using the following command (``%windir%\system32\cmd.exe "/K" "C:\Program Files\Anaconda3\Scripts\activate.bat" "C:\Program Files\Anaconda3"``)
-- ``conda update conda`` 
+- ``conda update conda``
 - ``conda create --name main --file package-list-win.txt``
 - ``activate main``  (You should now see a (main) at the start of your command line)
 - ``conda install -c https://conda.binstar.org/menpo opencv3``
@@ -58,10 +58,12 @@ Running
 - ``sandbox-fm calibrate``  calibrate the sandbox by selecting a quad in the box, a quad in the model and a high and low point.
 - ``sandbox-fm record``     record 10 frames, for testing
 - ``sandbox-fm run``        run the sandbox program.
+- ``sandbox-fm anomaly``    store the vertical anomaly for a plane in anomaly.npy
 - ``sandbox-fm view``       view raw kinect images
 
 Calibration
 -----------
+First run the command `sandbox-fm anomaly` with an empty sandbox to store the deviation from a plane.
 
 Calibration transforms between the different quads.
 
@@ -87,7 +89,7 @@ While running the simulation you can update the display using the following keys
 - B – Set bed level to current camera bed level
 - C – Currents on/off
 - P – Photo
-- F – Full screen view 
+- F – Full screen view
 - Q – Quit (windows only)
 - R – Reset to original bathy
 

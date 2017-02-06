@@ -69,7 +69,7 @@ def process_events(evt, data, model, vis):
                 vis.lic,
                 np.ones_like(vis.lic[:, :, 0])
             ])
-        
+
     if evt.key == 'c':
         vis.im_flow.set_visible(not vis.im_flow.get_visible())
     if evt.key == 'q':  # Quit (on windows)
@@ -172,7 +172,7 @@ class Visualization():
         # Plot scanned height
         self.im_height = self.ax.imshow(
             warped_height,
-            'jet', 
+            'jet',
             #cmap=terrajet2,
  #           cmap=summer,
             alpha=1,
@@ -339,8 +339,14 @@ class Visualization():
         # Remove liquid on dry places
         self.lic[bl_img >= s1_img, 3] = 0.0
         self.lic[zk_img >= s1_img, 3] = 0.0
-        self.lic[(s1_img - bl_img) < 0.05, 3] -= 0.01
-        self.lic[(s1_img - zk_img) < 0.05, 3] -= 0.01
+        self.lic[
+            np.logical_and.reduce([
+                (s1_img - bl_img < 0.05), # almost dry
+                (s1_img - zk_img < 0.05), # almost dry
+                self.lic[..., 3] > 0.01
+            ]),
+            3
+        ] -= 0.01
 
 
         #################################################
@@ -356,5 +362,4 @@ class Visualization():
         try:
             self.fig.canvas.flush_events()
         except NotImplementedError:
-            pass
-
+            self.ax.redraw_in_frame()

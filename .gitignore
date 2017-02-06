@@ -1,7 +1,14 @@
+tests/*
+!tests/*.py
+# anomaly correction
+anomaly.npy
+
 # FM output
 *.out
 *.dia
 *OUTPUT*
+
+
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

@@ -14,7 +14,7 @@ except ImportError:
     pass
 
 import skimage.io
-import cv2    
+import cv2
 import tqdm
 import click
 import numpy as np
@@ -37,7 +37,8 @@ from .depth import (
     video_images
 )
 from .calibrate import (
-    transform
+    transform,
+    compute_transforms
 )
 from .calibration_tool import Calibration
 from .plots import (
@@ -84,13 +85,23 @@ def record():
             break
 
 
+@cli.command()
+def anomaly():
+    """calibrate the kinect anomaly for a flat surface"""
+
+    raws = depth_images(raw=True)
+    raw = next(raws)
+    anomaly = raw - raw.mean()
+    anomaly.dump('anomaly.npy')
+
 
 @cli.command()
 @click.argument('schematization', type=click.File('rb'))
 def calibrate(schematization):
     """calibrate the sandbox by selecting both 4 points in box and in model"""
 
-    path = pathlib.Path('calibration.json').absolute()
+    schematization_path = pathlib.Path(schematization.name)
+    path = schematization_path.with_name('calibration.json').absolute()
     # raw images
     videos = video_images()
     raws = depth_images(raw=True)
@@ -99,10 +110,8 @@ def calibrate(schematization):
     # this stores current path
 
     # this changes directory
-    schematization_path = pathlib.Path(schematization.name)
     model.initialize(str(schematization_path.absolute()))
 
-    
     calibration = Calibration(path, videos, raws, model)
     calibration.run()
 
@@ -150,21 +159,26 @@ def run(schematization):
     """
     click.echo("Make sure you start the SARndbox first")
 
+    schematization_name = pathlib.Path(schematization.name)
+    # keep absolute path so model can change directory
+    calibration_name = schematization_name.with_name('calibration.json').absolute()
+    config_name = schematization_name.with_name('config.json').absolute()
+    anomaly_name = pathlib.Path('anomaly.npy').absolute()
+
     # calibration info
     data = {}
-    with open('calibration.json') as f:
+    with open(str(calibration_name)) as f:
         calibration = json.load(f)
     data.update(calibration)
-    with open('config.json') as f:
+    data.update(compute_transforms(data))
+    with open(str(config_name)) as f:
         configuration = json.load(f)
-
-
     data.update(configuration)
 
     # model
     model = bmi.wrapper.BMIWrapper('dflowfm')
     # initialize model schematization, changes directory
-    model.initialize(str(pathlib.Path(schematization.name).absolute()))
+    model.initialize(str(schematization_name.absolute()))
     update_delft3d_initial_vars(data, model)
     dt = model.get_time_step()
 
@@ -195,7 +209,11 @@ def run(schematization):
         plt.show()
 
     # images
-    heights = calibrated_height_images(calibration["z_values"], calibration["z"])
+    heights = calibrated_height_images(
+        calibration["z_values"],
+        calibration["z"],
+        anomaly_name=anomaly_name
+    )
     videos = video_images()
     # load model library
     height = next(heights)
