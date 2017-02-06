@@ -1,7 +1,12 @@
+tests/*
+!tests/*.py
+
 # FM output
 *.out
 *.dia
 *OUTPUT*
+
+
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
