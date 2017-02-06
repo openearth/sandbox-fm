@@ -94,7 +94,7 @@ def calibrated_height_images(values, z, anomaly_name='anomaly.npy'):
 
     anomaly = 0.0
     try:
-        anomaly = np.load(anomaly_name)
+        anomaly = np.load(str(anomaly_name))
     except:
         logger.exception('Cannot read anomaly file %s', anomaly_name)
 
