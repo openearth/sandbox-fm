@@ -119,7 +119,7 @@ class Visualization():
 
         # rgba image
         self.lic = cv2.warpPerspective(
-            data['video'].astype('float32'),
+            np.zeros_like(data['video']).astype('float32'),
             np.array(data['img2box']),
             data['height'].shape[::-1]
         )
