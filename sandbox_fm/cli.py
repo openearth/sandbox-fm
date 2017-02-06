@@ -85,6 +85,15 @@ def record():
             break
 
 
+@cli.command()
+def anomaly():
+    """calibrate the kinect anomaly for a flat surface"""
+
+    raws = depth_images(raw=True)
+    raw = next(raws)
+    anomaly = raw - raw.mean()
+    anomaly.dump('anomaly.npy')
+
 
 @cli.command()
 @click.argument('schematization', type=click.File('rb'))
@@ -154,6 +163,8 @@ def run(schematization):
     # keep absolute path so model can change directory
     calibration_name = schematization_name.with_name('calibration.json').absolute()
     config_name = schematization_name.with_name('config.json').absolute()
+    anomaly_name = pathlib.Path('anomaly.npy').absolute()
+
     # calibration info
     data = {}
     with open(str(calibration_name)) as f:
@@ -163,8 +174,6 @@ def run(schematization):
     with open(str(config_name)) as f:
         configuration = json.load(f)
     data.update(configuration)
-
-
 
     # model
     model = bmi.wrapper.BMIWrapper('dflowfm')
@@ -200,7 +209,11 @@ def run(schematization):
         plt.show()
 
     # images
-    heights = calibrated_height_images(calibration["z_values"], calibration["z"])
+    heights = calibrated_height_images(
+        calibration["z_values"],
+        calibration["z"],
+        anomaly_name=anomaly_name
+    )
     videos = video_images()
     # load model library
     height = next(heights)
