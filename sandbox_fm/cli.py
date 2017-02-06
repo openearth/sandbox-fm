@@ -190,8 +190,8 @@ def run(schematization):
 
     img_bbox = matplotlib.path.Path([
         (40, 40),
-        (40, 480),
-        (600, 480),
+        (40, 440),
+        (600, 440),
         (600, 40)
     ])
     xzw_box, yzw_box = transform(data['xzw'], data['yzw'], data['model2box'])

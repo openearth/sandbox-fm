@@ -119,7 +119,7 @@ class Visualization():
 
         # rgba image
         self.lic = cv2.warpPerspective(
-            data['video'].astype('float32'),
+            np.zeros_like(data['video']).astype('float32'),
             np.array(data['img2box']),
             data['height'].shape[::-1]
         )
@@ -339,14 +339,14 @@ class Visualization():
         # Remove liquid on dry places
         self.lic[bl_img >= s1_img, 3] = 0.0
         self.lic[zk_img >= s1_img, 3] = 0.0
-        self.lic[
-            np.logical_and.reduce([
-                (s1_img - bl_img < 0.05), # almost dry
-                (s1_img - zk_img < 0.05), # almost dry
-                self.lic[..., 3] > 0.01
-            ]),
-            3
-        ] -= 0.01
+        # self.lic[
+        #     np.logical_and.reduce([
+        #         (s1_img - bl_img < 0.05), # almost dry
+        #         (s1_img - zk_img < 0.05), # almost dry
+        #         self.lic[..., 3] > 0.01
+        #     ]),
+        #     3
+        # ] -= 0.01
 
 
         #################################################
