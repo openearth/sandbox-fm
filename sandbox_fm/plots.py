@@ -118,12 +118,8 @@ class Visualization():
         )
 
         # rgba image
-        self.lic = np.ones(
-            data['height'].shape + (4, ),
-            dtype='float32'
-        )
         self.lic = cv2.warpPerspective(
-            data['video'],
+            data['video'].astype('float32'),
             np.array(data['img2box']),
             data['height'].shape[::-1]
         )
