@@ -13,10 +13,8 @@ except ImportError:
     # python3 has it builtin
     pass
 
-
-
 import skimage.io
-import cv2
+import cv2    
 import tqdm
 import click
 import numpy as np
@@ -25,7 +23,13 @@ import matplotlib.backend_bases
 import matplotlib.pyplot as plt
 
 import bmi.wrapper
-import mpi4py.MPI
+
+HAVE_MPI = False
+try:
+    import mpi4py.MPI
+    HAVE_MPI = True
+except ImportError:
+    pass
 
 from .depth import (
     depth_images,
@@ -46,11 +50,14 @@ from .sandbox_fm import (
     update_delft3d_vars
 )
 
-# initialize mpi
-mpi4py.MPI.COMM_WORLD
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
+# initialize mpi
+if HAVE_MPI:
+    mpi4py.MPI.COMM_WORLD
+else:
+    logging.warn('MPI not initialized')
 
 @click.group()
 def cli():
@@ -139,7 +146,10 @@ def run(schematization):
     # model
     model = bmi.wrapper.BMIWrapper('dflowfm')
     # initialize model schematization, changes directory
+    background_name = pathlib.Path(schematization.name).with_suffix('.jpg').absolute()
+    data['background_name'] = background_name
     model.initialize(str(pathlib.Path(schematization.name).absolute()))
+    
     update_delft3d_initial_vars(data, model)
     dt = model.get_time_step()
 
@@ -210,4 +220,5 @@ def run(schematization):
         print(toc - tic)
 
 if __name__ == "__main__":
-    main()
+    import sandbox_fm.cli
+    sandbox_fm.cli.cli()
