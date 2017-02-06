@@ -334,6 +334,7 @@ class Visualization():
         # self.ax.redraw_in_frame()
         # interact with window and click events
         try:
+            self.fig.canvas.draw()
             self.fig.canvas.flush_events()
         except NotImplementedError:
-            self.ax.redraw_in_frame()
+            pass
