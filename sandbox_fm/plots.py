@@ -78,14 +78,22 @@ def process_events(evt, data, model, vis):
         vis.im_s1.set_visible(False)
         vis.im_height.set_visible(True)
         vis.im_zk.set_visible(False)
+        vis.im_mag.set_visible(False)
     if evt.key == '2':  # Visualisation preset 2. Show water level in model
         vis.im_s1.set_visible(True)
         vis.im_height.set_visible(False)
         vis.im_zk.set_visible(False)
+        vis.im_mag.set_visible(False)
     if evt.key == '3':  # Visualisation preset 3. Show bed level in model
         vis.im_s1.set_visible(False)
         vis.im_height.set_visible(False)
         vis.im_zk.set_visible(True)
+        vis.im_mag.set_visible(False)
+    if evt.key == '4':  # Visualisation preset . Show flow magnitude in model
+        vis.im_s1.set_visible(False)
+        vis.im_height.set_visible(False)
+        vis.im_zk.set_visible(False)
+        vis.im_mag.set_visible(True)
 
 
 class Visualization():
@@ -177,6 +185,7 @@ class Visualization():
         ucy_img = ucy_in_img[data['ravensburger_cells']]
         bl_img = data['bl'][data['ravensburger_cells']]
         zk_img = data['zk'][data['ravensburger_nodes']]
+        mag_img = np.sqrt(ucx_img**2 + ucy_img**2)
 
         # Plot scanned height
         self.im_height = self.ax.imshow(
@@ -218,6 +227,15 @@ class Visualization():
             visible=False
         )
 
+        # Plot flow magnitude
+        self.im_mag = self.ax.imshow(
+            mag_img,
+            'jet', 
+            alpha=1,
+            vmin=0,
+            visible=False
+        )
+        
         if data.get('debug'):
             self.ct_zk = self.ax.contour(zk_img, colors='k')
             self.ax.clabel(self.ct_zk, inline=1, fontsize=10)
@@ -278,11 +296,12 @@ class Visualization():
         ucx_img = ucx_in_img[data['ravensburger_cells']]
         ucy_img = ucy_in_img[data['ravensburger_cells']]
         bl_img = data['bl'][data['ravensburger_cells']]
-
+        mag_img = np.sqrt(ucx_img**2 + ucy_img**2)
+        
         # Update raster plots
         self.im_s1.set_data(s1_img - bl_img)
         self.im_zk.set_data(bl_img)
-
+        self.im_mag.set_data(mag_img)
 
         #################################################
         # Compute liquid added to the model
