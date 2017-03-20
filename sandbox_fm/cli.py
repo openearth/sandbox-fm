@@ -14,7 +14,7 @@ except ImportError:
     pass
 
 import skimage.io
-import cv2    
+import cv2
 import tqdm
 import click
 import numpy as np
@@ -47,8 +47,8 @@ from .plots import (
 )
 
 from .sandbox_fm import (
-    update_delft3d_initial_vars,
-    update_delft3d_vars
+    update_initial_vars,
+    update_vars
 )
 
 logger = logging.getLogger(__name__)
@@ -97,7 +97,8 @@ def anomaly():
 
 @cli.command()
 @click.argument('schematization', type=click.File('rb'))
-def calibrate(schematization):
+@click.option('--engine', default='dflowfm', type=click.Choice(['dflowfm', 'xbeach']))
+def calibrate(schematization, engine):
     """calibrate the sandbox by selecting both 4 points in box and in model"""
 
     schematization_path = pathlib.Path(schematization.name)
@@ -106,7 +107,7 @@ def calibrate(schematization):
     videos = video_images()
     raws = depth_images(raw=True)
     # start the model (changes directory)
-    model = bmi.wrapper.BMIWrapper('dflowfm')
+    model = bmi.wrapper.BMIWrapper(engine)
     # this stores current path
 
     # this changes directory
@@ -167,6 +168,7 @@ def run(schematization):
 
     # calibration info
     data = {}
+    data['schematization'] = schematization_name
     with open(str(calibration_name)) as f:
         calibration = json.load(f)
     data.update(calibration)
@@ -179,7 +181,7 @@ def run(schematization):
     model = bmi.wrapper.BMIWrapper('dflowfm')
     # initialize model schematization, changes directory
     background_name = pathlib.Path(schematization.name).with_suffix('.jpg').absolute()
-    data['background_name'] = background_name
+    data['background'] = background_name
     model.initialize(str(schematization_name.absolute()))
     update_delft3d_initial_vars(data, model)
     dt = model.get_time_step()
@@ -223,47 +225,31 @@ def run(schematization):
 
     data['height'] = height
     data['video'] = video
-    data['zk_original']=data['zk'].copy()
-    data['height_original']=data['height'].copy()
-
+    data['zk_original'] = data['zk'].copy()
+    data['height_original'] = data['height'].copy()
 
     vis = Visualization()
     update_delft3d_vars(data, model)
     vis.initialize(data)
-
     vis.subscribers.append(
         # fill in the data parameter and subscribe to events
         functools.partial(process_events, data=data, model=model, vis=vis)
     )
 
-    # start model and run for a bit
-    # for i in range(5):
-    #     model.update(dt)
-
-
     for i, (video, height) in enumerate(tqdm.tqdm(zip(videos, heights))):
 
-        tic = time.time()
         # Get data from model
         update_delft3d_vars(data, model)
+
         # update kinect
         data['height'] = height
         data['video'] = video
-        toc = time.time()
-        time_get=toc-tic
 
         # update visualization
-        tic = time.time()
         vis.update(data)
-        toc = time.time()
-        time_vis=toc-tic
 
         # update model
-        tic = time.time()
         model.update(dt)
-        toc = time.time()
-        time_model=toc-tic
-        print('get',time_get,';vis',time_vis,';model',time_model)
 
 if __name__ == "__main__":
     import sandbox_fm.cli

@@ -10,12 +10,12 @@ from matplotlib.artist import Artist
 from matplotlib.mlab import dist_point_to_segment
 import matplotlib.pyplot as plt
 
-
+import sandbox_fm.models
 from .calibrate import (
     compute_transforms
 )
 from .sandbox_fm import (
-    update_delft3d_initial_vars
+    update_initial_vars
 )
 
 logger = logging.getLogger(__name__)
@@ -198,7 +198,7 @@ class Calibration(object):
         self.curdir = pathlib.Path.cwd()
         self.make_window()
         # get data from model
-        update_delft3d_initial_vars(self.data, self.model)
+        update_initial_vars(self.data, self.model)
         if self.path.exists():
             with open(str(self.path)) as f:
                 self.old_calibration = json.load(f)
@@ -220,8 +220,8 @@ class Calibration(object):
 
     @property
     def z(self):
-        zk = self.model.get_var('zk')
-        return zk.min(), zk.max()
+        z = self.data['DEPTH']
+        return z.min(), z.max()
 
     @property
     def result(self):
@@ -258,9 +258,9 @@ class Calibration(object):
         result.update(compute_transforms(result))
 
         xy_node = np.c_[
-            data['xk'],
-            data['yk'],
-            np.ones_like(data['xk'])
+            data['X'].ravel(),
+            data['Y'].ravel(),
+            np.ones_like(data['X'].ravel())
         ].astype('float32')
 
         print(result['model2box'], xy_node)
@@ -278,7 +278,7 @@ class Calibration(object):
         ax.scatter(
             xy_nodes_in_img[:, 0],
             xy_nodes_in_img[:, 1],
-            c=data['zk'].ravel(),
+            c=data['DEPTH'].ravel(),
             cmap='Greens',
             edgecolor='none',
             s=20,
@@ -348,9 +348,9 @@ class Calibration(object):
         # convert to array we can feed into opencv
         data = self.data
         axes[0, 1].scatter(
-            data['xk'].ravel(),
-            data['yk'].ravel(),
-            c=data['zk'].ravel(),
+            data['X'].ravel(),
+            data['Y'].ravel(),
+            c=data['DEPTH'].ravel(),
             cmap='viridis',
             edgecolor='none'
         )

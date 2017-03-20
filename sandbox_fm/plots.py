@@ -110,6 +110,7 @@ class Visualization():
         plt.ion()
         plt.show(block=False)
         self.lic = None
+        self.background = None
         self.counter = itertools.count()
         self.subscribers = []
 
@@ -135,10 +136,10 @@ class Visualization():
         if self.lic.shape[-1] == 3:
             # add depth channel
             self.lic = np.dstack([self.lic, np.zeros_like(self.lic[:, :, 0])])
-        # transparent, white background
-        # self.lic[..., 3] = 0.0
 
-        self.background = plt.imread(data['background_name'])
+        # transparent, white background
+        if data['background'].exists():
+            self.background = plt.imread(str(data['background']))
 
         # get the xlim from the height image
         xlim = self.ax.get_xlim()
@@ -191,8 +192,6 @@ class Visualization():
         self.im_height = self.ax.imshow(
             warped_height,
             'jet',
-            #cmap=terrajet2,
- #           cmap=summer,
             alpha=1,
             vmin=data['z'][0],
             vmax=data['z'][-1],
@@ -200,16 +199,18 @@ class Visualization():
         )
 
         # plot satellite image background
-        self.im_background = self.ax.imshow(
-            self.background,
-            extent=[0, 640, 480, 0]
-        )
+        if self.background is not None:
+            self.im_background = self.ax.imshow(
+                self.background,
+                extent=[0, 640, 480, 0]
+            )
 
         # Plot waterdepth
+        # data['hh'] in xbeach
         self.im_s1 = self.ax.imshow(
             (s1_img - bl_img),
             cmap='Blues',
-            alpha=.3,
+            alpha=.3 if self.background is not None else 1.0,
             vmin=0,
             vmax=3,
             visible=True
@@ -230,12 +231,12 @@ class Visualization():
         # Plot flow magnitude
         self.im_mag = self.ax.imshow(
             mag_img,
-            'jet', 
+            'jet',
             alpha=1,
             vmin=0,
             visible=False
         )
-        
+
         if data.get('debug'):
             self.ct_zk = self.ax.contour(zk_img, colors='k')
             self.ax.clabel(self.ct_zk, inline=1, fontsize=10)
@@ -297,7 +298,7 @@ class Visualization():
         ucy_img = ucy_in_img[data['ravensburger_cells']]
         bl_img = data['bl'][data['ravensburger_cells']]
         mag_img = np.sqrt(ucx_img**2 + ucy_img**2)
-        
+
         # Update raster plots
         self.im_s1.set_data(s1_img - bl_img)
         self.im_zk.set_data(bl_img)
@@ -353,8 +354,8 @@ class Visualization():
         # self.fig.canvas.blit(self.ax.bbox)
         # self.ax.redraw_in_frame()
         # interact with window and click events
+        self.fig.canvas.draw()
         try:
-            self.fig.canvas.draw()
             self.fig.canvas.flush_events()
         except NotImplementedError:
             pass
