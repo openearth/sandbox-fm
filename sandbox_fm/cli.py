@@ -147,7 +147,8 @@ def view():
 
 @cli.command()
 @click.argument('schematization', type=click.File('rb'))
-def run(schematization):
+@click.option('--engine', default='dflowfm', type=click.Choice(['dflowfm', 'xbeach']))
+def run(schematization, engine):
     """Console script for sandbox_fm
 
     keys:
@@ -173,24 +174,30 @@ def run(schematization):
         calibration = json.load(f)
     data.update(calibration)
     data.update(compute_transforms(data))
-    with open(str(config_name)) as f:
-        configuration = json.load(f)
+    # if we have a configuration file
+    if config_name.exists():
+        # open it
+        with open(str(config_name)) as f:
+            configuration = json.load(f)
+    else:
+        # default empty
+        configuration = {}
     data.update(configuration)
 
     # model
-    model = bmi.wrapper.BMIWrapper('dflowfm')
+    model = bmi.wrapper.BMIWrapper(engine)
     # initialize model schematization, changes directory
     background_name = pathlib.Path(schematization.name).with_suffix('.jpg').absolute()
     data['background'] = background_name
     model.initialize(str(schematization_name.absolute()))
-    update_delft3d_initial_vars(data, model)
+    update_initial_vars(data, model)
     dt = model.get_time_step()
 
     # compute the model bounding box that is shown on the screen
     model_bbox = matplotlib.path.Path(data['model_points'])
     # create an index to see which points/cells are visualized
-    data['node_in_box'] = model_bbox.contains_points(np.c_[data['xk'], data['yk']])
-    data['cell_in_box'] = model_bbox.contains_points(np.c_[data['xzw'], data['yzw']])
+    data['node_in_box'] = model_bbox.contains_points(np.c_[data['X_NODES'].ravel(), data['Y_NODES'].ravel()])
+    data['cell_in_box'] = model_bbox.contains_points(np.c_[data['X_CELLS'].ravel(), data['Y_CELLS'].ravel()])
 
     img_bbox = matplotlib.path.Path([
         (40, 40),
@@ -198,18 +205,17 @@ def run(schematization):
         (600, 440),
         (600, 40)
     ])
-    xzw_box, yzw_box = transform(data['xzw'], data['yzw'], data['model2box'])
-    xk_box, yk_box = transform(data['xk'], data['yk'], data['model2box'])
-    print(xzw_box.min(), xzw_box.max())
+    x_nodes_box, y_nodes_box = transform(data['X_NODES'].ravel(), data['Y_NODES'].ravel(), data['model2box'])
+    x_cells_box, y_cells_box = transform(data['X_CELLS'].ravel(), data['X_CELLS'].ravel(), data['model2box'])
 
     # for transformed coordinates see if they are on the screen
-    data['cell_in_img_bbox'] = img_bbox.contains_points(np.c_[xzw_box, yzw_box])
-    data['node_in_img_bbox'] = img_bbox.contains_points(np.c_[xk_box, yk_box])
+    data['node_in_img_bbox'] = img_bbox.contains_points(np.c_[x_nodes_box, y_nodes_box])
+    data['cell_in_img_bbox'] = img_bbox.contains_points(np.c_[x_cells_box, y_cells_box])
 
     if data.get('debug'):
-        plt.scatter(data['xzw'], data['yzw'], c=data['cell_in_img_bbox'], edgecolor='none')
+        plt.scatter(data['X_CELLS'], data['Y_CELLS'], c=data['cell_in_img_bbox'], edgecolor='none')
         plt.show()
-        plt.scatter(data['xzw'], data['yzw'], c=data['cell_in_box'], edgecolor='none')
+        plt.scatter(data['X_CELLS'], data['Y_CELLS'], c=data['cell_in_box'], edgecolor='none')
         plt.show()
 
     # images
@@ -225,11 +231,11 @@ def run(schematization):
 
     data['height'] = height
     data['video'] = video
-    data['zk_original'] = data['zk'].copy()
+    data['depth_cells_original'] = data['DEPTH_CELLS'].copy()
     data['height_original'] = data['height'].copy()
 
     vis = Visualization()
-    update_delft3d_vars(data, model)
+    update_vars(data, model)
     vis.initialize(data)
     vis.subscribers.append(
         # fill in the data parameter and subscribe to events
@@ -239,7 +245,7 @@ def run(schematization):
     for i, (video, height) in enumerate(tqdm.tqdm(zip(videos, heights))):
 
         # Get data from model
-        update_delft3d_vars(data, model)
+        update_vars(data, model)
 
         # update kinect
         data['height'] = height

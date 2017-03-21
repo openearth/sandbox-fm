@@ -9,10 +9,10 @@ import scipy.interpolate
 import numpy as np
 import skimage.draw
 import sys
-import time
 
 from .cm import terrajet2
 from .sandbox_fm import compute_delta_zk
+import sandbox_fm.models
 
 from .calibrate import (
     transform,
@@ -37,6 +37,9 @@ def warp_flow(img, flow):
 
 
 def process_events(evt, data, model, vis):
+    """handle keystrokes and other interactions"""
+    meta = getattr(sandbox_fm.models, model.engine)
+
     if not isinstance(evt, matplotlib.backend_bases.KeyEvent):
         return
     if evt.key == 'b':  # Set bed level to current camera bed level
@@ -51,10 +54,10 @@ def process_events(evt, data, model, vis):
                 # TODO: bug in zk
                 model.set_var_slice('zk', [i + 1], [1], zk_copy[i:i + 1])
     if evt.key == 'r':  # Reset to original bed level
-        for i in range(0, len(data['zk_original'])):
-            if data['zk'][i] != data['zk_original'][i]:
-                model.set_var_slice('zk', [i + 1], [1],
-                                    data['zk_original'][i:i + 1])
+        for i in range(0, len(data['depth_cells_original'])):
+            if data['DEPTH_CELLS'][i] != data['depth_cells_original'][i]:
+                model.set_var_slice(mappings["DEPTH_CELLS"], [i + 1], [1],
+                                    data['depth_cells_original'][i:i + 1])
     if evt.key == 'p':
         vis.lic[:, :, :3] = 1.0
         vis.lic[:, :, 3] = 0.0
@@ -75,22 +78,22 @@ def process_events(evt, data, model, vis):
     if evt.key == 'q':  # Quit (on windows)
         sys.exit()
     if evt.key == '1':  # Visualisation preset 1. Show bed level from camera
-        vis.im_s1.set_visible(False)
+        vis.im_waterlevel.set_visible(False)
         vis.im_height.set_visible(True)
         vis.im_zk.set_visible(False)
         vis.im_mag.set_visible(False)
     if evt.key == '2':  # Visualisation preset 2. Show water level in model
-        vis.im_s1.set_visible(True)
+        vis.im_waterlevel.set_visible(True)
         vis.im_height.set_visible(False)
         vis.im_zk.set_visible(False)
         vis.im_mag.set_visible(False)
     if evt.key == '3':  # Visualisation preset 3. Show bed level in model
-        vis.im_s1.set_visible(False)
+        vis.im_waterlevel.set_visible(False)
         vis.im_height.set_visible(False)
         vis.im_zk.set_visible(True)
         vis.im_mag.set_visible(False)
     if evt.key == '4':  # Visualisation preset . Show flow magnitude in model
-        vis.im_s1.set_visible(False)
+        vis.im_waterlevel.set_visible(False)
         vis.im_height.set_visible(False)
         vis.im_zk.set_visible(False)
         vis.im_mag.set_visible(True)
@@ -149,31 +152,31 @@ class Visualization():
         v, u = np.mgrid[:HEIGHT, :WIDTH]
 
         # xy of model in image coordinates
-        xzw_box, yzw_box = transform(
-            data['xzw'],
-            data['yzw'],
+        x_cell_box, y_cell_box = transform(
+            data['X_CELLS'].ravel(),
+            data['Y_CELLS'].ravel(),
             data['model2box']
         )
         # transform vectors
-        xzw_ucx_box, yzw_ucy_box = transform(
-            data['xzw'] + data['ucx'],
-            data['yzw'] + data['ucy'],
+        x_cell_u_box, y_cell_v_box = transform(
+            (data['X_CELLS'] + data['U']).ravel(),
+            (data['Y_CELLS'] + data['V']).ravel(),
             data['model2box']
         )
-        ucx_in_img = xzw_ucx_box - xzw_box
-        ucy_in_img = yzw_ucy_box - yzw_box
+        u_in_img = x_cell_box - x_cell_u_box
+        v_in_img = y_cell_box - y_cell_v_box
 
         u_t, v_t = transform(
             u.ravel().astype('float32'),
             v.ravel().astype('float32'),
             data['box2model']
         )
-        tree = scipy.spatial.cKDTree(np.c_[data['xzw'], data['yzw']])
+        tree = scipy.spatial.cKDTree(np.c_[data['X_CELLS'].ravel(), data['Y_CELLS'].ravel()])
         distances_cells, ravensburger_cells = tree.query(np.c_[u_t, v_t])
         print("shapes", distances_cells.shape, ravensburger_cells.shape)
         data['ravensburger_cells'] = ravensburger_cells.reshape(HEIGHT, WIDTH)
         data['distances_cells'] = distances_cells.reshape(HEIGHT, WIDTH)
-        tree = scipy.spatial.cKDTree(np.c_[data['xk'], data['yk']])
+        tree = scipy.spatial.cKDTree(np.c_[data['X_NODES'].ravel(), data['Y_NODES'].ravel()])
         distances_nodes, ravensburger_nodes = tree.query(np.c_[u_t, v_t])
         data['ravensburger_nodes'] = ravensburger_nodes.reshape(HEIGHT, WIDTH)
         data['distances_nodes'] = distances_nodes.reshape(HEIGHT, WIDTH)
@@ -181,12 +184,12 @@ class Visualization():
         data['node_mask'] = data['distances_nodes'] > 500
         data['cell_mask'] = data['distances_cells'] > 500
 
-        s1_img = data['s1'][data['ravensburger_cells']]
-        ucx_img = ucx_in_img[data['ravensburger_cells']]
-        ucy_img = ucy_in_img[data['ravensburger_cells']]
-        bl_img = data['bl'][data['ravensburger_cells']]
-        zk_img = data['zk'][data['ravensburger_nodes']]
-        mag_img = np.sqrt(ucx_img**2 + ucy_img**2)
+        waterlevel_img = data['WATERLEVEL'].ravel()[data['ravensburger_cells']]
+        u_img = u_in_img[data['ravensburger_cells']]
+        v_img = v_in_img[data['ravensburger_cells']]
+        depth_cells_img = data['DEPTH_CELLS'].ravel()[data['ravensburger_cells']]
+        depth_nodes_img = data['DEPTH_NODES'].ravel()[data['ravensburger_nodes']]
+        mag_img = np.sqrt(u_img**2 + v_img**2)
 
         # Plot scanned height
         self.im_height = self.ax.imshow(
@@ -207,20 +210,18 @@ class Visualization():
 
         # Plot waterdepth
         # data['hh'] in xbeach
-        self.im_s1 = self.ax.imshow(
-            (s1_img - bl_img),
+        self.im_waterlevel = self.ax.imshow(
+            (waterlevel_img - depth_cells_img),
             cmap='Blues',
             alpha=.3 if self.background is not None else 1.0,
             vmin=0,
             vmax=3,
             visible=True
         )
-        # self.fig.colorbar(self.im_s1)
-        # self.im_s1.colorbar(self.im_s1, inline=1, fontsize=10)
 
         # Plot bed level
-        self.im_zk = self.ax.imshow(
-            bl_img,
+        self.im_depth_cells = self.ax.imshow(
+            depth_cells_img,
             cmap=terrajet2,  # 'gist_earth',
             alpha=1,
             vmin=data['z'][0],
@@ -238,8 +239,8 @@ class Visualization():
         )
 
         if data.get('debug'):
-            self.ct_zk = self.ax.contour(zk_img, colors='k')
-            self.ax.clabel(self.ct_zk, inline=1, fontsize=10)
+            self.ct_depth_cells = self.ax.contour(depth_cells_img, colors='k')
+            self.ax.clabel(self.ct_depth_cells, inline=1, fontsize=10)
 
         # Plot particles
         self.im_flow = self.ax.imshow(
@@ -276,32 +277,33 @@ class Visualization():
         # Update model parameters
         #
         # Transform velocity
-        xzw_box, yzw_box = transform(
-            data['xzw'],
-            data['yzw'],
+        x_cells_box, y_cells_box = transform(
+            data['X_CELLS'].ravel(),
+            data['Y_CELLS'].ravel(),
             data['model2box']
         )
 
         # transform vectors
-        xzw_ucx_box, yzw_ucy_box = transform(
-            data['xzw'] + data['ucx'],
-            data['yzw'] + data['ucy'],
+        x_cells_u_box, y_cells_v_box = transform(
+            data['X_CELLS'].ravel() + data['U'].ravel(),
+            data['Y_CELLS'].ravel() + data['V'].ravel(),
             data['model2box']
         )
-        ucx_in_img = xzw_ucx_box - xzw_box
-        ucy_in_img = yzw_ucy_box - yzw_box
+        # not sure whe don't use U
+        u_in_img = x_cells_u_box - x_cells_box
+        v_in_img = y_cells_v_box - y_cells_box
 
         # Convert to simple arrays
-        zk_img = data['zk'][data['ravensburger_nodes']]
-        s1_img = data['s1'][data['ravensburger_cells']]
-        ucx_img = ucx_in_img[data['ravensburger_cells']]
-        ucy_img = ucy_in_img[data['ravensburger_cells']]
-        bl_img = data['bl'][data['ravensburger_cells']]
-        mag_img = np.sqrt(ucx_img**2 + ucy_img**2)
+        depth_nodes_img = data['DEPTH_NODES'].ravel()[data['ravensburger_nodes']]
+        waterlevel_img = data['WATERLEVEL'].ravel()[data['ravensburger_cells']]
+        u_img = u_in_img[data['ravensburger_cells']]
+        v_img = v_in_img[data['ravensburger_cells']]
+        depth_cells_img = data['DEPTH_CELLS'].ravel()[data['ravensburger_cells']]
+        mag_img = np.sqrt(u_img**2 + v_img**2)
 
         # Update raster plots
-        self.im_s1.set_data(s1_img - bl_img)
-        self.im_zk.set_data(bl_img)
+        self.im_waterlevel.set_data(waterlevel_img - depth_cells_img)
+        self.im_depth_cells.set_data(depth_cells_img)
         self.im_mag.set_data(mag_img)
 
         #################################################
@@ -309,7 +311,7 @@ class Visualization():
         #
         # Multiplier on the flow velocities
         scale = data.get('scale', 10.0)
-        flow = np.dstack([ucx_img, ucy_img]) * scale
+        flow = np.dstack([u_img, v_img]) * scale
 
 
         # compute new flow timestep
@@ -334,15 +336,18 @@ class Visualization():
             r, c = skimage.draw.circle(v * HEIGHT, u * WIDTH, 4,
                                        shape=(HEIGHT, WIDTH))
             # Don't plot on (nearly) dry cells
-            if (s1_img[int(v * HEIGHT), int(u * WIDTH)] - zk_img[int(v * HEIGHT), int(u * WIDTH)]) < 0.5:
+            if (
+                    waterlevel_img[int(v * HEIGHT), int(u * WIDTH)] -
+                    depth_nodes_img[int(v * HEIGHT), int(u * WIDTH)]
+            ) < 0.5:
                 continue
             # if zk_img[int(v * HEIGHT), int(u * WIDTH)] > 0:
             #     continue
             self.lic[r, c, :] = tuple(rgb) + (1, )
 
         # Remove liquid on dry places
-        self.lic[bl_img >= s1_img, 3] = 0.0
-        self.lic[zk_img >= s1_img, 3] = 0.0
+        self.lic[depth_cells_img >= waterlevel_img, 3] = 0.0
+        self.lic[depth_nodes_img >= waterlevel_img, 3] = 0.0
 
         #################################################
         # Draw updated canvas
