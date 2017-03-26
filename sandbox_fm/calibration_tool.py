@@ -220,7 +220,7 @@ class Calibration(object):
 
     @property
     def z(self):
-        z = self.data['DEPTH']
+        z = self.data['HEIGHT_NODES']
         return z.min(), z.max()
 
     @property
@@ -258,9 +258,9 @@ class Calibration(object):
         result.update(compute_transforms(result))
 
         xy_node = np.c_[
-            data['X'].ravel(),
-            data['Y'].ravel(),
-            np.ones_like(data['X'].ravel())
+            data['X_NODES'].ravel(),
+            data['Y_NODES'].ravel(),
+            np.ones_like(data['X_NODES'].ravel())
         ].astype('float32')
 
         print(result['model2box'], xy_node)
@@ -278,7 +278,7 @@ class Calibration(object):
         ax.scatter(
             xy_nodes_in_img[:, 0],
             xy_nodes_in_img[:, 1],
-            c=data['DEPTH'].ravel(),
+            c=data['HEIGHT_NODES'].ravel(),
             cmap='Greens',
             edgecolor='none',
             s=20,
@@ -348,9 +348,9 @@ class Calibration(object):
         # convert to array we can feed into opencv
         data = self.data
         axes[0, 1].scatter(
-            data['X'].ravel(),
-            data['Y'].ravel(),
-            c=data['DEPTH'].ravel(),
+            data['X_NODES'].ravel(),
+            data['Y_NODES'].ravel(),
+            c=data['HEIGHT_NODES'].ravel(),
             cmap='viridis',
             edgecolor='none'
         )

@@ -1,5 +1,29 @@
+dflowfm_vars = ['bl', 'ucx', 'ucy', 's1', 'zk']
+
 def dflowfm_compute(data):
+    """compute variables that are missing/buggy/not available"""
     data['is_wet'] = data['s1'] > data['bl']
+    numk = data['zk'].shape[0]
+    data['numk'] = numk
+    # fix shapes
+    for var_name in dflowfm_vars:
+        arr = data[var_name]
+        if arr.shape[0] == data['numk']:
+            data[name] = arr[:data['numk']]
+        elif arr.shape[0] == data['ndx']:
+            "should be of shape ndx"
+            # ndxi:ndx are the boundary points (See  netcdf write code in unstruc)
+            data[name] = arr[:data['ndxi']]
+            # data should be off consistent shape now
+        else:
+            raise ValueError("unexpected data shape %s for variable %s" % (arr.shape, name))
+
+
+def update_height_dflowfm(idx, height_nodes_copy, data, model):
+    for i in np.where(idx)[0]:
+        if data['HEIGHT_NODES'][i] != height_nodes_copy[i]:
+            # TODO: bug in zk
+            model.set_var_slice('zk', [i + 1], [1], height_nodes_copy[i:i + 1])
 
 dflowfm = {
     "initial_vars": [
@@ -10,22 +34,22 @@ dflowfm = {
         'zk',
         'ndx',
         'ndxi',             # number of internal points (no boundaries)
-        'numk',
         'flowelemnode'
     ],
-    "vars": ['bl', 'ucx', 'ucy', 's1', 'zk'],
+    "vars": dflowfm_vars,
     "mapping": dict(
         X_NODES="xk",
         Y_NODES="yk",
         X_CELLS="xzw",
         Y_CELLS="yzw",
-        DEPTH_NODES="zk",
-        DEPTH_CELLS="bl",
+        HEIGHT_NODES="zk",
+        HEIGHT_CELLS="bl",
         WATERLEVEL="s1",
         U="ucx",
         V="ucy"
     ),
-    "compute": dflowfm_compute
+    "compute": dflowfm_compute,
+    "update_height": update_height_dflowfm
 }
 
 def xbeach_compute(data):
@@ -47,8 +71,8 @@ xbeach = {
         Y_NODES="y",
         X_CELLS="x",
         Y_CELLS="y",
-        DEPTH_NODES="zb",
-        DEPTH_CELLS="zb",
+        HEIGHT_NODES="zb",
+        HEIGHT_CELLS="zb",
         WATERLEVEL="zs",
         U="u",
         V="v",

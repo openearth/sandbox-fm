@@ -11,7 +11,7 @@ import skimage.draw
 import sys
 
 from .cm import terrajet2
-from .sandbox_fm import compute_delta_zk
+from .sandbox_fm import compute_delta_height
 import sandbox_fm.models
 
 from .calibrate import (
@@ -45,29 +45,25 @@ def process_events(evt, data, model, vis):
     if evt.key == 'b':  # Set bed level to current camera bed level
         # data['bl'][idx] += compute_delta_bl(data, idx)
         idx = np.logical_and(data['node_in_box'], data['node_in_img_bbox'])
-        zk_copy = data['zk'].copy()
-        zk_copy[idx] += compute_delta_zk(data, idx)
+        height_nodes_copy = data['HEIGHT_NODES'].copy()
+        height_nodes_copy[idx] += compute_delta_height(data, idx)
         # replace the part that changed
-        print(np.where(idx))
-        for i in np.where(idx)[0]:
-            if data['zk'][i] != zk_copy[i]:
-                # TODO: bug in zk
-                model.set_var_slice('zk', [i + 1], [1], zk_copy[i:i + 1])
+        meta['update_nodes'](idx, height_nodes_copy)
     if evt.key == 'r':  # Reset to original bed level
-        for i in range(0, len(data['depth_cells_original'])):
-            if data['DEPTH_CELLS'][i] != data['depth_cells_original'][i]:
-                model.set_var_slice(mappings["DEPTH_CELLS"], [i + 1], [1],
-                                    data['depth_cells_original'][i:i + 1])
+        for i in range(0, len(data['height_cells_original'])):
+            if data['HEIGHT_CELLS'][i] != data['height_cells_original'][i]:
+                model.set_var_slice(mappings["HEIGHT_CELLS"], [i + 1], [1],
+                                    data['height_cells_original'][i:i + 1])
     if evt.key == 'p':
         vis.lic[:, :, :3] = 1.0
         vis.lic[:, :, 3] = 0.0
         vis.lic = cv2.warpPerspective(
             data['video'].astype('float32') / 255.0,
             np.array(data['img2box']),
-            data['height'].shape[::-1]
+            data['kinect_height'].shape[::-1]
         )
         if vis.lic.shape[-1] == 3:
-            # add depth channel
+            # add height channel
             vis.lic = np.dstack([
                 vis.lic,
                 np.ones_like(vis.lic[:, :, 0])
@@ -80,22 +76,22 @@ def process_events(evt, data, model, vis):
     if evt.key == '1':  # Visualisation preset 1. Show bed level from camera
         vis.im_waterlevel.set_visible(False)
         vis.im_height.set_visible(True)
-        vis.im_zk.set_visible(False)
+        vis.im_height_cells.set_visible(False)
         vis.im_mag.set_visible(False)
     if evt.key == '2':  # Visualisation preset 2. Show water level in model
         vis.im_waterlevel.set_visible(True)
         vis.im_height.set_visible(False)
-        vis.im_zk.set_visible(False)
+        vis.im_height_cells.set_visible(False)
         vis.im_mag.set_visible(False)
     if evt.key == '3':  # Visualisation preset 3. Show bed level in model
         vis.im_waterlevel.set_visible(False)
         vis.im_height.set_visible(False)
-        vis.im_zk.set_visible(True)
+        vis.im_height_cells.set_visible(True)
         vis.im_mag.set_visible(False)
     if evt.key == '4':  # Visualisation preset . Show flow magnitude in model
         vis.im_waterlevel.set_visible(False)
         vis.im_height.set_visible(False)
-        vis.im_zk.set_visible(False)
+        vis.im_height_cells.set_visible(False)
         vis.im_mag.set_visible(True)
 
 
@@ -124,20 +120,20 @@ class Visualization():
     def initialize(self, data):
         # create plots here (not sure why shape is reversed)
         warped_height = cv2.warpPerspective(
-            data['height'].filled(0),
+            data['kinect_height'].filled(0),
             np.array(data['img2box']),
-            data['height'].shape[::-1]
+            data['kinect_height'].shape[::-1]
         )
 
         # rgba image
         self.lic = cv2.warpPerspective(
-            np.zeros_like(data['video']).astype('float32'),
+            np.zeros_like(data['kinect_image']).astype('float32'),
             np.array(data['img2box']),
-            data['height'].shape[::-1]
+            data['kinect_height'].shape[::-1]
         )
 
         if self.lic.shape[-1] == 3:
-            # add depth channel
+            # add height channel
             self.lic = np.dstack([self.lic, np.zeros_like(self.lic[:, :, 0])])
 
         # transparent, white background
@@ -187,8 +183,8 @@ class Visualization():
         waterlevel_img = data['WATERLEVEL'].ravel()[data['ravensburger_cells']]
         u_img = u_in_img[data['ravensburger_cells']]
         v_img = v_in_img[data['ravensburger_cells']]
-        depth_cells_img = data['DEPTH_CELLS'].ravel()[data['ravensburger_cells']]
-        depth_nodes_img = data['DEPTH_NODES'].ravel()[data['ravensburger_nodes']]
+        height_cells_img = data['HEIGHT_CELLS'].ravel()[data['ravensburger_cells']]
+        height_nodes_img = data['HEIGHT_NODES'].ravel()[data['ravensburger_nodes']]
         mag_img = np.sqrt(u_img**2 + v_img**2)
 
         # Plot scanned height
@@ -208,10 +204,10 @@ class Visualization():
                 extent=[0, 640, 480, 0]
             )
 
-        # Plot waterdepth
+        # Plot waterheight
         # data['hh'] in xbeach
         self.im_waterlevel = self.ax.imshow(
-            (waterlevel_img - depth_cells_img),
+            (waterlevel_img - height_cells_img),
             cmap='Blues',
             alpha=.3 if self.background is not None else 1.0,
             vmin=0,
@@ -220,8 +216,8 @@ class Visualization():
         )
 
         # Plot bed level
-        self.im_depth_cells = self.ax.imshow(
-            depth_cells_img,
+        self.im_height_cells = self.ax.imshow(
+            height_cells_img,
             cmap=terrajet2,  # 'gist_earth',
             alpha=1,
             vmin=data['z'][0],
@@ -237,10 +233,6 @@ class Visualization():
             vmin=0,
             visible=False
         )
-
-        if data.get('debug'):
-            self.ct_depth_cells = self.ax.contour(depth_cells_img, colors='k')
-            self.ax.clabel(self.ct_depth_cells, inline=1, fontsize=10)
 
         # Plot particles
         self.im_flow = self.ax.imshow(
@@ -265,9 +257,9 @@ class Visualization():
         #############################################
         # Update camera visualisation
         warped_height = cv2.warpPerspective(
-            data['height'],
+            data['kinect_height'],
             np.array(data['img2box']),
-            data['height'].shape[::-1]
+            data['kinect_height'].shape[::-1]
         )
 
         # Update scanned height
@@ -294,16 +286,16 @@ class Visualization():
         v_in_img = y_cells_v_box - y_cells_box
 
         # Convert to simple arrays
-        depth_nodes_img = data['DEPTH_NODES'].ravel()[data['ravensburger_nodes']]
+        height_nodes_img = data['HEIGHT_NODES'].ravel()[data['ravensburger_nodes']]
         waterlevel_img = data['WATERLEVEL'].ravel()[data['ravensburger_cells']]
         u_img = u_in_img[data['ravensburger_cells']]
         v_img = v_in_img[data['ravensburger_cells']]
-        depth_cells_img = data['DEPTH_CELLS'].ravel()[data['ravensburger_cells']]
+        height_cells_img = data['HEIGHT_CELLS'].ravel()[data['ravensburger_cells']]
         mag_img = np.sqrt(u_img**2 + v_img**2)
 
         # Update raster plots
-        self.im_waterlevel.set_data(waterlevel_img - depth_cells_img)
-        self.im_depth_cells.set_data(depth_cells_img)
+        self.im_waterlevel.set_data(waterlevel_img - height_cells_img)
+        self.im_height_cells.set_data(height_cells_img)
         self.im_mag.set_data(mag_img)
 
         #################################################
@@ -338,7 +330,7 @@ class Visualization():
             # Don't plot on (nearly) dry cells
             if (
                     waterlevel_img[int(v * HEIGHT), int(u * WIDTH)] -
-                    depth_nodes_img[int(v * HEIGHT), int(u * WIDTH)]
+                    height_nodes_img[int(v * HEIGHT), int(u * WIDTH)]
             ) < 0.5:
                 continue
             # if zk_img[int(v * HEIGHT), int(u * WIDTH)] > 0:
@@ -346,15 +338,15 @@ class Visualization():
             self.lic[r, c, :] = tuple(rgb) + (1, )
 
         # Remove liquid on dry places
-        self.lic[depth_cells_img >= waterlevel_img, 3] = 0.0
-        self.lic[depth_nodes_img >= waterlevel_img, 3] = 0.0
+        self.lic[height_cells_img >= waterlevel_img, 3] = 0.0
+        self.lic[height_nodes_img >= waterlevel_img, 3] = 0.0
 
         #################################################
         # Draw updated canvas
         #
         # TODO: this can be faster, this also redraws axis
         # self.fig.canvas.draw()
-        # for artist in [self.im_zk, self.im_s1, self.im_flow]:
+        # for artist in [self.im_height_cells, self.im_s1, self.im_flow]:
         #     self.ax.draw_artist(artist)
         # self.fig.canvas.blit(self.ax.bbox)
         # self.ax.redraw_in_frame()

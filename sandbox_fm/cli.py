@@ -77,7 +77,7 @@ def cli():
 def record():
     """record 10 frames, for testing"""
     videos = video_images()
-    raws = depth_images(raw=True)
+    raws = depth_images()
     for i, (video, raw) in enumerate(zip(videos, raws)):
         skimage.io.imsave("video_%06d.png" % (i, ), video)
         raw.dump("raw_%06d.npy" % (i, ))
@@ -89,7 +89,7 @@ def record():
 def anomaly():
     """calibrate the kinect anomaly for a flat surface"""
 
-    raws = depth_images(raw=True)
+    raws = depth_images()
     raw = next(raws)
     anomaly = raw - raw.mean()
     anomaly.dump('anomaly.npy')
@@ -105,7 +105,7 @@ def calibrate(schematization, engine):
     path = schematization_path.with_name('calibration.json').absolute()
     # raw images
     videos = video_images()
-    raws = depth_images(raw=True)
+    raws = depth_images()
     # start the model (changes directory)
     model = bmi.wrapper.BMIWrapper(engine)
     # this stores current path
@@ -219,20 +219,20 @@ def run(schematization, engine):
         plt.show()
 
     # images
-    heights = calibrated_height_images(
+    kinect_heights = calibrated_height_images(
         calibration["z_values"],
         calibration["z"],
         anomaly_name=anomaly_name
     )
-    videos = video_images()
+    kinect_images = video_images()
     # load model library
-    height = next(heights)
-    video = next(videos)
+    kinect_height = next(kinect_heights)
+    kinect_image = next(kinect_images)
 
-    data['height'] = height
-    data['video'] = video
-    data['depth_cells_original'] = data['DEPTH_CELLS'].copy()
-    data['height_original'] = data['height'].copy()
+    data['kinect_height'] = kinect_height
+    data['kinect_image'] = kinect_image
+    data['height_cells_original'] = data['HEIGHT_CELLS'].copy()
+    data['kinect_height_original'] = data['kinect_height'].copy()
 
     vis = Visualization()
     update_vars(data, model)
@@ -241,19 +241,19 @@ def run(schematization, engine):
         # fill in the data parameter and subscribe to events
         functools.partial(process_events, data=data, model=model, vis=vis)
     )
-
-    for i, (video, height) in enumerate(tqdm.tqdm(zip(videos, heights))):
+    iterator = enumerate(tqdm.tqdm(zip(kinect_images, kinect_heights)))
+    for i, (kinect_image, kinect_height) in iterator:
 
         # Get data from model
         update_vars(data, model)
 
         # update kinect
-        data['height'] = height
-        data['video'] = video
+        data['kinect_height'] = kinect_height
+        data['kinect_image'] = kinect_image
 
         # update visualization
         vis.update(data)
-
+        dt = model.get_time_step()
         # update model
         model.update(dt)
 

@@ -24,6 +24,7 @@ def update_initial_vars(data, model):
         data[name + '_0'] = model.get_var(name).copy()
     for key, val in meta["mapping"].items():
         data[key] = data[val]
+    meta['compute'](data)
 
 
 def update_vars(data, model):
@@ -32,53 +33,25 @@ def update_vars(data, model):
     for name in meta['vars']:
         # get data and toss away the boundary points
         arr = model.get_var(name)
-        # corner data
-        if model.engine == 'dflowfm':
-
-            if arr.shape[0] == data['numk']:
-                data[name] = arr[:data['numk']]
-            elif arr.shape[0] == data['ndx']:
-                "should be of shape ndx"
-                # ndxi:ndx are the boundary points (See  netcdf write code in unstruc)
-                data[name] = arr[:data['ndxi']]
-                # data should be off consistent shape now
-            else:
-                raise ValueError("unexpected data shape %s for variable %s" % (arr.shape, name))
+    # do some stuff per model
     meta["compute"](data)
     for key, val in meta["mapping"].items():
         data[key] = data[val]
 
 
-def compute_delta_zk(data, idx, mode='absolute'):
+def compute_delta_height(data, idx, mode='absolute'):
     """compute the bed level change, normalized a bit and only for cells in idx"""
-    if mode=='absolute':
-        height = data['height']
+    height = data['height']
 
-        xk_box, yk_box = transform(data['xk'], data['yk'], data['model2box'])
+    x_nodes_box, y_nodes_box = transform(data['X_NODES'], data['Y_NODES'], data['model2box'])
 
-        u = np.clip(np.round(yk_box[idx]).astype('int'), 0, HEIGHT - 1)
-        v = np.clip(np.round(xk_box[idx]).astype('int'), 0, WIDTH - 1)
-        # define the interpolation function from depth to meters
-        # depth2meters = scipy.interpolate.interp1d([0, 127, 255], [-8, 0, 12])
+    # pixels
+    u = np.clip(np.round(y_nodes_box[idx]).astype('int'), 0, HEIGHT - 1)
+    v = np.clip(np.round(x_nodes_box[idx]).astype('int'), 0, WIDTH - 1)
 
-        # cell_depth = depth2meters(depth[u, v].ravel())
-        node_height = height[u, v].ravel()
-        delta_zk = node_height - data['zk'][idx]
-        return delta_zk
-    elif mode=='relative':
-        height = np.array(data['height']) - np.array(data['height_original'])
-
-        xk_box, yk_box = transform(data['xk'], data['yk'], data['model2box'])
-
-        u = np.clip(np.round(yk_box[idx]).astype('int'), 0, HEIGHT - 1)
-        v = np.clip(np.round(xk_box[idx]).astype('int'), 0, WIDTH - 1)
-        # define the interpolation function from depth to meters
-        # depth2meters = scipy.interpolate.interp1d([0, 127, 255], [-8, 0, 12])
-
-        # cell_depth = depth2meters(depth[u, v].ravel())
-        node_height = height[u, v].ravel()
-        delta_zk = node_height
-        return delta_zk
+    node_height = height[u, v].ravel()
+    delta_zk = node_height - data['HEIGHT_NODES'][idx]
+    return delta_zk
 
 
 def compute_delta_s1(data, idx):
@@ -90,7 +63,7 @@ def compute_delta_s1(data, idx):
 
     u = np.clip(np.round(yzw_box[idx]).astype('int'), 0, HEIGHT-1)
     v = np.clip(np.round(xzw_box[idx]).astype('int'), 0, WIDTH-1)
-    # define the interpolation function from depth to meters
+    # define the interpolation function from height to meters
     cell_height = height[u, v].ravel()
 
     delta_s1 = np.zeros_like(cell_height)
