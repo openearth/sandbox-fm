@@ -7,7 +7,7 @@ from .calibrate import (
     HEIGHT, WIDTH,
     transform
 )
-import sandbox_fm.models
+import models
 
 logger = logging.getLogger(__name__)
 

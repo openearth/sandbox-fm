@@ -12,7 +12,7 @@ import sys
 
 from .cm import terrajet2
 from .sandbox_fm import compute_delta_height
-import sandbox_fm.models
+import models
 
 from .calibrate import (
     transform,

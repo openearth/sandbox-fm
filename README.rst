@@ -36,6 +36,7 @@ You preferably want to install these from the package manager (tested with ubunt
 Several python libraries:
 * ``pip install -r requirements.txt``
 
+Make sure your libdflowfm.so/libxbeach.so
 
 Windows Install
 ----------------
@@ -49,8 +50,11 @@ Windows Install
 - ``pip install tqdm``
 - ``pip install -r requirements.txt``
 - ``pip install cmocean``
-- Make sure the dflowfm.dll is somewhere in your PATH definition
+- Make sure the dflowfm.dll/xbeach.dll is somewhere in your PATH definition
+ 
 
+
+  
 Running
 -------
 
