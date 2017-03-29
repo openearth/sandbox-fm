@@ -169,7 +169,6 @@ class Visualization():
         )
         tree = scipy.spatial.cKDTree(np.c_[data['X_CELLS'].ravel(), data['Y_CELLS'].ravel()])
         distances_cells, ravensburger_cells = tree.query(np.c_[u_t, v_t])
-        print("shapes", distances_cells.shape, ravensburger_cells.shape)
         data['ravensburger_cells'] = ravensburger_cells.reshape(HEIGHT, WIDTH)
         data['distances_cells'] = distances_cells.reshape(HEIGHT, WIDTH)
         tree = scipy.spatial.cKDTree(np.c_[data['X_NODES'].ravel(), data['Y_NODES'].ravel()])

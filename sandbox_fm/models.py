@@ -9,14 +9,17 @@ def dflowfm_compute(data):
     for var_name in dflowfm_vars:
         arr = data[var_name]
         if arr.shape[0] == data['numk']:
-            data[name] = arr[:data['numk']]
+            data[var_name] = arr[:data['numk']]
         elif arr.shape[0] == data['ndx']:
             "should be of shape ndx"
             # ndxi:ndx are the boundary points (See  netcdf write code in unstruc)
-            data[name] = arr[:data['ndxi']]
+            data[var_name] = arr[:data['ndxi']]
             # data should be off consistent shape now
+        elif arr.shape[0] == data['ndxi']:
+            # this is ok
+            pass
         else:
-            raise ValueError("unexpected data shape %s for variable %s" % (arr.shape, name))
+            raise ValueError("unexpected data shape %s for variable %s" % (arr.shape, var_name))
 
 
 def update_height_dflowfm(idx, height_nodes_copy, data, model):
