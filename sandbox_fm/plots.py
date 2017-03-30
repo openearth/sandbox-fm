@@ -38,7 +38,7 @@ def warp_flow(img, flow):
 
 def process_events(evt, data, model, vis):
     """handle keystrokes and other interactions"""
-    meta = getattr(sandbox_fm.models, model.engine)
+    meta = getattr(models, model.engine)
 
     if not isinstance(evt, matplotlib.backend_bases.KeyEvent):
         return

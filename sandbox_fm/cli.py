@@ -254,6 +254,7 @@ def run(schematization, engine):
         # update visualization
         vis.update(data)
         dt = model.get_time_step()
+        dt = 600
         # update model
         model.update(dt)
 
