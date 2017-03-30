@@ -112,8 +112,9 @@ xbeach = {
         U="u",
         V="v",
         H="H",
-        WAVE_U="cgx",
-        WAVE_V="cgy",
+        WAVE_U="cgu",
+        WAVE_V="cgv",
+        WAVE_HEIGHT='H',
         EROSION="sedero",
         STRUCTURE_HEIGHT="structdepth"
     ),
