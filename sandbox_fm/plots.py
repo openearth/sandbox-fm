@@ -23,7 +23,10 @@ from .calibrate import (
 matplotlib.rcParams['toolbar'] = 'None'
 
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
+def warp_lines(lines, flow):
+    pass
 
 def warp_flow(img, flow):
     """transform image with flow field"""
@@ -46,9 +49,19 @@ def process_events(evt, data, model, vis):
         # data['bl'][idx] += compute_delta_bl(data, idx)
         idx = np.logical_and(data['node_in_box'], data['node_in_img_bbox'])
         height_nodes_copy = data['HEIGHT_NODES'].copy()
-        height_nodes_copy[idx] += compute_delta_height(data, idx)
+        height_nodes_copy.ravel()[idx] += compute_delta_height(data, idx)
         # replace the part that changed
-        meta['update_nodes'](idx, height_nodes_copy)
+        logger.info("updating bathymetry in  %s nodes", np.sum(idx))
+        meta['update_nodes'](idx, height_nodes_copy, data, model)
+    if evt.key == 'h':  # mark high objects as non erodable ([H]ard structure)
+        idx = np.logical_and(data['node_in_box'], data['node_in_img_bbox'])
+        height_nodes_copy = data['HEIGHT_NODES'].copy()
+        height_nodes_copy.ravel()[idx] += compute_delta_height(data, idx)
+        # at least 3 meter
+        idx = np.logical_and(idx, height_nodes_copy.ravel() > data['HEIGHT_NODES'].ravel() + data.get('hard_threshold', 3.0))
+        # replace the part that changed
+        logger.info("updating structures in  %s nodes", np.sum(idx))
+        meta['update_structures'](idx, height_nodes_copy, data, model)
     if evt.key == 'r':  # Reset to original bed level
         for i in range(0, len(data['height_cells_original'])):
             if data['HEIGHT_CELLS'][i] != data['height_cells_original'][i]:
@@ -109,6 +122,7 @@ class Visualization():
         plt.ion()
         plt.show(block=False)
         self.lic = None
+        self.waves = []
         self.background = None
         self.counter = itertools.count()
         self.subscribers = []

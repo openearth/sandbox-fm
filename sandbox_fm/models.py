@@ -1,4 +1,7 @@
+import numpy as np
+
 dflowfm_vars = ['bl', 'ucx', 'ucy', 's1', 'zk']
+
 
 def dflowfm_compute(data):
     """compute variables that are missing/buggy/not available"""
@@ -12,14 +15,19 @@ def dflowfm_compute(data):
             data[var_name] = arr[:data['numk']]
         elif arr.shape[0] == data['ndx']:
             "should be of shape ndx"
-            # ndxi:ndx are the boundary points (See  netcdf write code in unstruc)
+            # ndxi:ndx are the boundary points
+            # (See  netcdf write code in unstruc)
             data[var_name] = arr[:data['ndxi']]
             # data should be off consistent shape now
         elif arr.shape[0] == data['ndxi']:
             # this is ok
             pass
         else:
-            raise ValueError("unexpected data shape %s for variable %s" % (arr.shape, var_name))
+            msg = "unexpected data shape %s for variable %s" % (
+                arr.shape,
+                var_name
+            )
+            raise ValueError(msg)
 
 
 def update_height_dflowfm(idx, height_nodes_copy, data, model):
@@ -52,13 +60,36 @@ dflowfm = {
         V="ucy"
     ),
     "compute": dflowfm_compute,
-    "update_height": update_height_dflowfm
+    "update_nodes": update_height_dflowfm
 }
 
-def xbeach_compute(data):
-    # wetz -> is_wet
-    pass
 
+def xbeach_compute(data):
+    # rotate velocties with grid angle
+    data['u'] = (
+        data['uu'] * np.cos(data['alfaz']) -
+        data['vv'] * np.sin(data['alfaz'])
+    )
+    data['v'] = (
+        data['uu'] * np.sin(data['alfaz']) +
+        data['vv'] * np.cos(data['alfaz'])
+    )
+    data['cgu'] = (
+        data['cgx'] * np.cos(data['alfaz']) -
+        data['cgy'] * np.sin(data['alfaz'])
+    )
+    data['cgv'] = (
+        data['cgx'] * np.sin(data['alfaz']) +
+        data['cgy'] * np.cos(data['alfaz'])
+    )
+
+
+def update_height_xbeach(idx, height_nodes_copy, data, model):
+    data['HEIGHT_NODES'].ravel()[idx] = height_nodes_copy.ravel()[idx]
+
+def update_height_xbeach(idx, height_nodes_copy, data, model):
+    delta_height = height_nodes_copy - data['HEIGHT_NODES']
+    data['STRUCTURE_HEIGHT'].ravel()[idx] = delta_height.ravel()[idx]
 
 xbeach = {
     "initial_vars": [
@@ -66,9 +97,10 @@ xbeach = {
         'y',
         'xz',
         'yz',
-        'H'
+        'H',
+        'alfaz'
     ],
-    "vars": ['zb', 'zs', 'H', 'u', 'v', 'cgx', 'cgy', "sedero"],
+    "vars": ['zb', 'zs', 'H', 'cgx', 'cgy', "sedero", 'uu', 'vv', 'structdepth'],
     "mapping": dict(
         X_NODES="x",
         Y_NODES="y",
@@ -82,7 +114,10 @@ xbeach = {
         H="H",
         WAVE_U="cgx",
         WAVE_V="cgy",
-        EROSION="sedero"
+        EROSION="sedero",
+        STRUCTURE_HEIGHT="structdepth"
     ),
-    "compute": xbeach_compute
+    "compute": xbeach_compute,
+    "update_nodes": update_height_xbeach,
+    "update_structures": update_height_xbeach
 }

@@ -255,6 +255,9 @@ def run(schematization, engine, max_iterations):
         # update visualization
         vis.update(data)
         dt = model.get_time_step()
+        # HACK: fix unstable timestep in xbeach
+        if model.engine == 'xbeach':
+            dt = 60
         # update model
         model.update(dt)
 
