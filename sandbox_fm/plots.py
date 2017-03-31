@@ -237,6 +237,7 @@ class Visualization():
         waterlevel_img = data['WATERLEVEL'].ravel()[data['ravensburger_cells']]
         u_img = u_in_img[data['ravensburger_cells']]
         v_img = v_in_img[data['ravensburger_cells']]
+        logger.info("u_img shape %s, waterlevel %s", u_img.shape, waterlevel_img.shape)
         height_cells_img = data['HEIGHT_CELLS'].ravel()[data['ravensburger_cells']]
         height_nodes_img = data['HEIGHT_NODES'].ravel()[data['ravensburger_nodes']]
         mag_img = np.sqrt(u_img**2 + v_img**2)
@@ -344,6 +345,8 @@ class Visualization():
         u_in_img = x_cells_u_box - x_cells_box
         v_in_img = y_cells_v_box - y_cells_box
 
+        logger.info("u_in_img shape %s, x_cells: %s, u %s", u_in_img.shape, data['X_CELLS'].shape, data['U'].shape)
+
         # compute wave velocities
         have_waves = 'WAVE_V' in data
 
@@ -361,8 +364,8 @@ class Visualization():
         # Convert to simple arrays
         height_nodes_img = data['HEIGHT_NODES'].ravel()[data['ravensburger_nodes']]
         waterlevel_img = data['WATERLEVEL'].ravel()[data['ravensburger_cells']]
-        u_img = u_in_img[data['ravensburger_cells']]
-        v_img = v_in_img[data['ravensburger_cells']]
+        u_img = u_in_img.ravel()[data['ravensburger_cells']]
+        v_img = v_in_img.ravel()[data['ravensburger_cells']]
 
         height_cells_img = data['HEIGHT_CELLS'].ravel()[data['ravensburger_cells']]
         mag_img = np.sqrt(u_img**2 + v_img**2)
@@ -376,6 +379,7 @@ class Visualization():
         self.im_waterlevel.set_data(waterlevel_img - height_cells_img)
         self.im_height_cells.set_data(height_cells_img)
         self.im_mag.set_data(mag_img)
+        self.im_mag.set_clim(0, 2.5)
 
         #################################################
         # Compute liquid added to the model

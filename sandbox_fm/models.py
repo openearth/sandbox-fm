@@ -87,7 +87,7 @@ def xbeach_compute(data):
 def update_height_xbeach(idx, height_nodes_copy, data, model):
     data['HEIGHT_NODES'].ravel()[idx] = height_nodes_copy.ravel()[idx]
 
-def update_height_xbeach(idx, height_nodes_copy, data, model):
+def update_structure_height_xbeach(idx, height_nodes_copy, data, model):
     delta_height = height_nodes_copy - data['HEIGHT_NODES']
     data['STRUCTURE_HEIGHT'].ravel()[idx] = delta_height.ravel()[idx]
 
@@ -121,7 +121,7 @@ xbeach = {
     ),
     "compute": xbeach_compute,
     "update_nodes": update_height_xbeach,
-    "update_structures": update_height_xbeach
+    "update_structures": update_structure_height_xbeach
 }
 available = {
     "xbeach": xbeach,
