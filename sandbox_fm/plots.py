@@ -23,7 +23,19 @@ from .calibrate import (
 matplotlib.rcParams['toolbar'] = 'None'
 
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
+def create_wave(data):
+    n_segments = 100
+    wave_x = np.linspace(data['box'][0][0], data['box'][1][0], num=n_segments + 1)
+    wave_y = np.zeros(n_segments + 1) # y-pixels
+    wave_xy = np.c_[wave_x, wave_y]
+    wave_idx = np.round(wave_xy).astype('int')
+
+
+
+def warp_waves(waves, flow, wave_height_img):
+    return waves
 
 def warp_flow(img, flow):
     """transform image with flow field"""
@@ -46,9 +58,19 @@ def process_events(evt, data, model, vis):
         # data['bl'][idx] += compute_delta_bl(data, idx)
         idx = np.logical_and(data['node_in_box'], data['node_in_img_bbox'])
         height_nodes_copy = data['HEIGHT_NODES'].copy()
-        height_nodes_copy[idx] += compute_delta_height(data, idx)
+        height_nodes_copy.ravel()[idx] += compute_delta_height(data, idx)
         # replace the part that changed
-        meta['update_nodes'](idx, height_nodes_copy)
+        logger.info("updating bathymetry in  %s nodes", np.sum(idx))
+        meta['update_nodes'](idx, height_nodes_copy, data, model)
+    if evt.key == 'h':  # mark high objects as non erodable ([H]ard structure)
+        idx = np.logical_and(data['node_in_box'], data['node_in_img_bbox'])
+        height_nodes_copy = data['HEIGHT_NODES'].copy()
+        height_nodes_copy.ravel()[idx] += compute_delta_height(data, idx)
+        # at least 3 meter
+        idx = np.logical_and(idx, height_nodes_copy.ravel() > data['HEIGHT_NODES'].ravel() + data.get('hard_threshold', 3.0))
+        # replace the part that changed
+        logger.info("updating structures in  %s nodes", np.sum(idx))
+        meta['update_structures'](idx, height_nodes_copy, data, model)
     if evt.key == 'r':  # Reset to original bed level
         for i in range(0, len(data['height_cells_original'])):
             if data['HEIGHT_CELLS'][i] != data['height_cells_original'][i]:
@@ -109,6 +131,7 @@ class Visualization():
         plt.ion()
         plt.show(block=False)
         self.lic = None
+        self.waves = []
         self.background = None
         self.counter = itertools.count()
         self.subscribers = []
@@ -135,6 +158,11 @@ class Visualization():
         if self.lic.shape[-1] == 3:
             # add height channel
             self.lic = np.dstack([self.lic, np.zeros_like(self.lic[:, :, 0])])
+
+        have_waves = 'WAVE_U' in data
+        if have_waves:
+            self.waves.append(create_wave(data))
+
 
         # transparent, white background
         if data['background'].exists():
@@ -169,7 +197,6 @@ class Visualization():
         )
         tree = scipy.spatial.cKDTree(np.c_[data['X_CELLS'].ravel(), data['Y_CELLS'].ravel()])
         distances_cells, ravensburger_cells = tree.query(np.c_[u_t, v_t])
-        print("shapes", distances_cells.shape, ravensburger_cells.shape)
         data['ravensburger_cells'] = ravensburger_cells.reshape(HEIGHT, WIDTH)
         data['distances_cells'] = distances_cells.reshape(HEIGHT, WIDTH)
         tree = scipy.spatial.cKDTree(np.c_[data['X_NODES'].ravel(), data['Y_NODES'].ravel()])
@@ -285,13 +312,33 @@ class Visualization():
         u_in_img = x_cells_u_box - x_cells_box
         v_in_img = y_cells_v_box - y_cells_box
 
+        # compute wave velocities
+        have_waves = 'WAVE_V' in data
+
+        if have_waves:
+            x_cells_wave_u_box, y_cells_wave_v_box = transform(
+                data['X_CELLS'].ravel() + data['WAVE_U'].ravel(),
+                data['Y_CELLS'].ravel() + data['WAVE_V'].ravel(),
+                data['model2box']
+            )
+            wave_u_in_img = x_cells_wave_u_box - x_cells_box
+            wave_v_in_img = y_cells_wave_v_box - y_cells_box
+
+
+
         # Convert to simple arrays
         height_nodes_img = data['HEIGHT_NODES'].ravel()[data['ravensburger_nodes']]
         waterlevel_img = data['WATERLEVEL'].ravel()[data['ravensburger_cells']]
         u_img = u_in_img[data['ravensburger_cells']]
         v_img = v_in_img[data['ravensburger_cells']]
+
         height_cells_img = data['HEIGHT_CELLS'].ravel()[data['ravensburger_cells']]
         mag_img = np.sqrt(u_img**2 + v_img**2)
+        if have_waves:
+            wave_u_img = wave_u_in_img[data['ravensburger_cells']]
+            wave_v_img = wave_v_in_img[data['ravensburger_cells']]
+            wave_height_img = data['WAVE_HEIGHT'].ravel()[data['ravensburger_cells']]
+
 
         # Update raster plots
         self.im_waterlevel.set_data(waterlevel_img - height_cells_img)
@@ -305,6 +352,8 @@ class Visualization():
         scale = data.get('scale', 10.0)
         flow = np.dstack([u_img, v_img]) * scale
 
+        if have_waves:
+            waves_flow = np.dstack([wave_u_img, wave_v_img]) * scale
 
         # compute new flow timestep
         self.lic = warp_flow(
@@ -340,6 +389,11 @@ class Visualization():
         # Remove liquid on dry places
         self.lic[height_cells_img >= waterlevel_img, 3] = 0.0
         self.lic[height_nodes_img >= waterlevel_img, 3] = 0.0
+
+        # compute new waves
+        if have_waves:
+            self.waves = warp_waves(self.waves, wave_height_img, waves_flow)
+
 
         #################################################
         # Draw updated canvas

@@ -51,14 +51,15 @@ from .sandbox_fm import (
     update_vars
 )
 
-logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 # initialize mpi
 if HAVE_MPI:
     mpi4py.MPI.COMM_WORLD
 else:
-    logging.warn('MPI not initialized')
+    logger.warn('MPI not initialized')
 
 @click.group()
 def cli():
@@ -71,7 +72,7 @@ def cli():
      - r -> reset bathymethry
      - b -> set bed level
     """
-    pass
+    logger.info("Welcome to the sandbox software.")
 
 @cli.command()
 def record():
@@ -148,7 +149,8 @@ def view():
 @cli.command()
 @click.argument('schematization', type=click.File('rb'))
 @click.option('--engine', default='dflowfm', type=click.Choice(['dflowfm', 'xbeach']))
-def run(schematization, engine):
+@click.option('--max-iterations', default=0, type=int)
+def run(schematization, engine, max_iterations):
     """Console script for sandbox_fm
 
     keys:
@@ -159,7 +161,6 @@ def run(schematization, engine):
      - r -> reset bathymethry
      - b -> set bed level
     """
-    click.echo("Make sure you start the SARndbox first")
 
     schematization_name = pathlib.Path(schematization.name)
     # keep absolute path so model can change directory
@@ -254,9 +255,14 @@ def run(schematization, engine):
         # update visualization
         vis.update(data)
         dt = model.get_time_step()
-        dt = 600
+        # HACK: fix unstable timestep in xbeach
+        if model.engine == 'xbeach':
+            dt = 60
         # update model
         model.update(dt)
+
+        if max_iterations and i > max_iterations:
+            break
 
 if __name__ == "__main__":
     import sandbox_fm.cli
