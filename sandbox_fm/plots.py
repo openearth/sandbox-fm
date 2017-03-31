@@ -28,17 +28,41 @@ matplotlib.rcParams['toolbar'] = 'None'
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
+
 def create_wave(data):
     n_segments = 100
     wave_x = np.linspace(data['box'][0][0], data['box'][1][0], num=n_segments + 1)
-    wave_y = np.zeros(n_segments + 1) # y-pixels
+    wave_y = np.zeros(n_segments + 1) + 10.0 # y-pixels
     wave_xy = np.c_[wave_x, wave_y]
-    wave_idx = np.round(wave_xy).astype('int')
+    segments = []               # preallocate segments structure
+    for i in range(n_segments):
+        segments.append([
+            wave_xy[i],         # from
+            wave_xy[i+1]        # to
+        ])
+    wave = matplotlib.collections.LineCollection(segments)
+    return wave
 
 
+def warp_waves(waves, flow, data, wave_height_img):
+    for wave in waves:
+        logger.info("wave %s", wave)
+        # segments x 2(from, to) x 2 (x,y)
+        segments = wave.get_segments()
+        wave_idx = np.round(segments).astype('int')
+        # we only have velocities inside the domain, use nearest
+        wave_idx[:, :, 0] = np.clip(wave_idx[:, :, 0], 0, flow.shape[1] - 1)
+        wave_idx[:, :, 1] = np.clip(wave_idx[:, :, 1], 0, flow.shape[0] - 1)
+        # segments x 2(from, to) x 2 (u, v)
+        flow_per_segment = flow[wave_idx[:, :, 1], wave_idx[:, :, 0], :]
+        new_segments = segments + flow_per_segment * data.get('scale', 1.0)
+        # compute average wave height per segment
+        wave_height_per_segment = np.mean(wave_height_img[wave_idx[:, :, 1], wave_idx[:, :, 0]], axis=1)
+        wave.set_segments(new_segments)
+        wave.set_linewidths(wave_height_per_segment)
 
-def warp_waves(waves, flow, wave_height_img):
     return waves
+
 
 def warp_flow(img, flow):
     """transform image with flow field"""
@@ -54,7 +78,6 @@ def warp_flow(img, flow):
 def process_events(evt, data, model, vis):
     """handle keystrokes and other interactions"""
     meta = available[model.engine]
-
 
     if not isinstance(evt, matplotlib.backend_bases.KeyEvent):
         return
@@ -274,6 +297,10 @@ class Visualization():
             visible=True
         )
 
+        # add waves to plot
+        for wave in self.waves:
+            self.ax.add_collection(wave, autolim=False)
+
         # self.ax.set_xlim(xlim[0] + 80, xlim[1] - 80)
         # self.ax.set_ylim(ylim[0] + 80, ylim[1] - 80)
         self.ax.axis('tight')
@@ -374,6 +401,8 @@ class Visualization():
         # Update liquid
         self.im_flow.set_data(self.lic)
 
+        # update waves
+
         # Put in new white dots (to be plotted next time step)
         for u, v in zip(np.random.random(4), np.random.random(4)):
             rgb = (1.0, 1.0, 1.0)
@@ -397,7 +426,16 @@ class Visualization():
 
         # compute new waves
         if have_waves:
-            self.waves = warp_waves(self.waves, wave_height_img, waves_flow)
+            if i % 10 == 0:
+                wave = create_wave(data)
+                self.waves.append(wave)
+                self.ax.add_collection(wave)
+            logger.info("waves %s", self.waves)
+            if len(self.waves) > 10:
+                wave = self.waves.pop(0)
+                # TODO: remove, not implementedc
+                wave.set_visible(False)
+            self.waves = warp_waves(self.waves, waves_flow, data, wave_height_img)
 
 
         #################################################
