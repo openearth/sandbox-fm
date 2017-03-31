@@ -1,14 +1,14 @@
 import logging
 import itertools
+import sys
 
 import cv2
 import matplotlib.pyplot as plt
 import matplotlib
-# import cmocean
+import cmocean.cm
 import scipy.interpolate
 import numpy as np
 import skimage.draw
-import sys
 
 from .cm import terrajet2
 from .sandbox_fm import compute_delta_height
@@ -44,7 +44,8 @@ def create_wave(data):
     return wave
 
 
-def warp_waves(waves, flow, data, wave_height_img):
+def warp_waves(waves, flow, data, wave_height_img, dissipation_img):
+    N = matplotlib.colors.Normalize(0, 2000, clip=True)
     for wave in waves:
         # segments x 2(from, to) x 2 (x,y)
         segments = wave.get_segments()
@@ -57,8 +58,14 @@ def warp_waves(waves, flow, data, wave_height_img):
         new_segments = segments + (flow_per_segment * data.get('wave.scale', 1.0))
         # compute average wave height per segment
         wave_height_per_segment = np.mean(wave_height_img[wave_idx[:, :, 1], wave_idx[:, :, 0]], axis=1)
+        dissipation_per_segment = np.mean(dissipation_img[wave_idx[:, :, 1], wave_idx[:, :, 0]], axis=1)
+
         wave.set_segments(new_segments)
         wave.set_linewidths(wave_height_per_segment)
+        dissipation_per_segment_normalized = N(dissipation_per_segment)
+        dissipation_per_segment_color = np.ones((len(segments), 4))
+        dissipation_per_segment_color[:, 3] = dissipation_per_segment_normalized
+        wave.set_color(dissipation_per_segment_color)
 
     return waves
 
@@ -130,6 +137,8 @@ def process_events(evt, data, model, vis):
         vis.im_mag.set_visible(False)
         if hasattr(vis, 'im_wave_height'):
             vis.im_wave_height.set_visible(False)
+        if hasattr(vis, 'im_erosion'):
+            vis.im_erosion.set_visible(False)
     if evt.key == '2':  # Visualisation preset 2. Show water level in model
         if hasattr(vis, 'im_background'):
             vis.im_background.set_visible(True)
@@ -139,6 +148,8 @@ def process_events(evt, data, model, vis):
         vis.im_mag.set_visible(False)
         if hasattr(vis, 'im_wave_height'):
             vis.im_wave_height.set_visible(False)
+        if hasattr(vis, 'im_erosion'):
+            vis.im_erosion.set_visible(False)
     if evt.key == '3':  # Visualisation preset 3. Show bed level in model
         if hasattr(vis, 'im_background'):
             vis.im_background.set_visible(False)
@@ -148,6 +159,8 @@ def process_events(evt, data, model, vis):
         vis.im_mag.set_visible(False)
         if hasattr(vis, 'im_wave_height'):
             vis.im_wave_height.set_visible(False)
+        if hasattr(vis, 'im_erosion'):
+            vis.im_erosion.set_visible(False)
     if evt.key == '4':  # Visualisation preset . Show flow magnitude in model
         if hasattr(vis, 'im_background'):
             vis.im_background.set_visible(False)
@@ -157,6 +170,8 @@ def process_events(evt, data, model, vis):
         vis.im_mag.set_visible(True)
         if hasattr(vis, 'im_wave_height'):
             vis.im_wave_height.set_visible(False)
+        if hasattr(vis, 'im_erosion'):
+            vis.im_erosion.set_visible(False)
     if evt.key == '5':  # Visualisation preset . Show wave height in model
         if hasattr(vis, 'im_background'):
             vis.im_background.set_visible(False)
@@ -166,6 +181,19 @@ def process_events(evt, data, model, vis):
         vis.im_mag.set_visible(False)
         if hasattr(vis, 'im_wave_height'):
             vis.im_wave_height.set_visible(True)
+        if hasattr(vis, 'im_erosion'):
+            vis.im_erosion.set_visible(False)
+    if evt.key == '6':  # Visualisation preset . Show erosion in model
+        if hasattr(vis, 'im_background'):
+            vis.im_background.set_visible(False)
+        vis.im_waterlevel.set_visible(False)
+        vis.im_height.set_visible(True)
+        vis.im_height_cells.set_visible(False)
+        vis.im_mag.set_visible(False)
+        if hasattr(vis, 'im_wave_height'):
+            vis.im_wave_height.set_visible(False)
+        if hasattr(vis, 'im_erosion'):
+            vis.im_erosion.set_visible(True)
 
 
 class Visualization():
@@ -223,7 +251,7 @@ class Visualization():
         xlim = self.ax.get_xlim()
         ylim = self.ax.get_ylim()
 
-        # row, column indices
+        # row, column indices, not to be confused with velocities
         v, u = np.mgrid[:HEIGHT, :WIDTH]
 
         # xy of model in image coordinates
@@ -232,7 +260,7 @@ class Visualization():
             data['Y_CELLS'].ravel(),
             data['model2box']
         )
-        # transform vectors
+        # transform vectors, velocities
         x_cell_u_box, y_cell_v_box = transform(
             (data['X_CELLS'] + data['U']).ravel(),
             (data['Y_CELLS'] + data['V']).ravel(),
@@ -241,6 +269,7 @@ class Visualization():
         u_in_img = x_cell_box - x_cell_u_box
         v_in_img = y_cell_box - y_cell_v_box
 
+        # THESE ARE NOT VELOCITIES
         u_t, v_t = transform(
             u.ravel().astype('float32'),
             v.ravel().astype('float32'),
@@ -266,7 +295,8 @@ class Visualization():
         mag_img = np.sqrt(u_img**2 + v_img**2)
         if have_waves:
             wave_height_img = data['WAVE_HEIGHT'].ravel()[data['ravensburger_cells']]
-
+            dissipation_img = data['WAVE_DISSIPATION'].ravel()[data['ravensburger_cells']]
+            erosion_img = data['EROSION'].ravel()[data['ravensburger_cells']]
 
         # plot satellite image background
         if self.background is not None:
@@ -323,6 +353,15 @@ class Visualization():
             visible=False
         )
 
+        self.im_erosion = self.ax.imshow(
+            erosion_img,
+            cmocean.cm.curl_r,     # or balance
+            alpha=0.6,
+            vmin=-1,
+            vmax=1,
+            visible=False
+        )
+
         # Plot particles
         self.im_flow = self.ax.imshow(
             self.lic,
@@ -354,9 +393,6 @@ class Visualization():
             np.array(data['img2box']),
             data['kinect_height'].shape[::-1]
         )
-
-        # Update scanned height
-        self.im_height.set_data(warped_height)
 
         #############################################
         # Update model parameters
@@ -404,10 +440,13 @@ class Visualization():
             wave_u_img = wave_u_in_img[data['ravensburger_cells']]
             wave_v_img = wave_v_in_img[data['ravensburger_cells']]
             wave_height_img = data['WAVE_HEIGHT'].ravel()[data['ravensburger_cells']]
-
+            dissipation_img = data['WAVE_DISSIPATION'].ravel()[data['ravensburger_cells']]
+            erosion_img = data['EROSION'].ravel()[data['ravensburger_cells']]
 
         # Update raster plots
 
+        # Update scanned height
+        self.im_height.set_data(warped_height)
         self.im_waterlevel.set_data(np.ma.masked_less_equal(waterlevel_img - height_cells_img, 0.1))
         self.im_height_cells.set_data(height_cells_img)
         self.im_mag.set_data(mag_img)
@@ -415,6 +454,7 @@ class Visualization():
         if have_waves:
             self.im_wave_height.set_data(wave_height_img)
             self.im_wave_height.set_clim(0, 7)
+            self.im_erosion.set_data(erosion_img)
 
         #################################################
         # Compute liquid added to the model
@@ -466,7 +506,7 @@ class Visualization():
 
         # compute new waves
         if have_waves:
-            if i % 10 == 0:
+            if i % 20 == 0:
                 wave = create_wave(data)
                 self.waves.append(wave)
                 self.ax.add_collection(wave)
@@ -474,7 +514,7 @@ class Visualization():
                 wave = self.waves.pop(0)
                 # TODO: remove, not implementedc
                 wave.set_visible(False)
-            self.waves = warp_waves(self.waves, waves_flow, data, wave_height_img)
+            self.waves = warp_waves(self.waves, waves_flow, data, wave_height_img, dissipation_img)
 
 
         #################################################

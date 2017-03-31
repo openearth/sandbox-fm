@@ -101,7 +101,7 @@ xbeach = {
         'alfaz'
     ],
 
-    "vars": ['zb', 'zs', 'H', 'cgx', 'cgy', "sedero", 'uu', 'vv', 'structdepth'],
+    "vars": ['zb', 'zs', 'H', 'D', 'cgx', 'cgy', "sedero", 'uu', 'vv', 'structdepth'],
     "mapping": dict(
         X_NODES="xz",
         Y_NODES="yz",
@@ -116,6 +116,7 @@ xbeach = {
         WAVE_U="cgu",
         WAVE_V="cgv",
         WAVE_HEIGHT='H',
+        WAVE_DISSIPATION='D',
         EROSION="sedero",
         STRUCTURE_HEIGHT="structdepth"
     ),
