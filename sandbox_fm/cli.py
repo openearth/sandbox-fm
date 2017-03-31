@@ -31,6 +31,8 @@ try:
 except ImportError:
     pass
 
+
+
 from .depth import (
     depth_images,
     calibrated_height_images,
@@ -58,6 +60,7 @@ logger.setLevel(logging.INFO)
 # initialize mpi
 if HAVE_MPI:
     mpi4py.MPI.COMM_WORLD
+    logger.info("MPI initialized")
 else:
     logger.warn('MPI not initialized')
 
@@ -259,7 +262,12 @@ def run(schematization, engine, max_iterations):
         if model.engine == 'xbeach':
             dt = 60
         # update model
-        model.update(dt)
+        import time
+        tic = time.time()
+        for i in range(data.get('iterations.per.visualization', 1)):
+            model.update(dt)
+        toc = time.time()
+        logger.info("elapsed %s, t: %s", toc-tic, model.get_current_time())
 
         if max_iterations and i > max_iterations:
             break
