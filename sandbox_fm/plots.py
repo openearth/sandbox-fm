@@ -1,6 +1,7 @@
 import logging
 import itertools
 import sys
+import random
 
 import cv2
 import matplotlib.pyplot as plt
@@ -355,8 +356,8 @@ class Visualization():
 
         self.im_erosion = self.ax.imshow(
             erosion_img,
-            cmocean.cm.curl_r,     # or balance
-            alpha=0.6,
+            cmocean.cm.balance_r,     # or balance
+            alpha=1,
             vmin=-1,
             vmax=1,
             visible=False
@@ -485,7 +486,7 @@ class Visualization():
         # Put in new white dots (to be plotted next time step)
         n_dots = data.get('n_dots', 4)
         for u, v in zip(np.random.random(n_dots), np.random.random(n_dots)):
-            rgb = (1.0, 1.0, 1.0)
+            rgb = (random.random(), random.random(), 1.0)
             # make sure outline has the same color
             # create a little dot
             r, c = skimage.draw.circle(v * HEIGHT, u * WIDTH, 4,
