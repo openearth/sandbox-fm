@@ -191,8 +191,6 @@ def run(schematization, engine, max_iterations):
     # model
     model = bmi.wrapper.BMIWrapper(engine)
     # initialize model schematization, changes directory
-    background_name = pathlib.Path(schematization.name).with_suffix('.jpg').absolute()
-    data['background'] = background_name
     model.initialize(str(schematization_name.absolute()))
     update_initial_vars(data, model)
     dt = model.get_time_step()

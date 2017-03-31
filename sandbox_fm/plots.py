@@ -40,7 +40,7 @@ def create_wave(data):
             wave_xy[i],         # from
             wave_xy[i+1]        # to
         ])
-    wave = matplotlib.collections.LineCollection(segments)
+    wave = matplotlib.collections.LineCollection(segments, color='white')
     return wave
 
 
@@ -55,7 +55,7 @@ def warp_waves(waves, flow, data, wave_height_img):
         wave_idx[:, :, 1] = np.clip(wave_idx[:, :, 1], 0, flow.shape[0] - 1)
         # segments x 2(from, to) x 2 (u, v)
         flow_per_segment = flow[wave_idx[:, :, 1], wave_idx[:, :, 0], :]
-        new_segments = segments + flow_per_segment * data.get('scale', 1.0)
+        new_segments = segments + (flow_per_segment * data.get('wave.scale', 1.0))
         # compute average wave height per segment
         wave_height_per_segment = np.mean(wave_height_img[wave_idx[:, :, 1], wave_idx[:, :, 0]], axis=1)
         wave.set_segments(new_segments)
@@ -123,21 +123,25 @@ def process_events(evt, data, model, vis):
     if evt.key == 'q':  # Quit (on windows)
         sys.exit()
     if evt.key == '1':  # Visualisation preset 1. Show bed level from camera
+        vis.im_background.set_visible(False)
         vis.im_waterlevel.set_visible(False)
         vis.im_height.set_visible(True)
         vis.im_height_cells.set_visible(False)
         vis.im_mag.set_visible(False)
     if evt.key == '2':  # Visualisation preset 2. Show water level in model
+        vis.im_background.set_visible(True)
         vis.im_waterlevel.set_visible(True)
         vis.im_height.set_visible(False)
         vis.im_height_cells.set_visible(False)
         vis.im_mag.set_visible(False)
     if evt.key == '3':  # Visualisation preset 3. Show bed level in model
+        vis.im_background.set_visible(False)
         vis.im_waterlevel.set_visible(False)
         vis.im_height.set_visible(False)
         vis.im_height_cells.set_visible(True)
         vis.im_mag.set_visible(False)
     if evt.key == '4':  # Visualisation preset . Show flow magnitude in model
+        vis.im_background.set_visible(False)
         vis.im_waterlevel.set_visible(False)
         vis.im_height.set_visible(False)
         vis.im_height_cells.set_visible(False)
@@ -192,8 +196,8 @@ class Visualization():
 
 
         # transparent, white background
-        if data['background'].exists():
-            self.background = plt.imread(str(data['background']))
+        if 'background' in data:
+            self.background = plt.imread(data['background'])
 
         # get the xlim from the height image
         xlim = self.ax.get_xlim()
@@ -242,17 +246,6 @@ class Visualization():
         height_nodes_img = data['HEIGHT_NODES'].ravel()[data['ravensburger_nodes']]
         mag_img = np.sqrt(u_img**2 + v_img**2)
 
-        # Plot scanned height
-        self.im_height = self.ax.imshow(
-            warped_height,
-            'jet',
-            alpha=1,
-            vmin=data['z'][0],
-            vmax=data['z'][-1],
-            visible=False
-        )
-        logger.info("vmin, vmax, %s-%s", data['z'][0], data['z'][-1])
-
         # plot satellite image background
         if self.background is not None:
             self.im_background = self.ax.imshow(
@@ -260,15 +253,27 @@ class Visualization():
                 extent=[0, 640, 480, 0]
             )
 
+        # Plot scanned height
+        self.im_height = self.ax.imshow(
+            warped_height,
+            'jet',
+            alpha=1,
+            vmin=data['z'][0],
+            vmax=data['z'][-1],
+            visible=True
+        )
+        logger.info("vmin, vmax, %s-%s", data['z'][0], data['z'][-1])
+
+
         # Plot waterheight
         # data['hh'] in xbeach
         self.im_waterlevel = self.ax.imshow(
-            (waterlevel_img - height_cells_img),
+            np.ma.masked_less_equal(waterlevel_img - height_cells_img, 0.1),
             cmap='Blues',
-            alpha=.3 if self.background is not None else 1.0,
+            alpha=1.0,
             vmin=0,
             vmax=3,
-            visible=True
+            visible=False
         )
 
         # Plot bed level
@@ -376,7 +381,8 @@ class Visualization():
 
 
         # Update raster plots
-        self.im_waterlevel.set_data(waterlevel_img - height_cells_img)
+
+        self.im_waterlevel.set_data(np.ma.masked_less_equal(waterlevel_img - height_cells_img, 0.1))
         self.im_height_cells.set_data(height_cells_img)
         self.im_mag.set_data(mag_img)
         self.im_mag.set_clim(0, 2.5)
@@ -408,7 +414,8 @@ class Visualization():
         # update waves
 
         # Put in new white dots (to be plotted next time step)
-        for u, v in zip(np.random.random(4), np.random.random(4)):
+        n_dots = data.get('n_dots', 4)
+        for u, v in zip(np.random.random(n_dots), np.random.random(n_dots)):
             rgb = (1.0, 1.0, 1.0)
             # make sure outline has the same color
             # create a little dot
