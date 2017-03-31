@@ -12,7 +12,10 @@ import sys
 
 from .cm import terrajet2
 from .sandbox_fm import compute_delta_height
-import models
+from .models import (
+    available
+)
+
 
 from .calibrate import (
     transform,
@@ -50,7 +53,8 @@ def warp_flow(img, flow):
 
 def process_events(evt, data, model, vis):
     """handle keystrokes and other interactions"""
-    meta = getattr(models, model.engine)
+    meta = available[model.engine]
+
 
     if not isinstance(evt, matplotlib.backend_bases.KeyEvent):
         return

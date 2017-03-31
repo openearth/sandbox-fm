@@ -10,7 +10,6 @@ from matplotlib.artist import Artist
 from matplotlib.mlab import dist_point_to_segment
 import matplotlib.pyplot as plt
 
-import models
 from .calibrate import (
     compute_transforms
 )

@@ -7,7 +7,9 @@ from .calibrate import (
     HEIGHT, WIDTH,
     transform
 )
-import models
+from .models import (
+    available
+)
 
 logger = logging.getLogger(__name__)
 
@@ -15,7 +17,7 @@ logger = logging.getLogger(__name__)
 def update_initial_vars(data, model):
     """get the initial variables for the model"""
     # variables on t=0
-    meta = getattr(models, model.engine)
+    meta = available[model.engine]
     for name in meta['initial_vars']:
         data[name] = model.get_var(name)
 
@@ -29,7 +31,7 @@ def update_initial_vars(data, model):
 
 def update_vars(data, model):
     """update the time varying variables in a delft3d model"""
-    meta = getattr(models, model.engine)
+    meta = available[model.engine]
     for name in meta['vars']:
         # get data and toss away the boundary points
         arr = model.get_var(name)

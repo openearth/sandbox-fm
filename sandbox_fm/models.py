@@ -123,3 +123,8 @@ xbeach = {
     "update_nodes": update_height_xbeach,
     "update_structures": update_height_xbeach
 }
+available = {
+    "xbeach": xbeach,
+    "dflowfm": dflowfm
+
+}
