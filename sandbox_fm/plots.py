@@ -46,7 +46,6 @@ def create_wave(data):
 
 def warp_waves(waves, flow, data, wave_height_img):
     for wave in waves:
-        logger.info("wave %s", wave)
         # segments x 2(from, to) x 2 (x,y)
         segments = wave.get_segments()
         wave_idx = np.round(segments).astype('int')
@@ -123,29 +122,50 @@ def process_events(evt, data, model, vis):
     if evt.key == 'q':  # Quit (on windows)
         sys.exit()
     if evt.key == '1':  # Visualisation preset 1. Show bed level from camera
-        vis.im_background.set_visible(False)
+        if hasattr(vis, 'im_background'):
+            vis.im_background.set_visible(False)
         vis.im_waterlevel.set_visible(False)
         vis.im_height.set_visible(True)
         vis.im_height_cells.set_visible(False)
         vis.im_mag.set_visible(False)
+        if hasattr(vis, 'im_wave_height'):
+            vis.im_wave_height.set_visible(False)
     if evt.key == '2':  # Visualisation preset 2. Show water level in model
-        vis.im_background.set_visible(True)
+        if hasattr(vis, 'im_background'):
+            vis.im_background.set_visible(True)
         vis.im_waterlevel.set_visible(True)
         vis.im_height.set_visible(False)
         vis.im_height_cells.set_visible(False)
         vis.im_mag.set_visible(False)
+        if hasattr(vis, 'im_wave_height'):
+            vis.im_wave_height.set_visible(False)
     if evt.key == '3':  # Visualisation preset 3. Show bed level in model
-        vis.im_background.set_visible(False)
+        if hasattr(vis, 'im_background'):
+            vis.im_background.set_visible(False)
         vis.im_waterlevel.set_visible(False)
         vis.im_height.set_visible(False)
         vis.im_height_cells.set_visible(True)
         vis.im_mag.set_visible(False)
+        if hasattr(vis, 'im_wave_height'):
+            vis.im_wave_height.set_visible(False)
     if evt.key == '4':  # Visualisation preset . Show flow magnitude in model
-        vis.im_background.set_visible(False)
+        if hasattr(vis, 'im_background'):
+            vis.im_background.set_visible(False)
         vis.im_waterlevel.set_visible(False)
         vis.im_height.set_visible(False)
         vis.im_height_cells.set_visible(False)
         vis.im_mag.set_visible(True)
+        if hasattr(vis, 'im_wave_height'):
+            vis.im_wave_height.set_visible(False)
+    if evt.key == '5':  # Visualisation preset . Show wave height in model
+        if hasattr(vis, 'im_background'):
+            vis.im_background.set_visible(False)
+        vis.im_waterlevel.set_visible(False)
+        vis.im_height.set_visible(False)
+        vis.im_height_cells.set_visible(False)
+        vis.im_mag.set_visible(False)
+        if hasattr(vis, 'im_wave_height'):
+            vis.im_wave_height.set_visible(True)
 
 
 class Visualization():
@@ -241,10 +261,12 @@ class Visualization():
         waterlevel_img = data['WATERLEVEL'].ravel()[data['ravensburger_cells']]
         u_img = u_in_img[data['ravensburger_cells']]
         v_img = v_in_img[data['ravensburger_cells']]
-        logger.info("u_img shape %s, waterlevel %s", u_img.shape, waterlevel_img.shape)
         height_cells_img = data['HEIGHT_CELLS'].ravel()[data['ravensburger_cells']]
         height_nodes_img = data['HEIGHT_NODES'].ravel()[data['ravensburger_nodes']]
         mag_img = np.sqrt(u_img**2 + v_img**2)
+        if have_waves:
+            wave_height_img = data['WAVE_HEIGHT'].ravel()[data['ravensburger_cells']]
+
 
         # plot satellite image background
         if self.background is not None:
@@ -262,8 +284,6 @@ class Visualization():
             vmax=data['z'][-1],
             visible=True
         )
-        logger.info("vmin, vmax, %s-%s", data['z'][0], data['z'][-1])
-
 
         # Plot waterheight
         # data['hh'] in xbeach
@@ -289,6 +309,14 @@ class Visualization():
         # Plot flow magnitude
         self.im_mag = self.ax.imshow(
             mag_img,
+            'jet',
+            alpha=1,
+            vmin=0,
+            visible=False
+        )
+
+        self.im_wave_height = self.ax.imshow(
+            wave_height_img,
             'jet',
             alpha=1,
             vmin=0,
@@ -350,8 +378,6 @@ class Visualization():
         u_in_img = x_cells_u_box - x_cells_box
         v_in_img = y_cells_v_box - y_cells_box
 
-        logger.info("u_in_img shape %s, x_cells: %s, u %s", u_in_img.shape, data['X_CELLS'].shape, data['U'].shape)
-
         # compute wave velocities
         have_waves = 'WAVE_V' in data
 
@@ -386,6 +412,9 @@ class Visualization():
         self.im_height_cells.set_data(height_cells_img)
         self.im_mag.set_data(mag_img)
         self.im_mag.set_clim(0, 2.5)
+        if have_waves:
+            self.im_wave_height.set_data(wave_height_img)
+            self.im_wave_height.set_clim(0, 7)
 
         #################################################
         # Compute liquid added to the model
@@ -441,7 +470,6 @@ class Visualization():
                 wave = create_wave(data)
                 self.waves.append(wave)
                 self.ax.add_collection(wave)
-            logger.info("waves %s", self.waves)
             if len(self.waves) > 10:
                 wave = self.waves.pop(0)
                 # TODO: remove, not implementedc
