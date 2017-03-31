@@ -106,8 +106,11 @@ def calibrated_height_images(depth_max_min, z_min_max, anomaly_name='anomaly.npy
         depth_range = depth_max - depth_min
         z_min, z_max = z_min_max
         z_range = z_max - z_min
-        depth2scaled_height = (x - depth_min)/depth_range
-        height = depth2scaled_height * z_range + z_min
+        # scaled depth (1 = deep, 0=undeep)
+        scaled_depth = (x - depth_min)/depth_range
+        # scaled height
+        scaled_height = (1.0 - scaled_depth)
+        height = scaled_height * z_range + z_min
         return height
     f = functools.partial(values2height, z_min_max=z_min_max, depth_max_min=depth_max_min)
 
@@ -117,27 +120,3 @@ def calibrated_height_images(depth_max_min, z_min_max, anomaly_name='anomaly.npy
         yield height
 
 
-def calibrated_depth_images_old(extent=None):
-    """generate depth images on a fixed grid """
-    v, u = np.mgrid[:HEIGHT, :WIDTH]
-    images = percentile_depth_images()
-    if not extent:
-        depth_0 = next(images)
-        xyz_0, uv_0 = depth2xyzuv(depth_0, u, v)
-        xmin = xyz_0[:, 0].min() + 0.01
-        xmax = xyz_0[:, 0].max() - 0.01
-        ymin = xyz_0[:, 1].min() + 0.01
-        ymax = xyz_0[:, 1].max() - 0.01
-    else:
-        xmin, xmax, ymin, ymax = extent
-    X, Y = np.meshgrid(
-        np.linspace(xmin, xmax, num=320),
-        np.linspace(ymin, ymax, num=240)
-    )
-
-    for depth in images:
-        xyz, uv = depth2xyzuv(depth, u, v)
-        F = scipy.interpolate.NearestNDInterpolator(xyz[:, :2], xyz[:, 2])
-        z = F(X.ravel(), Y.ravel())
-        Z = z.reshape(X.shape)
-        yield Z

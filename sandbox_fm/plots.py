@@ -223,6 +223,7 @@ class Visualization():
             vmax=data['z'][-1],
             visible=False
         )
+        logger.info("vmin, vmax, %s-%s", data['z'][0], data['z'][-1])
 
         # plot satellite image background
         if self.background is not None:
