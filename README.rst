@@ -57,6 +57,7 @@ Windows Install
   
 Running
 -------
+If you are using a virtual enviroment, make sure it is loaded. You can load your environment using the command `workon main`, assuming you have virtualenv wrapper installed.
 
 - ``sandbox-fm --help``
 - ``sandbox-fm calibrate``  calibrate the sandbox by selecting a quad in the box, a quad in the model and a high and low point.
