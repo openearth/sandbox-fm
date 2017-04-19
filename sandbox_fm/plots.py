@@ -137,7 +137,7 @@ class Visualization():
             self.lic = np.dstack([self.lic, np.zeros_like(self.lic[:, :, 0])])
         # transparent, white background
         # self.lic[..., 3] = 0.0
-        if data['background_name']:
+        if 'background_name' in data:
             self.background = plt.imread(data['background_name'])
 
         # get the xlim from the height image
