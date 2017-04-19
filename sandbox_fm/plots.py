@@ -200,10 +200,11 @@ class Visualization():
         )
 
         # plot satellite image background
-        self.im_background = self.ax.imshow(
-            self.background,
-            extent=[0, 640, 480, 0]
-        )
+        if hasattr(self, 'background'):
+            self.im_background = self.ax.imshow(
+                self.background,
+                extent=[0, 640, 480, 0]
+            )
 
         # Plot waterdepth
         self.im_s1 = self.ax.imshow(
