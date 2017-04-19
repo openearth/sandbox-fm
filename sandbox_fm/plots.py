@@ -137,8 +137,8 @@ class Visualization():
             self.lic = np.dstack([self.lic, np.zeros_like(self.lic[:, :, 0])])
         # transparent, white background
         # self.lic[..., 3] = 0.0
-
-        self.background = plt.imread(data['background_name'])
+        if data['background_name']:
+            self.background = plt.imread(data['background_name'])
 
         # get the xlim from the height image
         xlim = self.ax.get_xlim()
@@ -230,12 +230,12 @@ class Visualization():
         # Plot flow magnitude
         self.im_mag = self.ax.imshow(
             mag_img,
-            'jet', 
+            'jet',
             alpha=1,
             vmin=0,
             visible=False
         )
-        
+
         if data.get('debug'):
             self.ct_zk = self.ax.contour(zk_img, colors='k')
             self.ax.clabel(self.ct_zk, inline=1, fontsize=10)
@@ -297,7 +297,7 @@ class Visualization():
         ucy_img = ucy_in_img[data['ravensburger_cells']]
         bl_img = data['bl'][data['ravensburger_cells']]
         mag_img = np.sqrt(ucx_img**2 + ucy_img**2)
-        
+
         # Update raster plots
         self.im_s1.set_data(s1_img - bl_img)
         self.im_zk.set_data(bl_img)

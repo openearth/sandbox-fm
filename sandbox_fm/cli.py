@@ -14,7 +14,7 @@ except ImportError:
     pass
 
 import skimage.io
-import cv2    
+import cv2
 import tqdm
 import click
 import numpy as np
@@ -179,7 +179,9 @@ def run(schematization):
     model = bmi.wrapper.BMIWrapper('dflowfm')
     # initialize model schematization, changes directory
     background_name = pathlib.Path(schematization.name).with_suffix('.jpg').absolute()
-    data['background_name'] = background_name
+    if background_name.exists():
+        data['background_name'] = background_name
+
     model.initialize(str(schematization_name.absolute()))
     update_delft3d_initial_vars(data, model)
     dt = model.get_time_step()
