@@ -163,6 +163,19 @@ def process_events(evt, data, model, vis):
         if hasattr(vis, 'im_erosion'):
             vis.im_erosion.set_visible(False)
     if evt.key == '4':  # Visualisation preset . Show flow magnitude in model
+        # views ={
+        #     4: ["im_mag"],
+        #     3: ["im_height_cells"]
+        # }
+        # for plot_name in ["im_erosion", "im_wave_height"]:
+        #     plot = getattr(vis, plot_name)
+        #     if not plot:
+        #         continue
+        #     if plot in views:
+        #         plot.set_visible(True)
+        #     else:
+        #         plot.set_visible(False)
+
         if hasattr(vis, 'im_background'):
             vis.im_background.set_visible(False)
         vis.im_waterlevel.set_visible(False)
