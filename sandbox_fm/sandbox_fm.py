@@ -61,7 +61,7 @@ def compute_delta_zk(data, idx, mode='absolute'):
     if mode=='absolute':
         height = data['height']
 
-        xk_box, yk_box = transform(data['xk'], data['yk'], data['model2box'])
+        xk_box, yk_box = transform(data['xk'], data['yk'], data['model2img'])
 
         u = np.clip(np.round(yk_box[idx]).astype('int'), 0, HEIGHT - 1)
         v = np.clip(np.round(xk_box[idx]).astype('int'), 0, WIDTH - 1)
@@ -75,7 +75,7 @@ def compute_delta_zk(data, idx, mode='absolute'):
     elif mode=='relative':
         height = np.array(data['height']) - np.array(data['height_original'])
 
-        xk_box, yk_box = transform(data['xk'], data['yk'], data['model2box'])
+        xk_box, yk_box = transform(data['xk'], data['yk'], data['model2img'])
 
         u = np.clip(np.round(yk_box[idx]).astype('int'), 0, HEIGHT - 1)
         v = np.clip(np.round(xk_box[idx]).astype('int'), 0, WIDTH - 1)
@@ -93,7 +93,7 @@ def compute_delta_s1(data, idx):
 
     height = data['height']
 
-    xzw_box, yzw_box = transform(data['xzw'], data['yzw'], data['model2box'])
+    xzw_box, yzw_box = transform(data['xzw'], data['yzw'], data['model2img'])
 
     u = np.clip(np.round(yzw_box[idx]).astype('int'), 0, HEIGHT-1)
     v = np.clip(np.round(xzw_box[idx]).astype('int'), 0, WIDTH-1)

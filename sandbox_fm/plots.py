@@ -167,6 +167,7 @@ class Visualization():
             v.ravel().astype('float32'),
             data['box2model']
         )
+    
         tree = scipy.spatial.cKDTree(np.c_[data['xzw'], data['yzw']])
         distances_cells, ravensburger_cells = tree.query(np.c_[u_t, v_t])
         print("shapes", distances_cells.shape, ravensburger_cells.shape)
