@@ -99,6 +99,7 @@ While running the simulation you can update the display using the following keys
 Possible Issues
 ---------------
 If USB is not functioning:
+
 - Check sand in USB plug.
 - Make sure there is no program running in the background (`ps -afx`, `jobs`)
 - Replug the USB cable
