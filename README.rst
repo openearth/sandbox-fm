@@ -96,6 +96,16 @@ While running the simulation you can update the display using the following keys
 - Q – Quit (windows only)
 - R – Reset to original bathy
 
+Possible Issues
+---------------
+If USB is not functioning:
+- Check sand in USB plug.
+- Make sure there is no program running in the background (`ps -afx`, `jobs`)
+- Replug the USB cable
+- Plug the USB cable in a different port
+- Check power supply of cable (is the green light on?)
+
+
 Features
 --------
 
