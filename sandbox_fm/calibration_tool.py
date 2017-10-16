@@ -1,6 +1,7 @@
 import pathlib
 import json
 import logging
+import pathlib
 
 import cv2
 import numpy as np
@@ -8,6 +9,7 @@ from matplotlib.lines import Line2D
 from matplotlib.patches import Polygon
 from matplotlib.artist import Artist
 from matplotlib.mlab import dist_point_to_segment
+from matplotlib.widgets import Slider
 import matplotlib.pyplot as plt
 
 
@@ -16,6 +18,14 @@ from .calibrate import (
 )
 from .sandbox_fm import (
     update_delft3d_initial_vars
+)
+
+from .depth import (
+    calibrated_height_images,
+)
+from .calibrate import (
+    transform,
+    compute_transforms
 )
 
 logger = logging.getLogger(__name__)
@@ -52,15 +62,26 @@ class PolygonInteractor(object):
     showverts = True
     epsilon = 5  # max pixel distance to count as a vertex hit
 
-    def __init__(self, ax, poly, markevery=None):
+    def __init__(self, ax, poly, markevery=None, pstate=True):
         if poly.figure is None:
             raise RuntimeError('You must first add the polygon to a figure or canvas before defining the interactor')
         self.ax = ax
         canvas = poly.figure.canvas
         self.poly = poly
-
+        self.pstate = pstate
         x, y = zip(*self.poly.xy)
         self.line = Line2D(x, y, marker='o', markerfacecolor='r', animated=True, markevery=markevery)
+        if self.pstate:
+            textc = 'black'
+            self.TL = self.ax.annotate('TL', xy=(x[0], y[0]), xytext=(x[0] + 1, y[0] + 1),
+                                       animated=True, color=textc)
+            self.TR = self.ax.annotate('TR', xy=(x[1], y[1]), xytext=(x[1] + 1, y[1] + 1),
+                                       animated=True, color=textc)
+            self.BL = self.ax.annotate('BL', xy=(x[2], y[2]), xytext=(x[2] + 1, y[2] + 1),
+                                       animated=True, color=textc)
+            self.BR = self.ax.annotate('BR', xy=(x[3], y[3]), xytext=(x[3] + 1, y[3] + 1),
+                                       animated=True, color=textc)
+
         self.ax.add_line(self.line)
         #self._update_line(poly)
 
@@ -72,12 +93,18 @@ class PolygonInteractor(object):
         canvas.mpl_connect('key_press_event', self.key_press_callback)
         canvas.mpl_connect('button_release_event', self.button_release_callback)
         canvas.mpl_connect('motion_notify_event', self.motion_notify_callback)
+
         self.canvas = canvas
 
     def draw_callback(self, event):
         self.background = self.canvas.copy_from_bbox(self.ax.bbox)
         self.ax.draw_artist(self.poly)
         self.ax.draw_artist(self.line)
+        if self.pstate:
+            self.ax.draw_artist(self.TL)
+            self.ax.draw_artist(self.TR)
+            self.ax.draw_artist(self.BL)
+            self.ax.draw_artist(self.BR)
         self.canvas.blit(self.ax.bbox)
 
     def poly_changed(self, poly):
@@ -166,14 +193,38 @@ class PolygonInteractor(object):
 
         self.poly.xy[self._ind] = x, y
         self.line.set_data(zip(*self.poly.xy))
-
         self.canvas.restore_region(self.background)
+        if self.pstate:
+            if self._ind == 0:
+                self.TL.xy = (x, y)
+                self.TL.xytext = (x + 1, y + 1)
+                self.ax.draw_artist(self.TL)
+            if self._ind == 1:
+                self.TR.xy = (x, y)
+                self.TR.xytext = (x + 1, y + 1)
+                self.ax.draw_artist(self.TR)
+            if self._ind == 2:
+                self.BL.xy = (x, y)
+                self.BL.xytext = (x + 1, y + 1)
+                self.ax.draw_artist(self.BL)
+            if self._ind == 3:
+                self.BR.xy = (x, y)
+                self.BR.xytext = (x + 1, y + 1)
+                self.ax.draw_artist(self.BR)
         self.ax.draw_artist(self.poly)
         self.ax.draw_artist(self.line)
-        self.canvas.blit(self.ax.bbox)
-
+        self.canvas.draw()
 
 class Calibration(object):
+    """
+    key-bindings:
+
+    'esc' Use escape button to close figure when done calibrating
+
+    'enter' Use enter key to save changes to calibration.json
+
+    """
+
     def __init__(self, path, videos, raws, model):
         # absolute path to calibration.json
         self.path = path.absolute()
@@ -206,13 +257,15 @@ class Calibration(object):
             self.old_calibration = {}
 
     def make_window(self):
-        self.fig, self.axes = plt.subplots(2, 2)
+        self.fig, self.axes = plt.subplots(2, 3)
+        self.fig.figsize = (200, 100)
         # sic show instructions in the title
         self.fig.suptitle('select 4 points (clockwise start at top left)')
-        self.axes[0, 0].set_title("projector box")
-        self.axes[0, 1].set_title("model box")
-        self.axes[1, 0].set_title("low high")
-        self.axes[1, 1].set_title("result")
+        self.axes[0, 0].set_title("1) projector box")
+        self.axes[0, 1].set_title("2) model box")
+        self.axes[1, 0].set_title("3) set low (red dot), high")
+        self.axes[1, 1].set_title("4) result with raw kinect image")
+        self.axes[1, 2].set_title("5) initial view of sandbox")
 
     def save(self):
         with open(str(self.path), 'w') as f:
@@ -281,11 +334,12 @@ class Calibration(object):
             c=data['zk'].ravel(),
             cmap='Greens',
             edgecolor='none',
-            s=20,
-            alpha=0.5
+            s=10,
+            alpha=0.2
         )
+
         # transformed video on top
-        ax.imshow(
+        '''ax.imshow(
             cv2.warpPerspective(
                 next(self.videos),
                 np.array(result['img2box'], dtype='float32'),
@@ -293,8 +347,45 @@ class Calibration(object):
             ),
             cmap='Reds',
             alpha=0.5
+        )'''
+
+        # Still raw image, with cut out by polygon
+        ax.imshow(
+            cv2.warpPerspective(
+                next(self.raws),
+                np.array(result['img2box'], dtype='float32'),
+                (640, 480)
+            ),
+            cmap='jet',
         )
-        ax.set_title('You are done (result below)')
+        return result
+
+    def show_data(self, ax, result):
+        print('wat het moet zijn: ')
+        print("([933, 923], [-15.65193178225327, 7.227255704551149], PosixPath('/home/sandbox/src/sandbox-fm/tests/zandmotor/anomaly.npy'))")
+
+        print(result['z_values'],result['z'], pathlib.Path('anomaly.npy').absolute())
+        heights = calibrated_height_images(
+            result['z_values'],
+            result['z'],
+            anomaly_name=pathlib.Path('anomaly.npy').absolute()
+        )
+        height = next(heights)
+        warped_height = cv2.warpPerspective(
+            height.filled(0),
+            np.array(result['img2box']),
+            (640, 480)
+        )
+        self.im_height = ax.imshow(
+            warped_height,
+            'jet',
+            #cmap=terrajet2,
+            alpha=1,
+            vmin=result['z'][0],
+            vmax=result['z'][-1],
+            visible=True
+        )
+        plt.title("5) Deze plot doet nog niet precies wat ik wil")
         plt.show()
 
     def add_edit_polygon(self, ax, points=4):
@@ -329,14 +420,18 @@ class Calibration(object):
         )
         ax.add_patch(poly)
         markevery = None
+        pstate = True
         if len(xs) == 2:
             markevery = [1]
-        p = PolygonInteractor(ax, poly, markevery=markevery)
+            pstate = False
+        p = PolygonInteractor(ax, poly, markevery=markevery, pstate=pstate)
         return p
 
     def run(self):
-        fig, axes = self.fig, self.axes
 
+        fig, axes = self.fig, self.axes
+        mng = plt.get_current_fig_manager()
+        mng.resize(*mng.window.maxsize())
         # get video and depth image
         video = next(self.videos)
         raw = next(self.raws)
@@ -345,6 +440,7 @@ class Calibration(object):
 
         axes[0, 0].imshow(raw) #, cmap='jet', vmin=650, vmax=800)
         axes[1, 0].imshow(raw)
+
         # convert to array we can feed into opencv
         data = self.data
         axes[0, 1].scatter(
@@ -362,8 +458,14 @@ class Calibration(object):
         height_points = self.old_calibration.get("height_points", 2)
         height_poly = self.add_edit_polygon(axes[1, 0], points=2)
 
-
-        # keep track of the selected points
+        self.axes[0, 2].text(0, 0.7, "1) shows the raw kinect image, use the dots to select the area to \n" +
+                                    "(TL = Top Left, TR = Top Right, BL = Bottom Left, BR = Bottom Right)\n" +
+                                    "2) Shows the domain to select within the bathymetry of the model \n" +
+                                    "3) Select the lowest (red dot) and highest point in the raw kinect data\n"
+                                    "4) This box shows the result \n" +
+                                    "5) Shows the initial calibrated bathymetry as will be displayed")
+        self.axes[0, 2].axis('off')
+        # keep track of the selected points\n
 
         height_points = self.height_points
 
@@ -405,11 +507,13 @@ class Calibration(object):
                                 self.z_values )
                     self.z_values = list(reversed(self.z_values))
                     self.height_points = list(reversed(self.height_points))
-
-                fig.canvas.mpl_disconnect(pid)
                 self.save()
-                self.show_result(axes[1, 1])
+                result = self.show_result(axes[1, 1])
+                self.show_data(axes[1, 2], result)
 
+            if event.key =='escape':
+                fig.canvas.mpl_disconnect(pid)
+                plt.close(fig)
 
         plt.ion()
         pid = fig.canvas.mpl_connect('key_press_event', picker)
