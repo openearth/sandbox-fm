@@ -60,27 +60,25 @@ class PolygonInteractor(object):
     """
 
     showverts = True
-    epsilon = 5  # max pixel distance to count as a vertex hit
+    epsilon = 10  # max pixel distance to count as a vertex hit
+    margin = 10
 
-    def __init__(self, ax, poly, markevery=None, pstate=True):
+    def __init__(self, ax, poly, markevery=None, annotate=True):
         if poly.figure is None:
             raise RuntimeError('You must first add the polygon to a figure or canvas before defining the interactor')
         self.ax = ax
         canvas = poly.figure.canvas
         self.poly = poly
-        self.pstate = pstate
+        self.annotate = annotate
         x, y = zip(*self.poly.xy)
         self.line = Line2D(x, y, marker='o', markerfacecolor='r', animated=True, markevery=markevery)
-        if self.pstate:
+        if self.annotate:
             textc = 'black'
-            self.TL = self.ax.annotate('TL', xy=(x[0], y[0]), xytext=(x[0] + 1, y[0] + 1),
-                                       animated=True, color=textc)
-            self.TR = self.ax.annotate('TR', xy=(x[1], y[1]), xytext=(x[1] + 1, y[1] + 1),
-                                       animated=True, color=textc)
-            self.BL = self.ax.annotate('BL', xy=(x[2], y[2]), xytext=(x[2] + 1, y[2] + 1),
-                                       animated=True, color=textc)
-            self.BR = self.ax.annotate('BR', xy=(x[3], y[3]), xytext=(x[3] + 1, y[3] + 1),
-                                       animated=True, color=textc)
+
+            self.TL = self.ax.text(x[0] + self.margin, y[0] + self.margin, 'TL', animated=True, color=textc)
+            self.TR = self.ax.text(x[1] + self.margin, y[1] + self.margin, 'TR', animated=True, color=textc)
+            self.BL = self.ax.text(x[2] + self.margin, y[2] + self.margin, 'BL', animated=True, color=textc)
+            self.BR = self.ax.text(x[3] + self.margin, y[3] + self.margin, 'BR', animated=True, color=textc)
 
         self.ax.add_line(self.line)
         #self._update_line(poly)
@@ -100,7 +98,7 @@ class PolygonInteractor(object):
         self.background = self.canvas.copy_from_bbox(self.ax.bbox)
         self.ax.draw_artist(self.poly)
         self.ax.draw_artist(self.line)
-        if self.pstate:
+        if self.annotate:
             self.ax.draw_artist(self.TL)
             self.ax.draw_artist(self.TR)
             self.ax.draw_artist(self.BL)
@@ -187,33 +185,37 @@ class PolygonInteractor(object):
             return
         if event.inaxes is None:
             return
+        # are we in the current axes
+        if event.inaxes != self.ax:
+            return
         if event.button != 1:
             return
         x, y = event.xdata, event.ydata
+        ind = self._ind
 
         self.poly.xy[self._ind] = x, y
         self.line.set_data(zip(*self.poly.xy))
         self.canvas.restore_region(self.background)
-        if self.pstate:
+        if self.annotate:
+            logger.info("ind is currently %s -> %s", self._ind, ind)
             if self._ind == 0:
-                self.TL.xy = (x, y)
-                self.TL.xytext = (x + 1, y + 1)
-                self.ax.draw_artist(self.TL)
+                self.TL.set_position((x + self.margin, y + self.margin))
             if self._ind == 1:
-                self.TR.xy = (x, y)
-                self.TR.xytext = (x + 1, y + 1)
-                self.ax.draw_artist(self.TR)
+                self.TR.set_position((x + self.margin, y + self.margin))
             if self._ind == 2:
-                self.BL.xy = (x, y)
-                self.BL.xytext = (x + 1, y + 1)
-                self.ax.draw_artist(self.BL)
+                self.BL.set_position((x + self.margin, y + self.margin))
             if self._ind == 3:
-                self.BR.xy = (x, y)
-                self.BR.xytext = (x + 1, y + 1)
-                self.ax.draw_artist(self.BR)
+                self.BR.set_position((x + self.margin, y + self.margin))
+            self.ax.draw_artist(self.TL)
+            self.ax.draw_artist(self.TR)
+            self.ax.draw_artist(self.BL)
+            self.ax.draw_artist(self.BR)
         self.ax.draw_artist(self.poly)
         self.ax.draw_artist(self.line)
-        self.canvas.draw()
+        # update our little axis
+        self.canvas.blit(self.ax.bbox)
+
+
 
 class Calibration(object):
     """
@@ -258,7 +260,6 @@ class Calibration(object):
 
     def make_window(self):
         self.fig, self.axes = plt.subplots(2, 3)
-        self.fig.figsize = (200, 100)
         # sic show instructions in the title
         self.fig.suptitle('select 4 points (clockwise start at top left)')
         self.axes[0, 0].set_title("1) projector box")
@@ -327,27 +328,6 @@ class Calibration(object):
                 np.array(result['model2box'], dtype='float32')
             )
         )
-        # scatter plot
-        ax.scatter(
-            xy_nodes_in_img[:, 0],
-            xy_nodes_in_img[:, 1],
-            c=data['zk'].ravel(),
-            cmap='Greens',
-            edgecolor='none',
-            s=10,
-            alpha=0.2
-        )
-
-        # transformed video on top
-        '''ax.imshow(
-            cv2.warpPerspective(
-                next(self.videos),
-                np.array(result['img2box'], dtype='float32'),
-                (640, 480)
-            ),
-            cmap='Reds',
-            alpha=0.5
-        )'''
 
         # Still raw image, with cut out by polygon
         ax.imshow(
@@ -359,6 +339,7 @@ class Calibration(object):
             cmap='jet',
         )
         return result
+
 
     def show_data(self, ax, result):
         print('wat het moet zijn: ')
@@ -420,18 +401,25 @@ class Calibration(object):
         )
         ax.add_patch(poly)
         markevery = None
-        pstate = True
+        annotate = True
         if len(xs) == 2:
             markevery = [1]
-            pstate = False
-        p = PolygonInteractor(ax, poly, markevery=markevery, pstate=pstate)
+            annotate = False
+        p = PolygonInteractor(ax, poly, markevery=markevery, annotate=annotate)
         return p
 
     def run(self):
 
         fig, axes = self.fig, self.axes
         mng = plt.get_current_fig_manager()
-        mng.resize(*mng.window.maxsize())
+        # try and maximize
+        try:
+            mng.window.showMaximized()
+        except AttributeError:
+            try:
+                mng.resize(*mng.window.maxsize())
+            except AttributeError:
+                logging.warn('could not maximize, unknown interface')
         # get video and depth image
         video = next(self.videos)
         raw = next(self.raws)
@@ -458,12 +446,14 @@ class Calibration(object):
         height_points = self.old_calibration.get("height_points", 2)
         height_poly = self.add_edit_polygon(axes[1, 0], points=2)
 
-        self.axes[0, 2].text(0, 0.7, "1) shows the raw kinect image, use the dots to select the area to \n" +
-                                    "(TL = Top Left, TR = Top Right, BL = Bottom Left, BR = Bottom Right)\n" +
-                                    "2) Shows the domain to select within the bathymetry of the model \n" +
-                                    "3) Select the lowest (red dot) and highest point in the raw kinect data\n"
-                                    "4) This box shows the result \n" +
-                                    "5) Shows the initial calibrated bathymetry as will be displayed")
+        msg = """1) shows the raw kinect image, use the dots to select the area to
+(TL = Top Left, TR = Top Right, BL = Bottom Left, BR = Bottom Right)
+2) Shows the domain to select within the bathymetry of the model
+3) Select the lowest (red dot) and highest point in the raw kinect data
+4) This box shows the result
+5) Shows the initial calibrated bathymetry as will be displayed
+"""
+        self.axes[0, 2].text(0, 0.7, msg)
         self.axes[0, 2].axis('off')
         # keep track of the selected points\n
 
