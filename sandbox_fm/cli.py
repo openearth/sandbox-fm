@@ -13,7 +13,6 @@ except ImportError:
     # python3 has it builtin
     pass
 
-import skimage.io
 import cv2
 import tqdm
 import click
@@ -30,6 +29,9 @@ try:
     HAVE_MPI = True
 except ImportError:
     pass
+
+# don't import before MPI, otherwise segfault under OSX
+import skimage.io
 
 from .depth import (
     depth_images,

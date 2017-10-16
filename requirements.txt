@@ -1,1 +1,3 @@
-git+git://github.com/openearth/bmi-python.git
+bmi-python
+scikit-image
+tqdm
