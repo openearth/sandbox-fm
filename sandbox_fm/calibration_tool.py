@@ -5,6 +5,7 @@ import pathlib
 
 import cv2
 import numpy as np
+import matplotlib
 from matplotlib.lines import Line2D
 from matplotlib.patches import Polygon
 from matplotlib.artist import Artist
@@ -17,7 +18,8 @@ from .calibrate import (
     compute_transforms
 )
 from .sandbox_fm import (
-    update_delft3d_initial_vars
+    update_delft3d_initial_vars,
+    compute_delta_zk
 )
 
 from .depth import (
@@ -74,12 +76,14 @@ class PolygonInteractor(object):
         self.line = Line2D(x, y, marker='o', markerfacecolor='r', animated=True, markevery=markevery)
         if self.annotate:
             textc = 'black'
-
             self.TL = self.ax.text(x[0] + self.margin, y[0] + self.margin, 'TL', animated=True, color=textc)
             self.TR = self.ax.text(x[1] + self.margin, y[1] + self.margin, 'TR', animated=True, color=textc)
-            self.BL = self.ax.text(x[2] + self.margin, y[2] + self.margin, 'BL', animated=True, color=textc)
-            self.BR = self.ax.text(x[3] + self.margin, y[3] + self.margin, 'BR', animated=True, color=textc)
-
+            self.BR = self.ax.text(x[2] + self.margin, y[2] + self.margin, 'BR', animated=True, color=textc)
+            self.BL = self.ax.text(x[3] + self.margin, y[3] + self.margin, 'BL', animated=True, color=textc)
+        elif not self.annotate:
+            textc = 'black'
+            self.high = self.ax.text(x[0] + self.margin, y[0] + self.margin, 'high', animated=True, color=textc)
+            self.low = self.ax.text(x[1] + self.margin, y[1] + self.margin, 'low', animated=True, color=textc)
         self.ax.add_line(self.line)
         #self._update_line(poly)
 
@@ -101,8 +105,11 @@ class PolygonInteractor(object):
         if self.annotate:
             self.ax.draw_artist(self.TL)
             self.ax.draw_artist(self.TR)
-            self.ax.draw_artist(self.BL)
             self.ax.draw_artist(self.BR)
+            self.ax.draw_artist(self.BL)
+        elif not self.annotate:
+            self.ax.draw_artist(self.low)
+            self.ax.draw_artist(self.high)
         self.canvas.blit(self.ax.bbox)
 
     def poly_changed(self, poly):
@@ -210,6 +217,13 @@ class PolygonInteractor(object):
             self.ax.draw_artist(self.TR)
             self.ax.draw_artist(self.BL)
             self.ax.draw_artist(self.BR)
+        elif not self.annotate:
+            if self._ind == 0:
+                self.high.set_position((x + self.margin, y + self.margin))
+            if self._ind == 1:
+                self.low.set_position((x + self.margin, y + self.margin))
+            self.ax.draw_artist(self.low)
+            self.ax.draw_artist(self.high)
         self.ax.draw_artist(self.poly)
         self.ax.draw_artist(self.line)
         # update our little axis
@@ -238,6 +252,7 @@ class Calibration(object):
         self.model_points = []
         self.img_points = []
         self.z_values = []
+        
         # define fixed box coordinate system (what will be on the screen)
         # 0 at bottom
         self.box = np.array([
@@ -342,31 +357,42 @@ class Calibration(object):
 
 
     def show_data(self, ax, result):
-        print('wat het moet zijn: ')
-        print("([933, 923], [-15.65193178225327, 7.227255704551149], PosixPath('/home/sandbox/src/sandbox-fm/tests/zandmotor/anomaly.npy'))")
-
-        print(result['z_values'],result['z'], pathlib.Path('anomaly.npy').absolute())
+        
         heights = calibrated_height_images(
-            result['z_values'],
-            result['z'],
+            self.z_values,
+            self.z,
             anomaly_name=pathlib.Path('anomaly.npy').absolute()
         )
         height = next(heights)
-        warped_height = cv2.warpPerspective(
-            height.filled(0),
-            np.array(result['img2box']),
-            (640, 480)
+
+        data = self.data
+        data['height'] = height
+        img_bbox = matplotlib.path.Path([
+            (40, 40),
+            (40, 440),
+            (600, 440),
+            (600, 40)
+        ])
+        model_bbox = matplotlib.path.Path(self.model_points)
+        data['node_in_box'] = model_bbox.contains_points(np.c_[data['xk'], data['yk']])
+        xk_box, yk_box = transform(data['xk'], data['yk'], result['model2box'])
+        data['node_in_img_bbox'] = img_bbox.contains_points(np.c_[xk_box, yk_box])
+        idx = np.logical_and(data['node_in_box'], data['node_in_img_bbox'])
+
+        data['model2img'] = cv2.getPerspectiveTransform(
+            np.array(self.model_points, dtype='float32'),
+            np.array(self.img_points, dtype='float32')
         )
-        self.im_height = ax.imshow(
-            warped_height,
-            'jet',
-            #cmap=terrajet2,
-            alpha=1,
-            vmin=result['z'][0],
-            vmax=result['z'][-1],
-            visible=True
+        zk_copy = data['zk'].copy()
+        zk_copy[idx] += compute_delta_zk(data, idx)
+
+        ax.scatter(
+            data['xk'].ravel(),
+            data['yk'].ravel(),
+            c=zk_copy.ravel(),
+            cmap='jet',
+            edgecolor='none'
         )
-        plt.title("5) Deze plot doet nog niet precies wat ik wil")
         plt.show()
 
     def add_edit_polygon(self, ax, points=4):
@@ -407,6 +433,20 @@ class Calibration(object):
             annotate = False
         p = PolygonInteractor(ax, poly, markevery=markevery, annotate=annotate)
         return p
+
+    def min_slider(self, val):
+        self.zk = val
+        self.save()
+        result = self.show_result(self.axes[1, 1])
+        self.show_data(self.axes[1, 2], result)
+
+
+    def max_slider(self, val):
+        self.z[1] = val
+        self.save()
+        result = self.show_result(self.axes[1, 1])
+        self.show_data(self.axes[1, 2], result)
+
 
     def run(self):
 
@@ -455,13 +495,20 @@ class Calibration(object):
 """
         self.axes[0, 2].text(0, 0.7, msg)
         self.axes[0, 2].axis('off')
+        slidermin = Slider(plt.axes([0.70, 0.6, 0.15, 0.03]), 'Min z', min(data['zk']), max(data['zk']), 
+                           valinit = self.z[0])
+        slidermax = Slider(plt.axes([0.70, 0.55, 0.15, 0.03]), 'Max z', min(data['zk']), max(data['zk']),
+                           valinit = self.z[1])
+
+        slidermin.on_changed(self.min_slider)
+        slidermax.on_changed(self.max_slider)
         # keep track of the selected points\n
 
         height_points = self.height_points
 
         z_values = self.z_values
 
-
+        
         # pointer event
         pid = None
 
