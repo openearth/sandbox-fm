@@ -182,7 +182,7 @@ class PolygonInteractor(object):
                     self.line.set_data(zip(*self.poly.xy))
                     break
 
-        self.canvas.draw()
+        # self.canvas.draw()
 
     def motion_notify_callback(self, event):
         'on mouse movement'
@@ -252,7 +252,7 @@ class Calibration(object):
         self.model_points = []
         self.img_points = []
         self.z_values = []
-        
+
         # define fixed box coordinate system (what will be on the screen)
         # 0 at bottom
         self.box = np.array([
@@ -332,7 +332,6 @@ class Calibration(object):
             np.ones_like(data['xk'])
         ].astype('float32')
 
-        print(result['model2box'], xy_node)
         # now for showing results
         xy_nodes_in_img = np.squeeze(
             cv2.perspectiveTransform(
@@ -344,35 +343,37 @@ class Calibration(object):
             )
         )
 
-        # Still raw image, with cut out by polygon
-        ax.imshow(
-            cv2.warpPerspective(
-                next(self.raws),
-                np.array(result['img2box'], dtype='float32'),
-                (640, 480)
-            ),
-            cmap='jet',
-        )
-        return result
-
-
-    def show_data(self, ax, result):
-        
         heights = calibrated_height_images(
             self.z_values,
             self.z,
             anomaly_name=pathlib.Path('anomaly.npy').absolute()
         )
         height = next(heights)
-
         data = self.data
-        data['height'] = height
+        self.data['height'] = height
+
+        # Still raw image, with cut out by polygon
+        self.sandbox_height = cv2.warpPerspective(
+                        height,
+                        np.array(result['img2box'], dtype='float32'),
+                        (640, 480)
+                    )
+        self.data['height'] = self.sandbox_height
+        self.fig4 = ax.imshow(self.sandbox_height,
+            cmap='jet',
+        )
+        return result
+
+    def show_data(self, ax, result):
+        self.axes[1, 2].clear()
+
         img_bbox = matplotlib.path.Path([
             (40, 40),
             (40, 440),
             (600, 440),
             (600, 40)
         ])
+        data = self.data
         model_bbox = matplotlib.path.Path(self.model_points)
         data['node_in_box'] = model_bbox.contains_points(np.c_[data['xk'], data['yk']])
         xk_box, yk_box = transform(data['xk'], data['yk'], result['model2box'])
@@ -384,9 +385,10 @@ class Calibration(object):
             np.array(self.img_points, dtype='float32')
         )
         zk_copy = data['zk'].copy()
-        zk_copy[idx] += compute_delta_zk(data, idx)
+        self.delta_zk = compute_delta_zk(data, idx)
+        zk_copy[idx] += self.delta_zk
 
-        ax.scatter(
+        self.fig5 = ax.scatter(
             data['xk'].ravel(),
             data['yk'].ravel(),
             c=zk_copy.ravel(),
@@ -435,21 +437,34 @@ class Calibration(object):
         return p
 
     def min_slider(self, val):
-        self.zk = val
+        self.z_values[0] = val
         self.save()
         result = self.show_result(self.axes[1, 1])
         self.show_data(self.axes[1, 2], result)
-
+        self.sliderchanged = True
+        self.set_text()
+        # self.min_slider.set_title('Largest distance (low): ' + str(val) +
+        #                           '\n Converted to depth (min Z): ' + str(round(self.delta_zk[0], 2)))
 
     def max_slider(self, val):
-        self.z[1] = val
+        self.z_values[1] = val
         self.save()
         result = self.show_result(self.axes[1, 1])
         self.show_data(self.axes[1, 2], result)
+        self.sliderchanged = True
+        self.set_text()
 
+        # self.min_slider.set_val(label, 'Largest distance (low): ' + str(val) +
+        #                           '\n Converted to depth (min Z): ' + str(round(self.delta_zk[0], 2)))
+
+    def set_text(self):
+        self.text_min = self.fig.text(0.7, 0.7, 'Largest distance (low): ' + str(self.z_values[0]) +
+                                        '\n Converted to depth (min Z): ' + str(round(self.delta_zk[0], 2)))
+        self.text_max = self.fig.text(0.7, 0.6, 'Smallest distance (low): ' + str(self.z_values[1]) +
+                                        '\n Converted to depth (max Z): ' + str(round(self.delta_zk[1], 2)))
 
     def run(self):
-
+        self.sliderchanged = False
         fig, axes = self.fig, self.axes
         mng = plt.get_current_fig_manager()
         # try and maximize
@@ -466,18 +481,21 @@ class Calibration(object):
 
         # show the depth and video in the left window
 
-        axes[0, 0].imshow(raw) #, cmap='jet', vmin=650, vmax=800)
-        axes[1, 0].imshow(raw)
+        plot1 = axes[0, 0].imshow(raw) #, cmap='jet', vmin=650, vmax=800)
+        plot2 = axes[1, 0].imshow(raw)
+        plt.colorbar(plot1, ax=self.axes[0, 0])
+        plt.colorbar(plot2, ax=self.axes[1, 0])
 
         # convert to array we can feed into opencv
         data = self.data
-        axes[0, 1].scatter(
+        scat1 = axes[0, 1].scatter(
             data['xk'].ravel(),
             data['yk'].ravel(),
             c=data['zk'].ravel(),
             cmap='viridis',
             edgecolor='none'
         )
+        plt.colorbar(scat1, ax=axes[0, 1])
 
         img_points = self.old_calibration.get("img_points", 4)
         img_poly = self.add_edit_polygon(axes[0, 0], points=img_points)
@@ -486,67 +504,77 @@ class Calibration(object):
         height_points = self.old_calibration.get("height_points", 2)
         height_poly = self.add_edit_polygon(axes[1, 0], points=2)
 
+        z_values = self.z_values
+
         msg = """1) shows the raw kinect image, use the dots to select the area to
 (TL = Top Left, TR = Top Right, BL = Bottom Left, BR = Bottom Right)
 2) Shows the domain to select within the bathymetry of the model
 3) Select the lowest (red dot) and highest point in the raw kinect data
-4) This box shows the result
-5) Shows the initial calibrated bathymetry as will be displayed
+4) This box shows the result of the cut out with the polygon
+5) Shows the initial calibrated bathymetry of the entire model.
 """
         self.axes[0, 2].text(0, 0.7, msg)
         self.axes[0, 2].axis('off')
-        slidermin = Slider(plt.axes([0.70, 0.6, 0.15, 0.03]), 'Min z', min(data['zk']), max(data['zk']), 
-                           valinit = self.z[0])
-        slidermax = Slider(plt.axes([0.70, 0.55, 0.15, 0.03]), 'Max z', min(data['zk']), max(data['zk']),
-                           valinit = self.z[1])
 
-        slidermin.on_changed(self.min_slider)
-        slidermax.on_changed(self.max_slider)
         # keep track of the selected points\n
-
         height_points = self.height_points
 
-        z_values = self.z_values
-
-        
         # pointer event
         pid = None
 
+        #Generate figures and sliders at first enter pressed
+        self.firstenter = True
         # define the point selector
         def picker(event):
             if event.key == 'enter':
-                # stop listening we're done
-                self.img_points = list(zip(
-                    *img_poly.line.get_data()
-                ))
-                self.model_points = list(zip(
-                    *model_poly.line.get_data()
-                ))
-                self.height_points = list(zip(
-                    *height_poly.line.get_data()
-                ))
-                u0, v0 = (
-                    int(np.round(self.height_points[0][0])),
-                    int(np.round(self.height_points[0][1]))
-                )
-                u1, v1 = (
-                    int(np.round(self.height_points[1][0])),
-                    int(np.round(self.height_points[1][1]))
-                )
-                self.z_values = [
-                    raw[v0, u0],
-                    raw[v1, u1]
-                ]
-                # deep should be > undeep
+                if not self.sliderchanged:
+                    # stop listening we're done
+                    self.img_points = list(zip(
+                        *img_poly.line.get_data()
+                    ))
+                    self.model_points = list(zip(
+                        *model_poly.line.get_data()
+                    ))
+                    self.height_points = list(zip(
+                        *height_poly.line.get_data()
+                    ))
+                    u0, v0 = (
+                        int(np.round(self.height_points[0][0])),
+                        int(np.round(self.height_points[0][1]))
+                    )
+                    u1, v1 = (
+                        int(np.round(self.height_points[1][0])),
+                        int(np.round(self.height_points[1][1]))
+                    )
+
+                    self.z_values = [
+                        raw[v0, u0],
+                        raw[v1, u1]
+                    ]
+
                 if not self.z_values[0] > self.z_values[1]:
+                    axes[1, 2].set_title('Choose a min z lower than high z')
                     logger.warn("I had to reverse your z points, please select lower value with the bottom left dot. Coordinates: %s, raw: %s.",
                                 self.height_points,
                                 self.z_values )
                     self.z_values = list(reversed(self.z_values))
                     self.height_points = list(reversed(self.height_points))
                 self.save()
-                result = self.show_result(axes[1, 1])
-                self.show_data(axes[1, 2], result)
+                result = self.show_result(self.axes[1, 1])
+                self.show_data(self.axes[1, 2], result)
+                if self.firstenter:
+                    minz = self.z_values[0]
+                    maxz = self.z_values[1]
+                    self.slidermin = Slider(plt.axes([0.70, 0.65, 0.15, 0.03]), 'min z',
+                                            minz - 50, minz + 50, valinit = minz)
+                    self.slidermax = Slider(plt.axes([0.70, 0.55, 0.15, 0.03]), 'max z',
+                                            maxz - 50, maxz + 50, valinit = maxz)
+                    self.set_text()
+                    self.slidermin.on_changed(self.min_slider)
+                    self.slidermax.on_changed(self.max_slider)
+                    plt.colorbar(self.fig5, ax=self.axes[1, 2])
+                    plt.colorbar(self.fig4, ax=self.axes[1, 1])
+                    self.firstenter = False
 
             if event.key =='escape':
                 fig.canvas.mpl_disconnect(pid)
