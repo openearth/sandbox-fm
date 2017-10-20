@@ -6,6 +6,10 @@ import time
 import json
 import functools
 import itertools
+import cProfile
+import pstats
+import io
+
 
 try:
     from itertools import izip as zip
@@ -47,10 +51,12 @@ from .plots import (
     Visualization,
     process_events
 )
-
 from .sandbox_fm import (
     update_delft3d_initial_vars,
     update_delft3d_vars
+)
+from .gestures import (
+    recognize_gestures
 )
 
 logger = logging.getLogger(__name__)
@@ -148,7 +154,8 @@ def view():
 
 @cli.command()
 @click.argument('schematization', type=click.File('rb'))
-def run(schematization):
+@click.option('--max-iterations', type=int)
+def run(schematization, max_iterations):
     """Console script for sandbox_fm
 
     keys:
@@ -159,7 +166,7 @@ def run(schematization):
      - r -> reset bathymethry
      - b -> set bed level
     """
-    click.echo("Make sure you start the SARndbox first")
+    click.echo("Make sure you turn on the sandbox first")
 
     schematization_name = pathlib.Path(schematization.name)
     # keep absolute path so model can change directory
@@ -243,31 +250,27 @@ def run(schematization):
     # start model and run for a bit
     # for i in range(5):
     #     model.update(dt)
-
-
     for i, (video, height) in enumerate(tqdm.tqdm(zip(videos, heights))):
-
-        tic = time.time()
         # Get data from model
         update_delft3d_vars(data, model)
         # update kinect
         data['height'] = height
         data['video'] = video
-        toc = time.time()
-        time_get=toc-tic
 
+        gestures = recognize_gestures(data['height'])
+        data['gestures'] = gestures
         # update visualization
-        tic = time.time()
         vis.update(data)
-        toc = time.time()
-        time_vis=toc-tic
+        # visualization can trigger an exit
+        if vis.quitting:
+            break
 
         # update model
-        tic = time.time()
         model.update(dt)
-        toc = time.time()
-        time_model=toc-tic
-        print('get',time_get,';vis',time_vis,';model',time_model)
+
+        if max_iterations is not None and i > max_iterations:
+            break
+
 
 if __name__ == "__main__":
     import sandbox_fm.cli

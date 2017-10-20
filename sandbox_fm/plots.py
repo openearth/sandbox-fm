@@ -73,7 +73,7 @@ def process_events(evt, data, model, vis):
     if evt.key == 'c':
         vis.im_flow.set_visible(not vis.im_flow.get_visible())
     if evt.key == 'q':  # Quit (on windows)
-        sys.exit()
+        vis.quitting = True
     if evt.key == '1':  # Visualisation preset 1. Show bed level from camera
         vis.im_s1.set_visible(False)
         vis.im_height.set_visible(True)
@@ -100,6 +100,7 @@ class Visualization():
     def __init__(self):
         # create figure and axes
         self.fig, self.ax = plt.subplots()
+        self.quitting = False
         self.fig.subplots_adjust(
             left=0,
             right=1,
@@ -167,7 +168,7 @@ class Visualization():
             v.ravel().astype('float32'),
             data['box2model']
         )
-    
+
         tree = scipy.spatial.cKDTree(np.c_[data['xzw'], data['yzw']])
         distances_cells, ravensburger_cells = tree.query(np.c_[u_t, v_t])
         print("shapes", distances_cells.shape, ravensburger_cells.shape)
