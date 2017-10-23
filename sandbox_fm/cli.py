@@ -54,7 +54,7 @@ from .sandbox_fm import (
 )
 
 logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO)
+
 
 # initialize mpi
 if HAVE_MPI:
@@ -73,7 +73,10 @@ def cli():
      - r -> reset bathymethry
      - b -> set bed level
     """
-    pass
+    logging.basicConfig(level=logging.INFO)
+    logging.root.setLevel(logging.INFO)
+    logging.info("test")
+
 
 @cli.command()
 def record():

@@ -27,7 +27,7 @@ def update_delft3d_initial_vars(data, model):
     ]:
         try:
             data[name] = model.get_var(name)
-        except AttributeError:
+        except (AttributeError, ValueError):
             if name == 'numk':
                 numk = data['zk'].shape[0]
                 data['numk'] = numk
