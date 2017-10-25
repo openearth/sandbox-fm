@@ -290,6 +290,7 @@ class Visualization():
             v.ravel().astype('float32'),
             data['box2model']
         )
+
         tree = scipy.spatial.cKDTree(np.c_[data['X_CELLS'].ravel(), data['Y_CELLS'].ravel()])
         distances_cells, ravensburger_cells = tree.query(np.c_[u_t, v_t])
         data['ravensburger_cells'] = ravensburger_cells.reshape(HEIGHT, WIDTH)
@@ -329,6 +330,7 @@ class Visualization():
             vmax=data['z'][-1],
             visible=False
         )
+
 
         # Plot waterheight
         # data['hh'] in xbeach

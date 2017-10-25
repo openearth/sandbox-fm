@@ -629,7 +629,6 @@ The lowest point should be with the highest value (distance from kinect to botto
                     self.firstenter = False
                 self.show_result(self.fig2ax, cbar=False)
 
-
             if event.key =='escape':
                 fig.canvas.mpl_disconnect(pid)
                 plt.close(fig)
