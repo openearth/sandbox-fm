@@ -17,7 +17,7 @@ from .calibrate import (
     compute_transforms
 )
 from .sandbox_fm import (
-    update_initial_vars
+    update_initial_vars,
     compute_delta_height
 )
 
@@ -317,16 +317,19 @@ class Calibration(object):
         return result
 
     def show_result(self, ax, cbar=True):
-        try:self.cb1.remove()
-        except Exception: pass
+        if hasattr(self, 'cb1'):
+            try:
+                self.cb1.remove()
+            except KeyError:
+                # not sure why this happens
+                pass
         ax.clear()
         # we should have results by now
         # save the calibration info
         data = self.data
-        result = self.result
 
         # add the transforms
-        result.update(compute_transforms(result))
+        data.update(compute_transforms(self.result))
 
         xy_node = np.c_[
             data['X_NODES'].ravel(),
@@ -341,23 +344,22 @@ class Calibration(object):
                     xy_node[:, np.newaxis, 0],
                     xy_node[:, np.newaxis, 1]
                 ]).astype('float32'),
-                np.array(result['model2box'], dtype='float32')
+                np.array(data['model2box'], dtype='float32')
             )
         )
 
-        heights = calibrated_height_images(
+        kinect_heights = calibrated_height_images(
             self.z_values,
             self.z,
             anomaly_name=pathlib.Path('anomaly.npy').absolute()
         )
-        height = next(heights)
+        kinect_height = next(kinect_heights)
+        self.data['kinect_height'] = kinect_height
 
-        data = self.data
-        self.data['height'] = height
         warped_height = cv2.warpPerspective(
-            height,
-            np.array(result['img2box']),
-            height.shape[::-1]
+            kinect_height,
+            np.array(data['img2box']),
+            kinect_height.shape[::-1]
         )
 
         #self.data['height'] = self.sandbox_height
@@ -370,11 +372,16 @@ class Calibration(object):
         if cbar:
             self.cb1 = plt.colorbar(plot, ax=ax)
         plt.show()
-        return result
 
-    def show_data(self, ax, result):
-        try:self.cb2.remove()
-        except Exception: pass
+    def show_data(self, ax):
+        if hasattr(self, 'cb2'):
+            try:
+                self.cb2.remove()
+            except KeyError:
+                # not sure why we get this error
+                pass
+
+
         ax.clear()
         img_bbox = matplotlib.path.Path([
             (40, 40),
@@ -383,26 +390,44 @@ class Calibration(object):
             (600, 40)
         ])
         data = self.data
+        data.update(compute_transforms(self.result))
+
         model_bbox = matplotlib.path.Path(self.model_points)
-        data['node_in_box'] = model_bbox.contains_points(np.c_[data['xk'], data['yk']])
-        xk_box, yk_box = transform(data['xk'], data['yk'], result['model2box'])
-        data['node_in_img_bbox'] = img_bbox.contains_points(np.c_[xk_box, yk_box])
+        data['node_in_box'] = model_bbox.contains_points(
+            np.c_[
+                data['X_NODES'].ravel(),
+                data['Y_NODES'].ravel()
+            ]
+        )
+        x_box, y_box = transform(
+            data['X_NODES'].ravel(),
+            data['Y_NODES'].ravel(),
+            data['model2box']
+        )
+        data['node_in_img_bbox'] = img_bbox.contains_points(
+            np.c_[
+                x_box,
+                y_box
+            ]
+        )
         idx = np.logical_and(data['node_in_box'], data['node_in_img_bbox'])
+        # reshape to original shape
+        idx = idx.reshape(data['X_NODES'].shape)
 
         data['model2img'] = cv2.getPerspectiveTransform(
             np.array(self.model_points, dtype='float32'),
             np.array(self.img_points, dtype='float32')
         )
 
-        zk_copy = data['zk'].copy()
-        self.delta_zk = compute_delta_zk(data, idx)
-        zk_copy[idx] += self.delta_zk
-        self.axes[1, 2].set_title((str(min(zk_copy)) + " and " + str(max(zk_copy))))
-
+        height_copy = data['HEIGHT_NODES'].copy()
+        self.delta_height = compute_delta_height(data, idx)
+        height_copy[idx] += self.delta_height
+        title = "{} and {}".format(height_copy.min(), height_copy.max())
+        self.axes[1, 2].set_title(title)
         plot = ax.scatter(
-            data['xk'].ravel(),
-            data['yk'].ravel(),
-            c=zk_copy.ravel(),
+            data['X_NODES'].ravel(),
+            data['Y_NODES'].ravel(),
+            c=height_copy.ravel(),
             cmap='jet',
             edgecolor='none',
             vmin=self.z[0],
@@ -453,7 +478,7 @@ class Calibration(object):
     def min_slider(self, val):
         self.z_values[0] = val
         self.save()
-        result = self.show_result(self.axes[1, 1])
+        self.show_result(self.axes[1, 1])
         self.show_data(self.axes[1, 2], result)
         self.set_text()
         self.show_result(self.fig2ax, cbar=False)
@@ -462,20 +487,28 @@ class Calibration(object):
     def max_slider(self, val):
         self.z_values[1] = val
         self.save()
-        result = self.show_result(self.axes[1, 1])
+        self.show_result(self.axes[1, 1])
         self.show_data(self.axes[1, 2], result)
         self.set_text()
         self.show_result(self.fig2ax, cbar=False)
 
     def set_text(self):
-        try: self.text_min.remove()
-        except Exception: pass
-        try: self.text_max.remove()
-        except Exception: pass
-        self.text_min = self.fig.text(0.7, 0.7, 'Largest distance (low): ' + str(self.z_values[0]) +
-                                        '\n Converted to depth (min Z): ' + str(round(self.delta_zk[0], 2)))
-        self.text_max = self.fig.text(0.7, 0.6, 'Smallest distance (high): ' + str(self.z_values[1]) +
-                                        '\n Converted to depth (max Z): ' + str(round(self.delta_zk[1], 2)))
+        if hasattr(self, 'text_min'):
+            self.text_min.remove()
+        if hasattr(self, 'text_max'):
+            self.text_max.remove()
+
+        text = 'Largest distance (low): {:.0f},\nConverted to depth (min Z): {:.2f}'.format(
+            self.z_values[0],
+            self.delta_height[0]
+        )
+        self.text_min = self.fig.text(0.7, 0.7, text)
+
+        text = 'Smallest distance (high): {:.0f}\nConverted to depth (max Z): {:.2f}'.format(
+            self.z_values[1],
+            self.delta_height[1]
+        )
+        self.text_max = self.fig.text(0.7, 0.6, text)
 
     def run(self):
         fig, axes = self.fig, self.axes
@@ -573,8 +606,8 @@ The lowest point should be with the highest value (distance from kinect to botto
                     self.z_values = list(reversed(self.z_values))
                     self.height_points = list(reversed(self.height_points))
                 self.save()
-                result = self.show_result(self.axes[1, 1])
-                self.show_data(self.axes[1, 2], result)
+                self.show_result(self.axes[1, 1])
+                self.show_data(self.axes[1, 2])
                 if self.firstenter:
                     minz = self.z_values[0]
                     maxz = self.z_values[1]

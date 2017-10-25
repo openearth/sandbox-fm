@@ -30,6 +30,8 @@ def update_initial_vars(data, model):
 
 
 def update_vars(data, model):
+    """get the variables from the model and put them in the data dictionary"""
+    meta = available[model.engine]
     for name in meta['vars']:
         data[name] = model.get_var(name)
     # do some stuff per model
@@ -41,15 +43,16 @@ def update_vars(data, model):
 
 
 def compute_delta_height(data, idx):
-    """compute the bed level change, normalized a bit and only for cells in idx"""
+    """compute the bed level change, normalized a bit and only for cells in idx """
+
     kinect_height = data['kinect_height']
 
     x_nodes_box, y_nodes_box = transform(data['X_NODES'].ravel(), data['Y_NODES'].ravel(), data['model2box'])
 
     # nearest pixels
-    u = np.clip(np.round(y_nodes_box[idx]).astype('int'), 0, HEIGHT - 1)
-    v = np.clip(np.round(x_nodes_box[idx]).astype('int'), 0, WIDTH - 1)
+    u = np.clip(np.round(y_nodes_box[idx.ravel()]).astype('int'), 0, HEIGHT - 1)
+    v = np.clip(np.round(x_nodes_box[idx.ravel()]).astype('int'), 0, WIDTH - 1)
 
     new_node_height = kinect_height[u, v].ravel()
-    delta_node_height = new_node_height - data['HEIGHT_NODES'].ravel()[idx]
+    delta_node_height = new_node_height - data['HEIGHT_NODES'].ravel()[idx.ravel()]
     return delta_node_height

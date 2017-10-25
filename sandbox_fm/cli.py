@@ -214,8 +214,16 @@ def run(schematization, engine, max_iterations):
         (600, 440),
         (600, 40)
     ])
-    x_nodes_box, y_nodes_box = transform(data['X_NODES'].ravel(), data['Y_NODES'].ravel(), data['model2box'])
-    x_cells_box, y_cells_box = transform(data['X_CELLS'].ravel(), data['X_CELLS'].ravel(), data['model2box'])
+    x_nodes_box, y_nodes_box = transform(
+        data['X_NODES'].ravel(),
+        data['Y_NODES'].ravel(),
+        data['model2box']
+    )
+    x_cells_box, y_cells_box = transform(
+        data['X_CELLS'].ravel(),
+        data['X_CELLS'].ravel(),
+        data['model2box']
+    )
 
     # for transformed coordinates see if they are on the screen
     data['node_in_img_bbox'] = img_bbox.contains_points(np.c_[x_nodes_box, y_nodes_box])
