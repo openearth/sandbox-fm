@@ -13,7 +13,6 @@ except ImportError:
     # python3 has it builtin
     pass
 
-import skimage.io
 import cv2
 import tqdm
 import click
@@ -31,7 +30,8 @@ try:
 except ImportError:
     pass
 
-
+# don't import before MPI, otherwise segfault under OSX
+import skimage.io
 
 from .depth import (
     depth_images,
@@ -75,6 +75,8 @@ def cli():
      - r -> reset bathymethry
      - b -> set bed level
     """
+    logging.basicConfig(level=logging.INFO)
+    logging.root.setLevel(logging.INFO)
     logger.info("Welcome to the sandbox software.")
 
 @cli.command()
@@ -191,6 +193,11 @@ def run(schematization, engine, max_iterations):
     # model
     model = bmi.wrapper.BMIWrapper(engine)
     # initialize model schematization, changes directory
+
+    background_name = pathlib.Path(schematization.name).with_suffix('.jpg').absolute()
+    if background_name.exists():
+        data['background_name'] = background_name
+
     model.initialize(str(schematization_name.absolute()))
     update_initial_vars(data, model)
     dt = model.get_time_step()

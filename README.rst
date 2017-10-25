@@ -33,7 +33,9 @@ You preferably want to install these from the package manager (tested with ubunt
 * libfreenect (available by default in linux and there are instructions for use with .. _macports: macports, make sure you build the python bindings, it is also available in homebrew)
 * opencv (available in linux and osx (macports/homebrew)
 
-Several python libraries:
+You probably want to create a virtual_ environment or an anaconda_ environment. Make sure you activate it, for example using the ``workon main`` command to activate your ``main`` environment (with virtualenvwrapper installed).
+
+Once you are in your python environment of choice you can install the required python libraries:
 * ``pip install -r requirements.txt``
 
 Make sure your libdflowfm.so/libxbeach.so
@@ -91,12 +93,24 @@ While running the simulation you can update the display using the following keys
 - 1 - Show bed level from camera
 - 2 - Show water level in model
 - 3 - Show bed level in model
+- 4 - Show currents in model
 - B – Set bed level to current camera bed level
 - C – Currents on/off
 - P – Photo
 - F – Full screen view
 - Q – Quit (windows only)
 - R – Reset to original bathy
+
+Possible Issues
+---------------
+If USB is not functioning:
+
+- Check sand in USB plug.
+- Make sure there is no program running in the background (`ps -afx`, `jobs`)
+- Replug the USB cable
+- Plug the USB cable in a different port
+- Check power supply of cable (is the green light on?)
+
 
 Features
 --------
@@ -111,3 +125,5 @@ This package was created with Cookiecutter_ and the `audreyr/cookiecutter-pypack
 .. _Cookiecutter: https://github.com/audreyr/cookiecutter
 .. _`audreyr/cookiecutter-pypackage`: https://github.com/audreyr/cookiecutter-pypackage
 .. _macports: https://github.com/OpenKinect/libfreenect#fetch-build
+.. _virtual: http://python-guide-pt-br.readthedocs.io/en/latest/dev/virtualenvs/
+.. _anaconda: https://conda.io/docs/using/envs.html

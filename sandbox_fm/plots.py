@@ -258,8 +258,9 @@ class Visualization():
 
 
         # transparent, white background
-        if 'background' in data:
-            self.background = plt.imread(data['background'])
+        # self.lic[..., 3] = 0.0
+        if 'background_name' in data:
+            self.background = plt.imread(data['background_name'])
 
         # get the xlim from the height image
         xlim = self.ax.get_xlim()
@@ -326,8 +327,15 @@ class Visualization():
             alpha=1,
             vmin=data['z'][0],
             vmax=data['z'][-1],
-            visible=True
+            visible=False
         )
+
+        # plot satellite image background
+        if hasattr(self, 'background'):
+            self.im_background = self.ax.imshow(
+                self.background,
+                extent=[0, 640, 480, 0]
+            )
 
         # Plot waterheight
         # data['hh'] in xbeach
@@ -375,6 +383,9 @@ class Visualization():
             vmax=1,
             visible=False
         )
+        if data.get('debug'):
+            self.ct_zk = self.ax.contour(zk_img, colors='k')
+            self.ax.clabel(self.ct_zk, inline=1, fontsize=10)
 
         # Plot particles
         self.im_flow = self.ax.imshow(
@@ -456,6 +467,12 @@ class Visualization():
             wave_height_img = data['WAVE_HEIGHT'].ravel()[data['ravensburger_cells']]
             dissipation_img = data['WAVE_DISSIPATION'].ravel()[data['ravensburger_cells']]
             erosion_img = data['EROSION'].ravel()[data['ravensburger_cells']]
+        zk_img = data['zk'][data['ravensburger_nodes']]
+        s1_img = data['s1'][data['ravensburger_cells']]
+        ucx_img = ucx_in_img[data['ravensburger_cells']]
+        ucy_img = ucy_in_img[data['ravensburger_cells']]
+        bl_img = data['bl'][data['ravensburger_cells']]
+        mag_img = np.sqrt(ucx_img**2 + ucy_img**2)
 
         # Update raster plots
 

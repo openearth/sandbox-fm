@@ -30,18 +30,17 @@ def update_initial_vars(data, model):
 
 
 def update_vars(data, model):
-    """update the time varying variables in a delft3d model"""
-    meta = available[model.engine]
     for name in meta['vars']:
-        # get data and toss away the boundary points
-        arr = model.get_var(name)
+        data[name] = model.get_var(name)
     # do some stuff per model
     meta["compute"](data)
     for key, val in meta["mapping"].items():
         data[key] = data[val]
 
 
-def compute_delta_height(data, idx, mode='absolute'):
+
+
+def compute_delta_height(data, idx):
     """compute the bed level change, normalized a bit and only for cells in idx"""
     kinect_height = data['kinect_height']
 
@@ -54,22 +53,3 @@ def compute_delta_height(data, idx, mode='absolute'):
     new_node_height = kinect_height[u, v].ravel()
     delta_node_height = new_node_height - data['HEIGHT_NODES'].ravel()[idx]
     return delta_node_height
-
-
-def compute_delta_s1(data, idx):
-    """compute the bathymetry change, normalized a bit and only for cells in idx"""
-
-    height = data['height']
-
-    xzw_box, yzw_box = transform(data['xzw'], data['yzw'], data['model2box'])
-
-    u = np.clip(np.round(yzw_box[idx]).astype('int'), 0, HEIGHT-1)
-    v = np.clip(np.round(xzw_box[idx]).astype('int'), 0, WIDTH-1)
-    # define the interpolation function from height to meters
-    cell_height = height[u, v].ravel()
-
-    delta_s1 = np.zeros_like(cell_height)
-
-    delta_s1[cell_height > 20] = (cell_height[cell_height > 20] - 20)/4000.0
-
-    return delta_s1

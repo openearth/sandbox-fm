@@ -1,1 +1,4 @@
-git+git://github.com/openearth/bmi-python.git
+matplotlib<2.1.0
+bmi-python
+scikit-image
+tqdm
