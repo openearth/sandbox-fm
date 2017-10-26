@@ -13,6 +13,8 @@ except ImportError:
     # python3 has it builtin
     pass
 
+
+import zmq
 import cv2
 import tqdm
 import click
@@ -22,6 +24,7 @@ import matplotlib.backend_bases
 import matplotlib.pyplot as plt
 
 import bmi.wrapper
+from mmi import recv_array
 from mmi.mmi_client import MMIClient
 
 HAVE_MPI = False
@@ -51,7 +54,8 @@ from .plots import (
 
 from .sandbox_fm import (
     update_initial_vars,
-    update_vars
+    update_vars,
+    update_with_event
 )
 
 logging.basicConfig(level=logging.INFO)
@@ -208,6 +212,9 @@ def run(schematization, engine, max_iterations, mmi):
     # mmi model is already initialized
     if not mmi:
         model.initialize(str(schematization_name.absolute()))
+    else:
+        # listen for incomming messges
+        model.subscribe()
     update_initial_vars(data, model)
 
     # compute the model bounding box that is shown on the screen
@@ -270,6 +277,7 @@ def run(schematization, engine, max_iterations, mmi):
     for i, (kinect_image, kinect_height) in iterator:
 
         # Get data from model
+        # TODO: async data
         update_vars(data, model)
 
         # update kinect
@@ -278,6 +286,7 @@ def run(schematization, engine, max_iterations, mmi):
 
         # update visualization
         vis.update(data)
+
         if not mmi:
             dt = model.get_time_step()
             # HACK: fix unstable timestep in xbeach

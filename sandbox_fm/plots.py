@@ -24,62 +24,47 @@ from .calibrate import (
     WIDTH
 )
 
+from .physics import (
+    warp_flow,
+    warp_particles,
+    warp_waves,
+    create_wave
+)
+
 matplotlib.rcParams['toolbar'] = 'None'
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 
-def create_wave(data):
-    n_segments = 100
-    wave_x = np.linspace(data['box'][0][0], data['box'][1][0], num=n_segments + 1)
-    wave_y = np.zeros(n_segments + 1) + 10.0 # y-pixels
-    wave_xy = np.c_[wave_x, wave_y]
-    segments = []               # preallocate segments structure
-    for i in range(n_segments):
-        segments.append([
-            wave_xy[i],         # from
-            wave_xy[i+1]        # to
-        ])
-    wave = matplotlib.collections.LineCollection(segments, color='white')
-    return wave
 
+views = [
+    {
+        "name": "Kinect",
+        "layers": ["height"]
+    },
+    {
+        "name": "Waterlevel",
+        "layers": ["background", "waterlevel", "flow", "particles"]
+    },
+    {
+        "name": "Bed level",
+        "layers": ["bedlevel"]
+    },
+    {
+        "name": "Flow magnitude",
+        "layers": ["flow_mag"]
+    },
+    {
+        "name": "Waves",
+        "layers": ["wave_height", "waves"]
+    },
+    {
+        "name": "Erosion",
+        "layers": ["erosion", "flow"]
+    }
 
-def warp_waves(waves, flow, data, wave_height_img, dissipation_img):
-    N = matplotlib.colors.Normalize(0, 2000, clip=True)
-    for wave in waves:
-        # segments x 2(from, to) x 2 (x,y)
-        segments = wave.get_segments()
-        wave_idx = np.round(segments).astype('int')
-        # we only have velocities inside the domain, use nearest
-        wave_idx[:, :, 0] = np.clip(wave_idx[:, :, 0], 0, flow.shape[1] - 1)
-        wave_idx[:, :, 1] = np.clip(wave_idx[:, :, 1], 0, flow.shape[0] - 1)
-        # segments x 2(from, to) x 2 (u, v)
-        flow_per_segment = flow[wave_idx[:, :, 1], wave_idx[:, :, 0], :]
-        new_segments = segments + (flow_per_segment * data.get('wave.scale', 1.0))
-        # compute average wave height per segment
-        wave_height_per_segment = np.mean(wave_height_img[wave_idx[:, :, 1], wave_idx[:, :, 0]], axis=1)
-        dissipation_per_segment = np.mean(dissipation_img[wave_idx[:, :, 1], wave_idx[:, :, 0]], axis=1)
-
-        wave.set_segments(new_segments)
-        wave.set_linewidths(wave_height_per_segment)
-        dissipation_per_segment_normalized = N(dissipation_per_segment)
-        dissipation_per_segment_color = np.ones((len(segments), 4))
-        dissipation_per_segment_color[:, 3] = dissipation_per_segment_normalized
-        wave.set_color(dissipation_per_segment_color)
-
-    return waves
-
-
-def warp_flow(img, flow):
-    """transform image with flow field"""
-    h, w = flow.shape[:2]
-    flow = -flow
-    flow[:, :, 0] += np.arange(w)
-    flow[:, :, 1] += np.arange(h)[:, np.newaxis]
-    res = cv2.remap(img, flow, None, cv2.INTER_LINEAR,
-                    borderValue=(1.0, 1.0, 1.0, 0.0))
-    return res
+]
 
 
 def process_events(evt, data, model, vis):
@@ -88,6 +73,17 @@ def process_events(evt, data, model, vis):
 
     if not isinstance(evt, matplotlib.backend_bases.KeyEvent):
         return
+
+    try:
+        new_view_idx = int(evt.key) - 1
+        old_view = vis.current_view
+        new_view = views[new_view_idx]
+        vis.current_view = new_view
+        logger.info('switching from %s to %s', old_view, new_view)
+
+    except ValueError:
+        pass
+
     if evt.key == 'b':  # Set bed level to current camera bed level
         # data['bl'][idx] += compute_delta_bl(data, idx)
         idx = np.logical_and(data['node_in_box'], data['node_in_img_bbox'])
@@ -227,6 +223,7 @@ class Visualization():
         self.waves = []
         self.background = None
         self.counter = itertools.count()
+        self.current_view = None
         self.subscribers = []
 
     def notify(self, event):
@@ -399,7 +396,7 @@ class Visualization():
         self.fig.canvas.mpl_connect('button_press_event', self.notify)
         self.fig.canvas.mpl_connect('key_press_event', self.notify)
 
-    #@profile
+
     def update(self, data):
         i = next(self.counter)
 
@@ -542,7 +539,7 @@ class Visualization():
         # self.fig.canvas.blit(self.ax.bbox)
         # self.ax.redraw_in_frame()
         # interact with window and click events
-        self.fig.canvas.draw()
+        # self.fig.canvas.draw()
         try:
             self.fig.canvas.flush_events()
         except NotImplementedError:
