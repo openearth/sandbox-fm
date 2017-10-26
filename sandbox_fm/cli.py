@@ -22,6 +22,7 @@ import matplotlib.backend_bases
 import matplotlib.pyplot as plt
 
 import bmi.wrapper
+from mmi.mmi_client import MMIClient
 
 HAVE_MPI = False
 try:
@@ -156,7 +157,8 @@ def view():
 @click.argument('schematization', type=click.File('rb'))
 @click.option('--engine', default='dflowfm', type=click.Choice(['dflowfm', 'xbeach']))
 @click.option('--max-iterations', default=0, type=int)
-def run(schematization, engine, max_iterations):
+@click.option('--mmi', type=str)
+def run(schematization, engine, max_iterations, mmi):
     """Console script for sandbox_fm
 
     keys:
@@ -192,16 +194,21 @@ def run(schematization, engine, max_iterations):
     data.update(configuration)
 
     # model
-    model = bmi.wrapper.BMIWrapper(engine)
+    if not mmi:
+        model = bmi.wrapper.BMIWrapper(engine)
+    else:
+        model = MMIClient(mmi)
+        model.engine = engine
     # initialize model schematization, changes directory
 
     background_name = pathlib.Path(schematization.name).with_suffix('.jpg').absolute()
     if background_name.exists():
         data['background_name'] = background_name
 
-    model.initialize(str(schematization_name.absolute()))
+    # mmi model is already initialized
+    if not mmi:
+        model.initialize(str(schematization_name.absolute()))
     update_initial_vars(data, model)
-    dt = model.get_time_step()
 
     # compute the model bounding box that is shown on the screen
     model_bbox = matplotlib.path.Path(data['model_points'])
@@ -271,17 +278,18 @@ def run(schematization, engine, max_iterations):
 
         # update visualization
         vis.update(data)
-        dt = model.get_time_step()
-        # HACK: fix unstable timestep in xbeach
-        if model.engine == 'xbeach':
-            dt = 60
-        # update model
-        import time
-        tic = time.time()
-        for i in range(data.get('iterations.per.visualization', 1)):
-            model.update(dt)
-        toc = time.time()
-        logger.info("elapsed %s, t: %s", toc-tic, model.get_current_time())
+        if not mmi:
+            dt = model.get_time_step()
+            # HACK: fix unstable timestep in xbeach
+            if model.engine == 'xbeach':
+                dt = 60
+            # update model
+            import time
+            tic = time.time()
+            for i in range(data.get('iterations.per.visualization', 1)):
+                model.update(dt)
+            toc = time.time()
+            logger.info("elapsed %s, t: %s", toc-tic, model.get_current_time())
 
         if max_iterations and i > max_iterations:
             break
