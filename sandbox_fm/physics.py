@@ -1,7 +1,13 @@
 import numpy as np
 import matplotlib.colors
+
 import cv2
 
+
+def apply_hillshade(z, vertical_exageration=1.0):
+    ls = matplotlib.colors.LightSource(azdeg=315, altdeg=45)
+    hillshaded = ls.hillshade(z, vert_exag=vertical_exageration)
+    return hillshaded
 
 def create_wave(data):
     """generate a wave in the dataset"""

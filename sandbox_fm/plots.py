@@ -28,6 +28,7 @@ from .physics import (
     warp_flow,
     warp_particles,
     warp_waves,
+    apply_hillshade,
     create_wave
 )
 
