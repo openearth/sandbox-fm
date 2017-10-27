@@ -460,7 +460,11 @@ class Visualization():
 
         # Update scanned height
         self.im_height.set_data(warped_height)
-        self.im_waterlevel.set_data(np.ma.masked_less_equal(waterlevel_img - height_cells_img, 0.1))
+        waterlevel = waterlevel_img - height_cells_img
+        shaded_waterlevel = apply_hillshade(waterlevel)
+        mask = waterlevel < 0.1
+        shaded_waterlevel[:, :, -1] = ~mask
+        self.im_waterlevel.set_data(shaded_waterlevel)
         self.im_height_cells.set_data(height_cells_img)
         self.im_mag.set_data(mag_img)
         self.im_mag.set_clim(0, 2.5)

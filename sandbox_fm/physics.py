@@ -1,12 +1,12 @@
 import numpy as np
 import matplotlib.colors
-
+import matplotlib.cm
 import cv2
 
 
 def apply_hillshade(z, vertical_exageration=1.0):
     ls = matplotlib.colors.LightSource(azdeg=315, altdeg=45)
-    hillshaded = ls.hillshade(z, vert_exag=vertical_exageration)
+    hillshaded = ls.shade(z, vert_exag=vertical_exageration, blend_mode='hsv', cmap=matplotlib.cm.gist_earth)
     return hillshaded
 
 def create_wave(data):
