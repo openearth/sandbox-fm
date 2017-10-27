@@ -5,7 +5,6 @@ import logging
 import time
 import json
 import functools
-import itertools
 
 try:
     from itertools import izip as zip
@@ -13,9 +12,6 @@ except ImportError:
     # python3 has it builtin
     pass
 
-
-import zmq
-import cv2
 import tqdm
 import click
 import numpy as np
@@ -24,7 +20,6 @@ import matplotlib.backend_bases
 import matplotlib.pyplot as plt
 
 import bmi.wrapper
-from mmi import recv_array
 from mmi.mmi_client import MMIClient
 
 HAVE_MPI = False
@@ -51,11 +46,13 @@ from .plots import (
     Visualization,
     process_events
 )
-
 from .sandbox_fm import (
     update_initial_vars,
     update_vars,
     update_with_event
+)
+from .gestures import (
+    recognize_gestures
 )
 
 logging.basicConfig(level=logging.INFO)
@@ -173,7 +170,6 @@ def run(schematization, engine, max_iterations, mmi):
      - r -> reset bathymethry
      - b -> set bed level
     """
-
     schematization_name = pathlib.Path(schematization.name)
     # keep absolute path so model can change directory
     calibration_name = schematization_name.with_name('calibration.json').absolute()
@@ -284,6 +280,8 @@ def run(schematization, engine, max_iterations, mmi):
         data['kinect_height'] = kinect_height
         data['kinect_image'] = kinect_image
 
+        gestures = recognize_gestures(data['height'])
+        data['gestures'] = gestures
         # update visualization
         vis.update(data)
 
@@ -293,7 +291,6 @@ def run(schematization, engine, max_iterations, mmi):
             if model.engine == 'xbeach':
                 dt = 60
             # update model
-            import time
             tic = time.time()
             for i in range(data.get('iterations.per.visualization', 1)):
                 model.update(dt)
@@ -302,6 +299,12 @@ def run(schematization, engine, max_iterations, mmi):
 
         if max_iterations and i > max_iterations:
             break
+        # visualization can trigger an exit
+        if vis.quitting:
+            break
+
+        # update model
+        model.update(dt)
 
 if __name__ == "__main__":
     import sandbox_fm.cli

@@ -47,17 +47,16 @@ class TestSandbox_fm(object):
             '--max-iterations=1'
         ])
         logger.info(result.output)
-        log_ex(result.exception)
         assert result.exit_code == 0, (result)
+        assert 'sandbox' in result.output.lower()
+
 
     def test_help(self):
         runner = CliRunner()
-        result = runner.invoke(cli.cli, [
-            '--help'
-        ])
         # run help
-        assert result.exit_code == 0
-        assert '--help  Show this message and exit.' in result.output
+        help_result = runner.invoke(cli.run, ['--help'])
+        assert help_result.exit_code == 0
+        assert 'Show this message and exit.' in help_result.output
 
     @classmethod
     def teardown_class(cls):
