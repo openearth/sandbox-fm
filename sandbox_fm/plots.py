@@ -125,7 +125,7 @@ def process_events(evt, data, model, vis):
     if evt.key == 'c':
         vis.im_flow.set_visible(not vis.im_flow.get_visible())
     if evt.key == 'q':  # Quit (on windows)
-        sys.exit()
+        vis.quitting = True
     if evt.key == '1':  # Visualisation preset 1. Show bed level from camera
         if hasattr(vis, 'im_background'):
             vis.im_background.set_visible(False)
@@ -211,6 +211,7 @@ class Visualization():
     def __init__(self):
         # create figure and axes
         self.fig, self.ax = plt.subplots()
+        self.quitting = False
         self.fig.subplots_adjust(
             left=0,
             right=1,
