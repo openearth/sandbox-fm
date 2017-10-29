@@ -26,9 +26,11 @@ def create_wave(data):
 
 
 
-def warp_waves(waves, flow, data, wave_height_img, dissipation_img):
+def warp_waves(waves, flow, data):
     """advect the waves"""
 
+    wave_height_img = data['wave_height_img']
+    dissipation_img = data['dissipation_img']
     N = matplotlib.colors.Normalize(0, 2000, clip=True)
     for wave in waves:
         # segments x 2(from, to) x 2 (x,y)

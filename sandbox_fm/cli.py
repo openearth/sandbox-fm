@@ -67,6 +67,21 @@ if HAVE_MPI:
 else:
     logger.warn('MPI not initialized')
 
+
+def tic_report(tics):
+    items = list(tics.items())
+    items.sort(key=lambda x:x[1])
+    # value of t0
+    prev = items[0][1]
+    assert items[0][0] == 't0'
+    msgs = []
+    for item, curr in items[1:]:
+        diff = curr - prev
+        msgs.append("%s: %.2f" % (item, diff))
+        prev = curr
+    return " ".join(msgs)
+
+
 @click.group()
 def cli():
     """
@@ -202,8 +217,7 @@ def run(schematization, engine, max_iterations, mmi):
     # initialize model schematization, changes directory
 
     background_name = pathlib.Path(schematization.name).with_suffix('.jpg').absolute()
-    if background_name.exists():
-        data['background_name'] = background_name
+    data['background_name'] = background_name
 
     # mmi model is already initialized
     if not mmi:
@@ -212,6 +226,10 @@ def run(schematization, engine, max_iterations, mmi):
         # listen for incomming messges
         model.subscribe()
     update_initial_vars(data, model)
+
+
+    for i in range(100):
+        model.update(60)
 
     # compute the model bounding box that is shown on the screen
     model_bbox = matplotlib.path.Path(data['model_points'])
@@ -240,12 +258,6 @@ def run(schematization, engine, max_iterations, mmi):
     data['node_in_img_bbox'] = img_bbox.contains_points(np.c_[x_nodes_box, y_nodes_box])
     data['cell_in_img_bbox'] = img_bbox.contains_points(np.c_[x_cells_box, y_cells_box])
 
-    if data.get('debug'):
-        plt.scatter(data['X_CELLS'], data['Y_CELLS'], c=data['cell_in_img_bbox'], edgecolor='none')
-        plt.show()
-        plt.scatter(data['X_CELLS'], data['Y_CELLS'], c=data['cell_in_box'], edgecolor='none')
-        plt.show()
-
     # images
     kinect_heights = calibrated_height_images(
         calibration["z_values"],
@@ -270,41 +282,43 @@ def run(schematization, engine, max_iterations, mmi):
         functools.partial(process_events, data=data, model=model, vis=vis)
     )
     iterator = enumerate(tqdm.tqdm(zip(kinect_images, kinect_heights)))
+    tics = {}
     for i, (kinect_image, kinect_height) in iterator:
+        tics['t0'] = time.time()
 
         # Get data from model
-        # TODO: async data
+        # TODO: async data using mmi subscribe
         update_vars(data, model)
-
         # update kinect
         data['kinect_height'] = kinect_height
         data['kinect_image'] = kinect_image
+        tics['update_vars'] = time.time()
 
-        gestures = recognize_gestures(data['height'])
+        gestures = recognize_gestures(data['kinect_height'])
         data['gestures'] = gestures
+        tics['gestures'] = time.time()
+
         # update visualization
         vis.update(data)
-
-        if not mmi:
-            dt = model.get_time_step()
-            # HACK: fix unstable timestep in xbeach
-            if model.engine == 'xbeach':
-                dt = 60
-            # update model
-            tic = time.time()
-            for i in range(data.get('iterations.per.visualization', 1)):
-                model.update(dt)
-            toc = time.time()
-            logger.info("elapsed %s, t: %s", toc-tic, model.get_current_time())
-
-        if max_iterations and i > max_iterations:
-            break
         # visualization can trigger an exit
         if vis.quitting:
             break
+        tics['vis'] = time.time()
 
+        dt = model.get_time_step()
+        # HACK: fix unstable timestep in xbeach
+        if model.engine == 'xbeach':
+            dt = 60
         # update model
+        # for i in range(data.get('iterations.per.visualization', 1)):
         model.update(dt)
+        tics['model'] = time.time()
+
+        logger.info("tics: %s", tic_report(tics))
+
+
+        if max_iterations and i > max_iterations:
+            break
 
 if __name__ == "__main__":
     import sandbox_fm.cli
