@@ -61,12 +61,12 @@ views = [
     },
     {
         "name": "Flow magnitude",
-        "layers": ["mag"],
+        "layers": ["background", "mag"],
         "key": "4"
     },
     {
         "name": "Waves",
-        "layers": ["wavesurface"],
+        "layers": ["background", "wavesurface"],
         "key": "5"
     },
     {
@@ -90,10 +90,7 @@ def process_events(evt, data, model, vis):
         old_view = vis.current_view
         # remove handles
         for layer in old_view['layers']:
-            # no handle set
-            if vis.handles[layer] is None:
-                pass
-            elif isinstance(vis.handles[layer], list):
+            if isinstance(vis.handles[layer], list):
                 # a collection
                 for item in vis.handles[layer]:
                     item.remove()
@@ -155,7 +152,7 @@ def process_events(evt, data, model, vis):
         data['lic'][:, :, :3] = 1.0
         data['lic'][:, :, 3] = 0.0
         data['lic'] = cv2.warpPerspective(
-            data['kinect_video'].astype('float32') / 255.0,
+            data['kinect_image'].astype('float32') / 255.0,
             np.array(data['img2box']),
             data['kinect_height'].shape[::-1]
         )
@@ -286,6 +283,7 @@ class Visualization():
         height_cells_img = data['height_cells_img']
         waterheight = waterlevel_img - height_cells_img
         mask = waterheight < 0.1
+        data['watermask'] = mask
         data['waterlevel_img'] = waterlevel_img
         data['waterheight_img'] = np.ma.masked_array(waterheight, mask=mask)
 
@@ -371,17 +369,15 @@ class Visualization():
         )
 
     def update_wavesurface(self, data):
+        self.update_waterheight(data)
         waterlevel_gradient = np.gradient(data['WATERLEVEL'], axis=1)
         waterlevel_gradient_img = waterlevel_gradient.ravel()[
             data['ravensburger_cells']
         ]
-        data['waterlevel_gradient_img'] = waterlevel_gradient_img
+        data['waterlevel_gradient_img'] = np.ma.masked_array(waterlevel_gradient_img, mask=data['watermask'])
 
     def blit_wavesurface(self, data):
         self.handles['wavesurface'].set_data(data['waterlevel_gradient_img'])
-
-
-
 
 
     def init_erosion(self, data):
@@ -404,25 +400,23 @@ class Visualization():
     def blit_erosion(self, data):
         self.handles['erosion'].set_data(data['erosion_img'])
 
-
-
     def init_background(self, data):
-        if pathlib.Path(data['background_name']).exists():
+        if data['background_name']:
             data['background_img'] = plt.imread(data['background_name'])
         else:
+            # 10 black pixels
+            data['background_img'] = np.zeros((10, 10, 3))
             logger.warn('could not find background image: %s', data['background_name'])
 
     def add_background(self, data):
-        if data.get('background_img'):
-            self.handles['background_img'] = self.ax.imshow(
-                data['background'],
-                extent=[0, 640, 480, 0]
-            )
-        else:
-            self.handles['background'] = None
+        self.handles['background'] = self.ax.imshow(
+            data['background_img'],
+            extent=[0, 640, 480, 0]
+        )
 
     def update_background(self, data):
         pass
+
     def blit_background(self, data):
         pass
 
@@ -473,11 +467,13 @@ class Visualization():
             animated=True
         )
     def update_mag(self, data):
+        self.update_waterheight(data)
         self.update_uv(data)
         u_img = data['u_img']
         v_img = data['v_img']
         mag_img = np.sqrt(u_img**2 + v_img**2)
-        data['mag_img'] = mag_img
+        data['mag_img'] = np.ma.masked_array(mag_img, mask=data['watermask'])
+
 
     def blit_mag(self, data):
         self.handles['mag'].set_data(data['mag_img'])
@@ -504,12 +500,13 @@ class Visualization():
         )
 
     def update_lic(self, data):
+        self.update_waterheight(data)
         self.update_uv(data)
         #################################################
         # Compute liquid added to the model
         #
         # Multiplier on the flow velocities
-        scale = data.get('scale', 10.0)
+        scale = data.get('scale', 1.0)
         u_img = data['u_img']
         v_img = data['v_img']
         flow = np.dstack([u_img, v_img]) * scale
@@ -523,6 +520,7 @@ class Visualization():
         # but not < 0
         data['lic'][..., 3][data['lic'][..., 3] < 0] = 0
         data['lic'][..., 3][data['cell_mask']] = 0
+        data['lic'][..., 3][data['watermask']] = 0
         # Update liquid
 
     def seed_lic(self, data):
@@ -549,8 +547,9 @@ class Visualization():
             data['lic'][r, c, :] = tuple(rgb) + (1, )
 
         # Remove liquid on dry places
-        data['lic'][data['height_cells_img'] >= data['waterlevel_img'], 3] = 0.0
-        data['lic'][data['height_nodes_img'] >= data['waterlevel_img'], 3] = 0.0
+        # data['lic'][data['height_cells_img'] >= data['waterlevel_img'], 3] = 0.0
+        # data['lic'][data['height_nodes_img'] >= data['waterlevel_img'], 3] = 0.0
+        data['lic'][data['watermask'], 3] = 0
     def blit_lic(self, data):
         self.handles['lic'].set_data(data['lic'])
 
