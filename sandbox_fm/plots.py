@@ -12,7 +12,10 @@ import scipy.interpolate
 import numpy as np
 import skimage.draw
 
-from .cm import terrajet2
+from .cm import (
+    terrajet2,
+    colombia
+)
 from .sandbox_fm import compute_delta_height
 from .models import (
     available
@@ -43,7 +46,7 @@ logger.setLevel(logging.INFO)
 views = [
     {
         "name": "Kinect",
-        "layers": ["kinect_height"],
+        "layers": ["kinect_height", "lic"],
         "key": "1"
     },
     {
@@ -63,16 +66,14 @@ views = [
     },
     {
         "name": "Waves",
-        "layers": ["wave_height", "wave_features"],
+        "layers": ["wavesurface"],
         "key": "5"
     },
     {
         "name": "Erosion",
-        "layers": ["erosion", "lic"],
+        "layers": ["erosion"],
         "key": "6"
-
     }
-
 ]
 
 
@@ -86,7 +87,6 @@ def process_events(evt, data, model, vis):
     # we are switching views if evt.key is a number
     if evt.key.isnumeric():
         new_view_idx = int(evt.key) - 1
-        view_switch = True
         old_view = vis.current_view
         # remove handles
         for layer in old_view['layers']:
@@ -132,32 +132,43 @@ def process_events(evt, data, model, vis):
         height_nodes_copy = data['HEIGHT_NODES'].copy()
         height_nodes_copy.ravel()[idx] += compute_delta_height(data, idx)
         # at least 3 meter
-        idx = np.logical_and(idx, height_nodes_copy.ravel() > data['HEIGHT_NODES'].ravel() + data.get('hard_threshold', 3.0))
+        idx = np.logical_and(
+            idx,
+            height_nodes_copy.ravel() > (
+                data['HEIGHT_NODES'].ravel() +
+                data.get('hard_threshold', 3.0)
+            )
+        )
         # replace the part that changed
         logger.info("updating structures in  %s nodes", np.sum(idx))
         meta['update_structures'](idx, height_nodes_copy, data, model)
     if evt.key == 'r':  # Reset to original bed level
         for i in range(0, len(data['height_cells_original'])):
             if data['HEIGHT_CELLS'][i] != data['height_cells_original'][i]:
-                model.set_var_slice(mappings["HEIGHT_CELLS"], [i + 1], [1],
-                                    data['height_cells_original'][i:i + 1])
+                model.set_var_slice(
+                    mappings["HEIGHT_CELLS"],
+                    [i + 1],
+                    [1],
+                    data['height_cells_original'][i:i + 1]
+                )
     if evt.key == 'p':
-        vis.lic[:, :, :3] = 1.0
-        vis.lic[:, :, 3] = 0.0
-        vis.lic = cv2.warpPerspective(
-            data['video'].astype('float32') / 255.0,
+        data['lic'][:, :, :3] = 1.0
+        data['lic'][:, :, 3] = 0.0
+        data['lic'] = cv2.warpPerspective(
+            data['kinect_video'].astype('float32') / 255.0,
             np.array(data['img2box']),
             data['kinect_height'].shape[::-1]
         )
-        if vis.lic.shape[-1] == 3:
+        if data['lic'].shape[-1] == 3:
             # add height channel
-            vis.lic = np.dstack([
-                vis.lic,
-                np.ones_like(vis.lic[:, :, 0])
+            data['lic'] = np.dstack([
+                data['lic'],
+                np.ones_like(data['lic'][:, :, 0])
             ])
 
     if evt.key == 'c':
-        vis.im_flow.set_visible(not vis.im_flow.get_visible())
+        if 'lic' in vis.handles:
+            vis.handles['lic'].set_visible(not vis.handles['lic'].get_visible())
     if evt.key == 'q':  # Quit (on windows)
         vis.quitting = True
 
@@ -166,6 +177,12 @@ class Visualization():
     def __init__(self):
         # create figure and axes
         self.fig, self.ax = plt.subplots()
+        # This should just work....
+        self.fig.set_size_inches((3, 2.4))
+        self.fig.set_dpi(100)
+        logger.info('dpi: %s', self.fig.get_dpi())
+        logger.info('size in px %s x %s', self.fig.get_figwidth(), self.fig.get_figheight())
+        logger.info('size in inches: %s', self.fig.get_size_inches())
         # force low dpi
         self.quitting = False
         self.fig.subplots_adjust(
@@ -201,10 +218,10 @@ class Visualization():
         # Plot scanned height
         self.handles['kinect_height'] = self.ax.imshow(
             data['kinect_height_img'],
-            'jet',
+            colombia,
             alpha=1,
-            vmin=data['z'][0],
-            vmax=data['z'][-1]
+            vmin=-12,
+            vmax=12
         )
     def update_kinect_height(self, data):
         #############################################
@@ -228,12 +245,13 @@ class Visualization():
 
     def add_height_cells(self, data):
         # Plot bed level
+
         self.handles['height_cells'] = self.ax.imshow(
             data['height_cells_img'],
-            cmap=terrajet2,
+            cmap=colombia,
             alpha=1,
-            vmin=data['z'][0],
-            vmax=data['z'][-1]
+            vmin=-12,
+            vmax=12
         )
     def update_height_cells(self, data):
         height_cells_img = data['HEIGHT_CELLS'].ravel()[data['ravensburger_cells']]
@@ -244,8 +262,6 @@ class Visualization():
 
     def init_height_nodes(self, data):
         self.update_height_nodes()
-
-
     def update_height_nodes(self, data):
         # Convert to simple arrays
         height_nodes_img = data['HEIGHT_NODES'].ravel()[data['ravensburger_nodes']]
@@ -304,8 +320,6 @@ class Visualization():
         wave_v_img = wave_v_in_img[data['ravensburger_cells']]
         data['wave_u_img'] = wave_u_img
         data['wave_v_img'] = wave_v_img
-
-
     def blit_wave_features(self, data):
         wave_u_img, wave_v_img = data['wave_u_img'], data['wave_v_img']
         waves_flow = np.dstack([wave_u_img, wave_v_img])
@@ -321,7 +335,6 @@ class Visualization():
             wave.set_visible(False)
             wave.remove()
 
-
     def init_wave_height(self, data):
         wave_height_img = data['WAVE_HEIGHT'].ravel()[data['ravensburger_cells']]
         dissipation_img = data['WAVE_DISSIPATION'].ravel()[data['ravensburger_cells']]
@@ -336,7 +349,6 @@ class Visualization():
             vmin=0
         )
 
-
     def update_wave_height(self, data):
         wave_height_img = data['WAVE_HEIGHT'].ravel()[data['ravensburger_cells']]
         dissipation_img = data['WAVE_DISSIPATION'].ravel()[data['ravensburger_cells']]
@@ -345,6 +357,30 @@ class Visualization():
 
     def blit_wave_height(self, data):
         self.handles['wave_height'].set_data(data['wave_height_img'])
+
+
+    def init_wavesurface(self, data):
+        self.update_wavesurface(data)
+
+    def add_wavesurface(self, data):
+        self.handles['wavesurface'] = self.ax.imshow(
+            data['waterlevel_gradient_img'],
+            cmocean.cm.ice_r,
+            vmin=-2,
+            vmax=1
+        )
+
+    def update_wavesurface(self, data):
+        waterlevel_gradient = np.gradient(data['WATERLEVEL'], axis=1)
+        waterlevel_gradient_img = waterlevel_gradient.ravel()[
+            data['ravensburger_cells']
+        ]
+        data['waterlevel_gradient_img'] = waterlevel_gradient_img
+
+    def blit_wavesurface(self, data):
+        self.handles['wavesurface'].set_data(data['waterlevel_gradient_img'])
+
+
 
 
 
@@ -515,15 +551,13 @@ class Visualization():
         # Remove liquid on dry places
         data['lic'][data['height_cells_img'] >= data['waterlevel_img'], 3] = 0.0
         data['lic'][data['height_nodes_img'] >= data['waterlevel_img'], 3] = 0.0
-
-
     def blit_lic(self, data):
         self.handles['lic'].set_data(data['lic'])
 
 
     def init_grid(self, data):
         # column and row numbers
-        m, n = np.mgrid[:HEIGHT, :WIDTH]
+        n, m = np.mgrid[:HEIGHT, :WIDTH]
         # transformed to model coordinates
         m_t, n_t = transform(
             m.ravel().astype('float32'),
@@ -578,7 +612,6 @@ class Visualization():
         self.fig.canvas.mpl_connect('key_press_event', self.notify)
         plt.show(block=False)
         plt.ion()
-
 
     def update(self, data):
         i = next(self.counter)

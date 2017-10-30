@@ -1,6 +1,10 @@
+import pathlib
+
 from matplotlib.colors import ListedColormap
 from matplotlib.colors import hex2color, rgb2hex
 from numpy import nan, inf
+
+from pycpt.load import gmtColormap
 
 
 def make_cmap(colors, position=None, bit=False, name='my_colormap'):
@@ -36,6 +40,9 @@ def make_cmap(colors, position=None, bit=False, name='my_colormap'):
 
     cmap = mpl.colors.LinearSegmentedColormap(name, cdict, 256)
     return cmap
+
+
+data_dir = pathlib.Path(__file__).parent.parent / 'data'
 
 # Used to reconstruct the colormap in viscm
 parameters = {'xp': [-4.3306605284902275, -12.121422910237584, -3.3568152307718151, 30.727770189372848],
@@ -304,6 +311,7 @@ terrajet = ListedColormap(cm_data, name=__file__)
 colors = [hex2color(hex) for hex in ('#2F3360', '#00C1FF', '#366032', '#BAA838', '#BA5C21')]
 colors = [hex2color(hex) for hex in ('#111160', '#00FFFF', '#11DD00', '#FFFF00', '#DD3322', '#FF0044', '#DDDDDD')]
 terrajet2 = make_cmap(colors)
+colombia = gmtColormap(str(data_dir / 'colombia.cpt'))
 
 if __name__ == "__main__":
     import matplotlib.pyplot as plt

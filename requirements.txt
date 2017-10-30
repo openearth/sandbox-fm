@@ -3,3 +3,4 @@ bmi-python
 scikit-image
 tqdm
 cmocean
+git+https://github.com/j08lue/pycpt.git
