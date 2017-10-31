@@ -14,7 +14,8 @@ import skimage.draw
 
 from .cm import (
     terrajet2,
-    colombia
+    colombia,
+    transparent_water
 )
 from .sandbox_fm import compute_delta_height
 from .models import (
@@ -272,10 +273,10 @@ class Visualization():
     def add_waterheight(self, data):
         self.handles['waterheight'] = self.ax.imshow(
             data['waterheight_img'],
-            cmap='Blues',
+            cmap=transparent_water,
             alpha=1.0,
             vmin=0,
-            vmax=3
+            vmax=10
         )
     def update_waterheight(self, data):
         self.update_height_cells(data)

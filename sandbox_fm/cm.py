@@ -1,5 +1,6 @@
 import pathlib
 
+import matplotlib.colors
 from matplotlib.colors import ListedColormap
 from matplotlib.colors import hex2color, rgb2hex
 from numpy import nan, inf
@@ -20,7 +21,7 @@ def make_cmap(colors, position=None, bit=False, name='my_colormap'):
     import matplotlib as mpl
     import numpy as np
     bit_rgb = np.linspace(0, 1, 256)
-    if position == None:
+    if position is None:
         position = np.linspace(0, 1, len(colors))
     else:
         if len(position) != len(colors):
@@ -312,6 +313,16 @@ colors = [hex2color(hex) for hex in ('#2F3360', '#00C1FF', '#366032', '#BAA838',
 colors = [hex2color(hex) for hex in ('#111160', '#00FFFF', '#11DD00', '#FFFF00', '#DD3322', '#FF0044', '#DDDDDD')]
 terrajet2 = make_cmap(colors)
 colombia = gmtColormap(str(data_dir / 'colombia.cpt'))
+transparent_water = matplotlib.colors.LinearSegmentedColormap.from_list(
+    'transparent_water',
+    [
+        (0, (0.7, 0.7, 0.9, 0.3)),
+        (0.1, (0.6, 0.6, 0.9, 0.7)),
+        (0.2, (0.4, 0.5, 0.9, 0.8)),
+        (0.7, (0.1, 0.2, 1.0, 0.9)),
+        (1.0, (0.0, 0.05, 0.2, 1.0))
+    ]
+)
 
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
