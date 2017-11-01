@@ -48,15 +48,12 @@ def update_with_event(data, model, event):
     logger.info("updated %s", mapped_name)
 
 
-
-
-
 def compute_delta_height(data, idx):
     """compute the bed level change, normalized a bit and only for cells in idx """
 
     kinect_height = data['kinect_height']
 
-    x_nodes_box, y_nodes_box = transform(data['X_NODES'].ravel(), data['Y_NODES'].ravel(), data['model2box'])
+    x_nodes_box, y_nodes_box = transform(data['X_NODES'].ravel(), data['Y_NODES'].ravel(), data['model2img'])
 
     # nearest pixels
     u = np.clip(np.round(y_nodes_box[idx.ravel()]).astype('int'), 0, HEIGHT - 1)

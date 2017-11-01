@@ -1,6 +1,7 @@
-matplotlib<2.1.0
+matplotlib<2.1
 bmi-python
 scikit-image
 tqdm
 cmocean
+mmi
 git+https://github.com/j08lue/pycpt.git

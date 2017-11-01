@@ -6,6 +6,8 @@ import pathlib
 
 import cv2
 import matplotlib.pyplot as plt
+import matplotlib.patches
+import matplotlib.streamplot
 import matplotlib
 import cmocean.cm
 import scipy.interpolate
@@ -90,11 +92,25 @@ def process_events(evt, data, model, vis):
         new_view_idx = int(evt.key) - 1
         old_view = vis.current_view
         # remove handles
+
+
         for layer in old_view['layers']:
             if isinstance(vis.handles[layer], list):
                 # a collection
                 for item in vis.handles[layer]:
                     item.remove()
+            elif isinstance(vis.handles[layer], matplotlib.streamplot.StreamplotSet):
+                streamplot = vis.handles[layer]
+                try:
+                    vis.handles[layer].lines.remove()
+                except ValueError:
+                    logging.exception('no worries')
+                for line in streamplot.lines:
+                    line.remove()
+                for arrow in streamplot.arrows:
+                    arrow.remove()
+
+
             else:
                 # an artist
                 vis.handles[layer].remove()
@@ -163,6 +179,10 @@ def process_events(evt, data, model, vis):
                 data['lic'],
                 np.ones_like(data['lic'][:, :, 0])
             ])
+    if evt.key == 's':
+        vis.update_streamplot(data)
+        vis.seed_streamplot(data)
+        vis.add_streamplot(data)
 
     if evt.key == 'c':
         if 'lic' in vis.handles:
@@ -553,6 +573,84 @@ class Visualization():
         data['lic'][data['watermask'], 3] = 0
     def blit_lic(self, data):
         self.handles['lic'].set_data(data['lic'])
+
+    def init_streamplot(self, data):
+        self.update_uv(data)
+        self.seed_streamplot(data)
+
+    def add_streamplot(self, data):
+        self.update_streamplot(data)
+        x = data['streamplot_x']
+        y = data['streamplot_y']
+        seed_x = data['streamplot_seed_x']
+        seed_y = data['streamplot_seed_y']
+        start_points = np.c_[seed_x, seed_y]
+        u = data['u_img']
+        v = data['v_img']
+        self.handles['streamplot'] = self.ax.streamplot(x, y, u, v) # , start_points=start_points)
+
+    def update_streamplot(self, data):
+        self.update_waterheight(data)
+        self.update_uv(data)
+
+
+    # def blit_streamplot(self, data):
+    #     # remove all arrows (and everything else)
+    #     old_streamplot = self.handles['streamplot']
+    #     # remove old arrows
+    #     for patch in self.ax.patches:
+    #         if isinstance(patch, matplotlib.patches.FancyArrowPatch):
+    #             logger.info('removing %s', patch)
+    #             patch.remove()
+    #     self.add_streamplot(data)
+    #     old_streamplot.lines.remove()
+    #     del old_streamplot
+    #     self.add_streamplot(data)
+
+
+
+    def seed_streamplot(self, data):
+        # number of seeds
+        N = 100
+        # domain
+        x_0 = data['box'][0][0]
+        x_1 = data['box'][1][0]
+        y_0 = data['box'][0][1]
+        y_1 = data['box'][2][1]
+
+        # x coordinates for u, v
+        data['streamplot_x'] = np.arange(x_0, x_1)
+        data['streamplot_y'] = np.arange(y_0, y_1)
+        # y coordinates for u, v
+
+        n, m = np.mgrid[:HEIGHT, :WIDTH]
+        if (
+                'gestures' in data
+                and len(data['gestures'])
+                and data['gestures'][0]["name"] == "hand"
+        ):
+            # use gesture if available
+            # mask out points that are not the feature and not water
+            mask = np.logical_or(
+                ~data['gestures'][0]['feature'],
+                data['watermask']
+            )
+            n_filtered = n[~mask]
+            m_filtered = m[~mask]
+        else:
+            # otherwise use watermask
+            m_filtered = m[~data['watermask']]
+            n_filtered = n[~data['watermask']]
+        m_points = m_filtered.ravel()
+        n_points = n_filtered.ravel()
+        points = np.array(
+            random.sample(
+                list(np.c_[m_points, n_points]),
+                N
+            )
+        )
+        data['streamplot_seed_x'] = points[:, 0]
+        data['streamplot_seed_y'] = points[:, 1]
 
 
     def init_grid(self, data):
