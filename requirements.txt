@@ -1,4 +1,4 @@
+bmi-python==0.2.6
 matplotlib<2.1.0
-bmi-python
 scikit-image
 tqdm
