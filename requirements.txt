@@ -1,4 +1,4 @@
+scikit-image==0.13.1
 bmi-python==0.2.6
 matplotlib<2.1.0
-scikit-image
 tqdm==4.19.4
