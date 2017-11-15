@@ -76,22 +76,23 @@ def video_images():
         yield img
 
 
-def depth_images(raw=False):
+def depth_images():
     """generate depth images"""
     while True:
         depth, _ = freenect.sync_get_depth()
-        if not raw:
-            depth = uint11_to_uint8(depth)
-        else:
-            depth = np.ma.masked_equal(depth, (2 ** 11) - 1)
+        depth = np.ma.masked_equal(depth, (2 ** 11) - 1)
 
-        yield depth
+        # return as double because we might compute something with it
+        yield depth.astype('double')
 
 
-def calibrated_height_images(values, z, anomaly_name='anomaly.npy'):
-    """convert values (from kinect 11 bit) to z values in m"""
-    assert values[0] > values[1], "please click deeper point first next time"
-
+def calibrated_height_images(depth_max_min, z_min_max, anomaly_name='anomaly.npy'):
+    """convert depth values (from kinect 11 bit) to z values in m.
+    The depth are expected in max and min and the corresponding z (height) are expected in min and max"""
+    if depth_max_min[0] < depth_max_min[1]:
+        raise ValueError("Calibration Error. Please click deeper point first next time. Got depths {} - {}".format(depth_max_min[0], depth_max_min[1]))
+    if z_min_max[0] > z_min_max[1]:
+        raise ValueError("Calibration error. Expected lower higher point. Got height values {} - {}.".format(z_min_max[0], z_min_max[1]))
     anomaly = 0.0
     try:
         anomaly = np.load(str(anomaly_name))
@@ -99,37 +100,23 @@ def calibrated_height_images(values, z, anomaly_name='anomaly.npy'):
         logger.exception('Cannot read anomaly file %s', anomaly_name)
 
 
-    def values2height(x, values, z):
-        return (x - (values[0] + values[1])/2.0) / (values[1] - values[0])*(z[1] - z[0]) + (z[0] + z[1])/2.0
-    f = functools.partial(values2height, z=z, values=values)
+    def values2height(x, depth_max_min, z_min_max):
+        """convert the values in """
+        depth_max, depth_min = depth_max_min
+        depth_range = depth_max - depth_min
+        z_min, z_max = z_min_max
+        z_range = z_max - z_min
+        # scaled depth (1 = deep, 0=undeep)
+        scaled_depth = (x - depth_min)/depth_range
+        # scaled height
+        scaled_height = (1.0 - scaled_depth)
+        height = scaled_height * z_range + z_min
+        return height
+    f = functools.partial(values2height, z_min_max=z_min_max, depth_max_min=depth_max_min)
 
-    for raw in depth_images(raw=True):
+    for raw in depth_images():
         # correct for anomaly
         height = f(raw - anomaly)
         yield height
 
 
-def calibrated_depth_images_old(extent=None):
-    """generate depth images on a fixed grid """
-    v, u = np.mgrid[:HEIGHT, :WIDTH]
-    images = percentile_depth_images()
-    if not extent:
-        depth_0 = next(images)
-        xyz_0, uv_0 = depth2xyzuv(depth_0, u, v)
-        xmin = xyz_0[:, 0].min() + 0.01
-        xmax = xyz_0[:, 0].max() - 0.01
-        ymin = xyz_0[:, 1].min() + 0.01
-        ymax = xyz_0[:, 1].max() - 0.01
-    else:
-        xmin, xmax, ymin, ymax = extent
-    X, Y = np.meshgrid(
-        np.linspace(xmin, xmax, num=320),
-        np.linspace(ymin, ymax, num=240)
-    )
-
-    for depth in images:
-        xyz, uv = depth2xyzuv(depth, u, v)
-        F = scipy.interpolate.NearestNDInterpolator(xyz[:, :2], xyz[:, 2])
-        z = F(X.ravel(), Y.ravel())
-        Z = z.reshape(X.shape)
-        yield Z

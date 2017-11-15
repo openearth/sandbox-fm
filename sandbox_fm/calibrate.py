@@ -35,6 +35,11 @@ Notes about the coordinate systems:
 import numpy as np
 import cv2
 import matplotlib.transforms
+import logging
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+
 
 # Width and height
 WIDTH, HEIGHT = 640, 480
@@ -181,6 +186,7 @@ def compute_transforms(calibration):
     img_points = np.array(calibration["img_points"], dtype="float32")
     box = np.array(calibration.get("box", DEFAULT_BOX), dtype="float32")
 
+    logger.info("model_points %s, box %s", model_points, box)
     model2box = cv2.getPerspectiveTransform(
         np.array(model_points, dtype='float32'),
         box
