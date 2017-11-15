@@ -4,4 +4,4 @@ matplotlib<2.1.0
 bmi-python
 scikit-image
 tqdm==4.19.4
-cmocean
+cmocean==1.1
