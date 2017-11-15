@@ -239,9 +239,6 @@ def run(schematization, engine, max_iterations, mmi):
     update_initial_vars(data, model)
 
 
-    for i in range(100):
-        model.update(60)
-
     # compute the model bounding box that is shown on the screen
     model_bbox = matplotlib.path.Path(data['model_points'])
     # create an index to see which points/cells are visualized
