@@ -479,7 +479,7 @@ class Calibration(object):
         self.z_values[0] = val
         self.save()
         self.show_result(self.axes[1, 1])
-        self.show_data(self.axes[1, 2], result)
+        self.show_data(self.axes[1, 2])
         self.set_text()
         self.show_result(self.fig2ax, cbar=False)
 
@@ -488,7 +488,7 @@ class Calibration(object):
         self.z_values[1] = val
         self.save()
         self.show_result(self.axes[1, 1])
-        self.show_data(self.axes[1, 2], result)
+        self.show_data(self.axes[1, 2])
         self.set_text()
         self.show_result(self.fig2ax, cbar=False)
 

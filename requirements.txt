@@ -1,7 +1,8 @@
+matplotlib<2.1
 scikit-image==0.13.1
 bmi-python==0.2.6
 matplotlib<2.1.0
-bmi-python
-scikit-image
 tqdm==4.19.4
 cmocean
+mmi
+git+https://github.com/j08lue/pycpt.git
