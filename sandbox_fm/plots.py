@@ -88,7 +88,7 @@ def process_events(evt, data, model, vis):
         return
 
     # we are switching views if evt.key is a number
-    if evt.key.isnumeric():
+    if evt.key in ['1', '2', '3', '4', '5', '6', '7', '8', '9']:
         new_view_idx = int(evt.key) - 1
         old_view = vis.current_view
         # remove handles
