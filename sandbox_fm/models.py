@@ -1,5 +1,9 @@
 import numpy as np
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 dflowfm_vars = ['bl', 'ucx', 'ucy', 's1', 'zk']
 
 
@@ -124,6 +128,9 @@ xbeach = {
     "update_nodes": update_height_xbeach,
     "update_structures": update_structure_height_xbeach
 }
+
+dflowfm["reverse_mapping"] = {value: key for key, value in dflowfm["mapping"].items()}
+xbeach["reverse_mapping"] = {value: key for key, value in xbeach["mapping"].items()}
 available = {
     "xbeach": xbeach,
     "dflowfm": dflowfm

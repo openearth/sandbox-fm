@@ -5,7 +5,6 @@ import logging
 import time
 import json
 import functools
-import itertools
 
 try:
     from itertools import izip as zip
@@ -13,7 +12,6 @@ except ImportError:
     # python3 has it builtin
     pass
 
-import cv2
 import tqdm
 import click
 import numpy as np
@@ -22,6 +20,7 @@ import matplotlib.backend_bases
 import matplotlib.pyplot as plt
 
 import bmi.wrapper
+from mmi.mmi_client import MMIClient
 
 HAVE_MPI = False
 try:
@@ -47,10 +46,13 @@ from .plots import (
     Visualization,
     process_events
 )
-
 from .sandbox_fm import (
     update_initial_vars,
-    update_vars
+    update_vars,
+    update_with_event
+)
+from .gestures import (
+    recognize_gestures
 )
 
 logging.basicConfig(level=logging.INFO)
@@ -64,6 +66,21 @@ if HAVE_MPI:
     logger.info("MPI initialized")
 else:
     logger.warn('MPI not initialized')
+
+
+def tic_report(tics):
+    items = list(tics.items())
+    items.sort(key=lambda x:x[1])
+    # value of t0
+    prev = items[0][1]
+    assert items[0][0] == 't0'
+    msgs = []
+    for item, curr in items[1:]:
+        diff = curr - prev
+        msgs.append("%s: %.2f" % (item, diff))
+        prev = curr
+    return " ".join(msgs)
+
 
 @click.group()
 def cli():
@@ -156,7 +173,8 @@ def view():
 @click.argument('schematization', type=click.File('rb'))
 @click.option('--engine', default='dflowfm', type=click.Choice(['dflowfm', 'xbeach']))
 @click.option('--max-iterations', default=0, type=int)
-def run(schematization, engine, max_iterations):
+@click.option('--mmi', type=str)
+def run(schematization, engine, max_iterations, mmi):
     """Console script for sandbox_fm
 
     keys:
@@ -167,7 +185,6 @@ def run(schematization, engine, max_iterations):
      - r -> reset bathymethry
      - b -> set bed level
     """
-
     schematization_name = pathlib.Path(schematization.name)
     # keep absolute path so model can change directory
     calibration_name = schematization_name.with_name('calibration.json').absolute()
@@ -192,16 +209,35 @@ def run(schematization, engine, max_iterations):
     data.update(configuration)
 
     # model
-    model = bmi.wrapper.BMIWrapper(engine)
+    if not mmi:
+        model = bmi.wrapper.BMIWrapper(engine)
+    else:
+        model = MMIClient(mmi)
+        model.engine = engine
     # initialize model schematization, changes directory
 
-    background_name = pathlib.Path(schematization.name).with_suffix('.jpg').absolute()
-    if background_name.exists():
-        data['background_name'] = background_name
+    # search for a background image
+    known_background_paths = [
+        pathlib.Path(schematization.name).with_suffix('.jpg'),
+        pathlib.Path(schematization.name).with_suffix('.png'),
+        pathlib.Path(schematization.name).with_name('background.jpg'),
+        pathlib.Path(schematization.name).with_name('background.png')
+    ]
+    for path in known_background_paths:
+        if path.exists():
+            data['background_name'] = str(path.absolute())
+            break
+    else:
+        data['background_name'] = None
 
-    model.initialize(str(schematization_name.absolute()))
+    # mmi model is already initialized
+    if not mmi:
+        model.initialize(str(schematization_name.absolute()))
+    else:
+        # listen for incomming messges
+        model.subscribe()
     update_initial_vars(data, model)
-    dt = model.get_time_step()
+
 
     # compute the model bounding box that is shown on the screen
     model_bbox = matplotlib.path.Path(data['model_points'])
@@ -230,12 +266,6 @@ def run(schematization, engine, max_iterations):
     data['node_in_img_bbox'] = img_bbox.contains_points(np.c_[x_nodes_box, y_nodes_box])
     data['cell_in_img_bbox'] = img_bbox.contains_points(np.c_[x_cells_box, y_cells_box])
 
-    if data.get('debug'):
-        plt.scatter(data['X_CELLS'], data['Y_CELLS'], c=data['cell_in_img_bbox'], edgecolor='none')
-        plt.show()
-        plt.scatter(data['X_CELLS'], data['Y_CELLS'], c=data['cell_in_box'], edgecolor='none')
-        plt.show()
-
     # images
     kinect_heights = calibrated_height_images(
         calibration["z_values"],
@@ -260,28 +290,40 @@ def run(schematization, engine, max_iterations):
         functools.partial(process_events, data=data, model=model, vis=vis)
     )
     iterator = enumerate(tqdm.tqdm(zip(kinect_images, kinect_heights)))
+    tics = {}
     for i, (kinect_image, kinect_height) in iterator:
+        tics['t0'] = time.time()
 
         # Get data from model
+        # TODO: async data using mmi subscribe
         update_vars(data, model)
-
         # update kinect
         data['kinect_height'] = kinect_height
         data['kinect_image'] = kinect_image
+        tics['update_vars'] = time.time()
+
+        gestures = recognize_gestures(data['kinect_height'])
+        data['gestures'] = gestures
+        tics['gestures'] = time.time()
 
         # update visualization
         vis.update(data)
+        # visualization can trigger an exit
+        if vis.quitting:
+            break
+        tics['vis'] = time.time()
+
         dt = model.get_time_step()
         # HACK: fix unstable timestep in xbeach
         if model.engine == 'xbeach':
             dt = 60
         # update model
-        import time
-        tic = time.time()
-        for i in range(data.get('iterations.per.visualization', 1)):
-            model.update(dt)
-        toc = time.time()
-        logger.info("elapsed %s, t: %s", toc-tic, model.get_current_time())
+        # for i in range(data.get('iterations.per.visualization', 1)):
+        model.update(dt)
+        tics['model'] = time.time()
+
+        logger.info("tics: %s", tic_report(tics))
+
 
         if max_iterations and i > max_iterations:
             break
