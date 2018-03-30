@@ -12,64 +12,64 @@ z={}
 for ii in np.arange(0, nframes):
     z[ii] = np.sin(x-ii/(2*np.pi))*np.sin(x-ii/(2*np.pi))+np.sin(y)*np.sin(y)
 
-# print('Method 1: matplotlib, imshow')
-# fig = plt.figure(figsize=(16, 8), facecolor='white')
-# t_0 = time.process_time()
-# for ii in np.arange(0, nframes):
-#     plt.cla()
-#     plt.imshow(z[ii])
-#     plt.pause(0.001)
-# plt.close()
-# total_time = (time.process_time() - t_0)
-# frequency = nframes / total_time
-# print('Time taken: {}. A frequency of: {}'.format(total_time, frequency))
+print('Method 1: matplotlib, imshow')
+fig = plt.figure(figsize=(16, 8), facecolor='white')
+t_0 = time.process_time()
+for ii in np.arange(0, nframes):
+    plt.cla()
+    plt.imshow(z[ii])
+    plt.pause(0.001)
+plt.close()
+total_time = (time.process_time() - t_0)
+frequency = nframes / total_time
+print('Time taken: {}. A frequency of: {}'.format(total_time, frequency))
 
 
-# print('Method 2: matplotlib, imshow with set_data')
-# ii = 0
-# fig = plt.figure(figsize=(16, 8), facecolor='white')
-# plt.ion()
-# im = plt.imshow(z[ii])
-# t_0 = time.process_time()
-# for ii in np.arange(0, nframes):
-#     im.set_data(z[ii])
-#     plt.draw()
-#     plt.pause(0.001)
-# plt.close()
-# total_time = (time.process_time() - t_0)
-# frequency = nframes / total_time
-# print('Time taken: {}. A frequency of: {}'.format(total_time, frequency))
+print('Method 2: matplotlib, imshow with set_data')
+ii = 0
+fig = plt.figure(figsize=(16, 8), facecolor='white')
+plt.ion()
+im = plt.imshow(z[ii])
+t_0 = time.process_time()
+for ii in np.arange(0, nframes):
+    im.set_data(z[ii])
+    plt.draw()
+    plt.pause(0.001)
+plt.close()
+total_time = (time.process_time() - t_0)
+frequency = nframes / total_time
+print('Time taken: {}. A frequency of: {}'.format(total_time, frequency))
 
-# print('Method 3: matplotlib, pcolormesh (with set_array)')
-# ii = 0
-# fig = plt.figure(figsize=(16, 8), facecolor='white')
-# plt.ion()
-# quad = plt.pcolormesh(z[ii])
-# t_0 = time.process_time()
-# for ii in np.arange(0, nframes):
-#     quad.set_array(z[ii].ravel())
-#     plt.draw()
-#     plt.pause(0.001)
-# plt.close()
-# total_time = (time.process_time() - t_0)
-# frequency = nframes / total_time
-# print('Time taken: {}. A frequency of: {}'.format(total_time, frequency))
+print('Method 3: matplotlib, pcolormesh (with set_array)')
+ii = 0
+fig = plt.figure(figsize=(16, 8), facecolor='white')
+plt.ion()
+quad = plt.pcolormesh(z[ii])
+t_0 = time.process_time()
+for ii in np.arange(0, nframes):
+    quad.set_array(z[ii].ravel())
+    plt.draw()
+    plt.pause(0.001)
+plt.close()
+total_time = (time.process_time() - t_0)
+frequency = nframes / total_time
+print('Time taken: {}. A frequency of: {}'.format(total_time, frequency))
 
 
-# print('Method 3b: matplotlib, pcolormesh for larger window')
-# ii = 0
-# fig = plt.figure(figsize=(40, 30), facecolor='white')
-# plt.ion()
-# quad = plt.pcolormesh(z[ii])
-# t_0 = time.process_time()
-# for ii in np.arange(0, nframes):
-#     quad.set_array(z[ii].ravel())
-#     plt.draw()
-#     plt.pause(0.001)
-# plt.close()
-# total_time = (time.process_time() - t_0)
-# frequency = nframes / total_time
-# print('Time taken: {}. A frequency of: {}'.format(total_time, frequency))
+print('Method 3b: matplotlib, pcolormesh for larger window')
+ii = 0
+fig = plt.figure(figsize=(40, 30), facecolor='white')
+plt.ion()
+quad = plt.pcolormesh(z[ii])
+t_0 = time.process_time()
+for ii in np.arange(0, nframes):
+    quad.set_array(z[ii].ravel())
+    plt.draw()
+    plt.pause(0.001)
+plt.close()
+total_time = (time.process_time() - t_0)
+frequency = nframes / total_time
+print('Time taken: {}. A frequency of: {}'.format(total_time, frequency))
 
 from vispy import app
 from vispy.gloo import clear, set_clear_color, set_viewport, Program
