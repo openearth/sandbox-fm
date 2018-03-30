@@ -359,6 +359,8 @@ class Calibration(object):
 
         elif (self.count == 3):
             self.save()
+            self.fig.delaxes(self.plotAxRight)
+
             self.prevAx.set_visible(True)
             self.nextAx.set_visible(False)
             self.saveExitAx.set_visible(True)
@@ -384,6 +386,16 @@ class Calibration(object):
 
             self.z_values = [self.raws.max(), self.raws.min()]
 
+
+            self.rangeminz = self.z_values[0]
+            self.rangemaxz = self.z_values[1]
+            self.slidermin = Slider(plt.axes([0.60, 0.5, 0.2, 0.03]), 'min',
+                                    self.rangeminz - 50, self.rangeminz + 50, valinit = self.z_values[0])
+            self.slidermax = Slider(plt.axes([0.60, 0.3, 0.2, 0.03]), 'max',
+                                    self.rangemaxz - 50, self.rangemaxz + 50, valinit = self.z_values[1])
+            self.slidermin.on_changed(self.min_slider)
+            self.slidermax.on_changed(self.max_slider)
+
             self.secondfig, self.fig2ax = plt.subplots()
             self.secondfig.subplots_adjust(
                 left=0,
@@ -398,6 +410,18 @@ class Calibration(object):
             self.plotAxLeft.text(0, 0, "plotAxLeft")
             self.plotAxRight.text(0, 0, "plotAxRight")
         self.titleAx.axis('off')
+
+    def min_slider(self, val):
+        self.z_values[0] = val
+        self.save()
+        self.show_result(self.fig2ax, cbar=False)
+        self.show_data(self.plotAxLeft)
+
+    def max_slider(self, val):
+        self.z_values[1] = val
+        self.save()
+        self.show_result(self.fig2ax, cbar=False)
+        self.show_data(self.plotAxLeft)
 
     def add_edit_polygon(self, ax, points=4):
         xmin, xmax = ax.get_xlim()
