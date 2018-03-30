@@ -39,7 +39,13 @@ def update_vars(data, model):
     for key, val in meta["mapping"].items():
         data[key] = data[val]
 
-
+def update_with_event(data, model, event):
+    """update the data with an event from a model subscription"""
+    arr, meta_msg = event
+    meta_model = available[model.engine]
+    mapped_name = meta_model['reverse_mapping'][meta_msg['name']]
+    data[mapped_name] = arr
+    logger.info("updated %s", mapped_name)
 
 
 def compute_delta_height(data, idx):
@@ -47,7 +53,7 @@ def compute_delta_height(data, idx):
 
     kinect_height = data['kinect_height']
 
-    x_nodes_box, y_nodes_box = transform(data['X_NODES'].ravel(), data['Y_NODES'].ravel(), data['model2box'])
+    x_nodes_box, y_nodes_box = transform(data['X_NODES'].ravel(), data['Y_NODES'].ravel(), data['model2img'])
 
     # nearest pixels
     u = np.clip(np.round(y_nodes_box[idx.ravel()]).astype('int'), 0, HEIGHT - 1)

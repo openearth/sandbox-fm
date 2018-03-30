@@ -19,23 +19,30 @@ class MockupFreenect(object):
         data_dir = pathlib.Path(__file__).parent.parent / 'data'
 
         # TODO: pkgutil.get_data('data', '*')
-        self.videos = itertools.cycle(
-            data_dir.glob('video_*.png')
-        )
-        self.depths = itertools.cycle(
-            data_dir.glob('raw_*.npy')
-        )
+        video_files = data_dir.glob('video_*.png')
+        depth_files = data_dir.glob('raw_*.npy')
+        videos = ([
+            plt.imread(str(video_file))
+            for video_file
+            in video_files
+        ])
+        depths = ([
+            np.load(str(depth_file), encoding='latin1')
+            for depth_file
+            in depth_files
+        ])
+        self.videos = itertools.cycle(videos)
+        self.depths = itertools.cycle(depths)
 
     def sync_get_video(self):
         """keep yielding videos"""
         video = next(self.videos)
-        return plt.imread(str(video)), 3
+        return video, 3
 
     def sync_get_depth(self):
         """keep yielding depths"""
         depth = next(self.depths)
-        arr = np.load(str(depth), encoding='latin1')
-        return arr, 3
+        return depth, 3
 
 
 HAVE_FREENECT = False
@@ -118,5 +125,3 @@ def calibrated_height_images(depth_max_min, z_min_max, anomaly_name='anomaly.npy
         # correct for anomaly
         height = f(raw - anomaly)
         yield height
-
-

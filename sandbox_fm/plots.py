@@ -2,16 +2,23 @@ import logging
 import itertools
 import sys
 import random
+import pathlib
 
 import cv2
 import matplotlib.pyplot as plt
+import matplotlib.patches
+import matplotlib.streamplot
 import matplotlib
 import cmocean.cm
 import scipy.interpolate
 import numpy as np
 import skimage.draw
 
-from .cm import terrajet2
+from .cm import (
+    terrajet2,
+    colombia,
+    transparent_water
+)
 from .sandbox_fm import compute_delta_height
 from .models import (
     available
@@ -24,62 +31,53 @@ from .calibrate import (
     WIDTH
 )
 
+from .physics import (
+    warp_flow,
+    warp_particles,
+    warp_waves,
+    apply_hillshade,
+    create_wave
+)
+
 matplotlib.rcParams['toolbar'] = 'None'
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 
-def create_wave(data):
-    n_segments = 100
-    wave_x = np.linspace(data['box'][0][0], data['box'][1][0], num=n_segments + 1)
-    wave_y = np.zeros(n_segments + 1) + 10.0 # y-pixels
-    wave_xy = np.c_[wave_x, wave_y]
-    segments = []               # preallocate segments structure
-    for i in range(n_segments):
-        segments.append([
-            wave_xy[i],         # from
-            wave_xy[i+1]        # to
-        ])
-    wave = matplotlib.collections.LineCollection(segments, color='white')
-    return wave
 
-
-def warp_waves(waves, flow, data, wave_height_img, dissipation_img):
-    N = matplotlib.colors.Normalize(0, 2000, clip=True)
-    for wave in waves:
-        # segments x 2(from, to) x 2 (x,y)
-        segments = wave.get_segments()
-        wave_idx = np.round(segments).astype('int')
-        # we only have velocities inside the domain, use nearest
-        wave_idx[:, :, 0] = np.clip(wave_idx[:, :, 0], 0, flow.shape[1] - 1)
-        wave_idx[:, :, 1] = np.clip(wave_idx[:, :, 1], 0, flow.shape[0] - 1)
-        # segments x 2(from, to) x 2 (u, v)
-        flow_per_segment = flow[wave_idx[:, :, 1], wave_idx[:, :, 0], :]
-        new_segments = segments + (flow_per_segment * data.get('wave.scale', 1.0))
-        # compute average wave height per segment
-        wave_height_per_segment = np.mean(wave_height_img[wave_idx[:, :, 1], wave_idx[:, :, 0]], axis=1)
-        dissipation_per_segment = np.mean(dissipation_img[wave_idx[:, :, 1], wave_idx[:, :, 0]], axis=1)
-
-        wave.set_segments(new_segments)
-        wave.set_linewidths(wave_height_per_segment)
-        dissipation_per_segment_normalized = N(dissipation_per_segment)
-        dissipation_per_segment_color = np.ones((len(segments), 4))
-        dissipation_per_segment_color[:, 3] = dissipation_per_segment_normalized
-        wave.set_color(dissipation_per_segment_color)
-
-    return waves
-
-
-def warp_flow(img, flow):
-    """transform image with flow field"""
-    h, w = flow.shape[:2]
-    flow = -flow
-    flow[:, :, 0] += np.arange(w)
-    flow[:, :, 1] += np.arange(h)[:, np.newaxis]
-    res = cv2.remap(img, flow, None, cv2.INTER_LINEAR,
-                    borderValue=(1.0, 1.0, 1.0, 0.0))
-    return res
+views = [
+    {
+        "name": "Kinect",
+        "layers": ["kinect_height", "lic"],
+        "key": "1"
+    },
+    {
+        "name": "Waterheight",
+        "layers": ["background", "waterheight", "lic"],
+        "key": "2"
+    },
+    {
+        "name": "Bed level",
+        "layers": ["height_cells"],
+        "key": "3"
+    },
+    {
+        "name": "Flow magnitude",
+        "layers": ["background", "mag"],
+        "key": "4"
+    },
+    {
+        "name": "Waves",
+        "layers": ["background", "wavesurface"],
+        "key": "5"
+    },
+    {
+        "name": "Erosion",
+        "layers": ["erosion"],
+        "key": "6"
+    }
+]
 
 
 def process_events(evt, data, model, vis):
@@ -88,6 +86,53 @@ def process_events(evt, data, model, vis):
 
     if not isinstance(evt, matplotlib.backend_bases.KeyEvent):
         return
+
+    # we are switching views if evt.key is a number
+    if evt.key in ['1', '2', '3', '4', '5', '6', '7', '8', '9']:
+        new_view_idx = int(evt.key) - 1
+        old_view = vis.current_view
+        # remove handles
+
+
+        for layer in old_view['layers']:
+            if isinstance(vis.handles[layer], list):
+                # a collection
+                for item in vis.handles[layer]:
+                    item.remove()
+            elif isinstance(vis.handles[layer], matplotlib.streamplot.StreamplotSet):
+                streamplot = vis.handles[layer]
+                try:
+                    vis.handles[layer].lines.remove()
+                except ValueError:
+                    logging.exception('no worries')
+                for line in streamplot.lines:
+                    line.remove()
+                for arrow in streamplot.arrows:
+                    arrow.remove()
+
+
+            else:
+                # an artist
+                vis.handles[layer].remove()
+        # remove references to old handles
+        vis.handles.clear()
+
+        new_view = views[new_view_idx]
+
+        for layer in new_view['layers']:
+            init = getattr(vis, 'init_' + layer)
+            logger.info("initializing layer %s", layer)
+            init(data)
+
+        for layer in new_view['layers']:
+            add = getattr(vis, 'add_' + layer)
+            logger.info("adding layer %s", layer)
+            add(data)
+
+        vis.current_view = new_view
+        logger.info('switching from %s to %s', old_view, new_view)
+
+
     if evt.key == 'b':  # Set bed level to current camera bed level
         # data['bl'][idx] += compute_delta_bl(data, idx)
         idx = np.logical_and(data['node_in_box'], data['node_in_img_bbox'])
@@ -101,119 +146,63 @@ def process_events(evt, data, model, vis):
         height_nodes_copy = data['HEIGHT_NODES'].copy()
         height_nodes_copy.ravel()[idx] += compute_delta_height(data, idx)
         # at least 3 meter
-        idx = np.logical_and(idx, height_nodes_copy.ravel() > data['HEIGHT_NODES'].ravel() + data.get('hard_threshold', 3.0))
+        idx = np.logical_and(
+            idx,
+            height_nodes_copy.ravel() > (
+                data['HEIGHT_NODES'].ravel() +
+                data.get('hard_threshold', 3.0)
+            )
+        )
         # replace the part that changed
         logger.info("updating structures in  %s nodes", np.sum(idx))
         meta['update_structures'](idx, height_nodes_copy, data, model)
     if evt.key == 'r':  # Reset to original bed level
         for i in range(0, len(data['height_cells_original'])):
             if data['HEIGHT_CELLS'][i] != data['height_cells_original'][i]:
-                model.set_var_slice(mappings["HEIGHT_CELLS"], [i + 1], [1],
-                                    data['height_cells_original'][i:i + 1])
+                model.set_var_slice(
+                    mappings["HEIGHT_CELLS"],
+                    [i + 1],
+                    [1],
+                    data['height_cells_original'][i:i + 1]
+                )
     if evt.key == 'p':
-        vis.lic[:, :, :3] = 1.0
-        vis.lic[:, :, 3] = 0.0
-        vis.lic = cv2.warpPerspective(
-            data['video'].astype('float32') / 255.0,
+        data['lic'][:, :, :3] = 1.0
+        data['lic'][:, :, 3] = 0.0
+        data['lic'] = cv2.warpPerspective(
+            data['kinect_image'].astype('float32') / 255.0,
             np.array(data['img2box']),
             data['kinect_height'].shape[::-1]
         )
-        if vis.lic.shape[-1] == 3:
+        if data['lic'].shape[-1] == 3:
             # add height channel
-            vis.lic = np.dstack([
-                vis.lic,
-                np.ones_like(vis.lic[:, :, 0])
+            data['lic'] = np.dstack([
+                data['lic'],
+                np.ones_like(data['lic'][:, :, 0])
             ])
+    if evt.key == 's':
+        vis.update_streamplot(data)
+        vis.seed_streamplot(data)
+        vis.add_streamplot(data)
 
     if evt.key == 'c':
-        vis.im_flow.set_visible(not vis.im_flow.get_visible())
+        if 'lic' in vis.handles:
+            vis.handles['lic'].set_visible(not vis.handles['lic'].get_visible())
     if evt.key == 'q':  # Quit (on windows)
-        sys.exit()
-    if evt.key == '1':  # Visualisation preset 1. Show bed level from camera
-        if hasattr(vis, 'im_background'):
-            vis.im_background.set_visible(False)
-        vis.im_waterlevel.set_visible(False)
-        vis.im_height.set_visible(True)
-        vis.im_height_cells.set_visible(False)
-        vis.im_mag.set_visible(False)
-        if hasattr(vis, 'im_wave_height'):
-            vis.im_wave_height.set_visible(False)
-        if hasattr(vis, 'im_erosion'):
-            vis.im_erosion.set_visible(False)
-    if evt.key == '2':  # Visualisation preset 2. Show water level in model
-        if hasattr(vis, 'im_background'):
-            vis.im_background.set_visible(True)
-        vis.im_waterlevel.set_visible(True)
-        vis.im_height.set_visible(False)
-        vis.im_height_cells.set_visible(False)
-        vis.im_mag.set_visible(False)
-        if hasattr(vis, 'im_wave_height'):
-            vis.im_wave_height.set_visible(False)
-        if hasattr(vis, 'im_erosion'):
-            vis.im_erosion.set_visible(False)
-    if evt.key == '3':  # Visualisation preset 3. Show bed level in model
-        if hasattr(vis, 'im_background'):
-            vis.im_background.set_visible(False)
-        vis.im_waterlevel.set_visible(False)
-        vis.im_height.set_visible(False)
-        vis.im_height_cells.set_visible(True)
-        vis.im_mag.set_visible(False)
-        if hasattr(vis, 'im_wave_height'):
-            vis.im_wave_height.set_visible(False)
-        if hasattr(vis, 'im_erosion'):
-            vis.im_erosion.set_visible(False)
-    if evt.key == '4':  # Visualisation preset . Show flow magnitude in model
-        # views ={
-        #     4: ["im_mag"],
-        #     3: ["im_height_cells"]
-        # }
-        # for plot_name in ["im_erosion", "im_wave_height"]:
-        #     plot = getattr(vis, plot_name)
-        #     if not plot:
-        #         continue
-        #     if plot in views:
-        #         plot.set_visible(True)
-        #     else:
-        #         plot.set_visible(False)
-
-        if hasattr(vis, 'im_background'):
-            vis.im_background.set_visible(False)
-        vis.im_waterlevel.set_visible(False)
-        vis.im_height.set_visible(False)
-        vis.im_height_cells.set_visible(False)
-        vis.im_mag.set_visible(True)
-        if hasattr(vis, 'im_wave_height'):
-            vis.im_wave_height.set_visible(False)
-        if hasattr(vis, 'im_erosion'):
-            vis.im_erosion.set_visible(False)
-    if evt.key == '5':  # Visualisation preset . Show wave height in model
-        if hasattr(vis, 'im_background'):
-            vis.im_background.set_visible(False)
-        vis.im_waterlevel.set_visible(False)
-        vis.im_height.set_visible(False)
-        vis.im_height_cells.set_visible(False)
-        vis.im_mag.set_visible(False)
-        if hasattr(vis, 'im_wave_height'):
-            vis.im_wave_height.set_visible(True)
-        if hasattr(vis, 'im_erosion'):
-            vis.im_erosion.set_visible(False)
-    if evt.key == '6':  # Visualisation preset . Show erosion in model
-        if hasattr(vis, 'im_background'):
-            vis.im_background.set_visible(False)
-        vis.im_waterlevel.set_visible(False)
-        vis.im_height.set_visible(True)
-        vis.im_height_cells.set_visible(False)
-        vis.im_mag.set_visible(False)
-        if hasattr(vis, 'im_wave_height'):
-            vis.im_wave_height.set_visible(False)
-        if hasattr(vis, 'im_erosion'):
-            vis.im_erosion.set_visible(True)
+        vis.quitting = True
 
 
 class Visualization():
     def __init__(self):
         # create figure and axes
         self.fig, self.ax = plt.subplots()
+        # This should just work....
+        self.fig.set_size_inches((3, 2.4))
+        self.fig.set_dpi(100)
+        logger.info('dpi: %s', self.fig.get_dpi())
+        logger.info('size in px %s x %s', self.fig.get_figwidth(), self.fig.get_figheight())
+        logger.info('size in inches: %s', self.fig.get_size_inches())
+        # force low dpi
+        self.quitting = False
         self.fig.subplots_adjust(
             left=0,
             right=1,
@@ -223,186 +212,36 @@ class Visualization():
         self.ax.axis('off')
         plt.ion()
         plt.show(block=False)
-        self.lic = None
-        self.waves = []
-        self.background = None
         self.counter = itertools.count()
+        self.current_view = views[0]
+        # handles per view name
+        self.handles = {
+        }
         self.subscribers = []
 
     def notify(self, event):
         for subscriber in self.subscribers:
             subscriber(event)
 
-    def initialize(self, data):
-        # create plots here (not sure why shape is reversed)
+
+    def init_kinect_height(self, data):
         warped_height = cv2.warpPerspective(
             data['kinect_height'].filled(0),
             np.array(data['img2box']),
             data['kinect_height'].shape[::-1]
         )
+        data['kinect_height_img'] = warped_height
 
-        # rgba image
-        self.lic = cv2.warpPerspective(
-            np.zeros_like(data['kinect_image']).astype('float32'),
-            np.array(data['img2box']),
-            data['kinect_height'].shape[::-1]
-        )
-
-        if self.lic.shape[-1] == 3:
-            # add height channel
-            self.lic = np.dstack([self.lic, np.zeros_like(self.lic[:, :, 0])])
-
-        have_waves = 'WAVE_U' in data
-        if have_waves:
-            self.waves.append(create_wave(data))
-
-
-        # transparent, white background
-        # self.lic[..., 3] = 0.0
-        if 'background_name' in data:
-            self.background = plt.imread(data['background_name'])
-
-        # get the xlim from the height image
-        xlim = self.ax.get_xlim()
-        ylim = self.ax.get_ylim()
-
-        # row, column indices, not to be confused with velocities
-        v, u = np.mgrid[:HEIGHT, :WIDTH]
-
-        # xy of model in image coordinates
-        x_cell_box, y_cell_box = transform(
-            data['X_CELLS'].ravel(),
-            data['Y_CELLS'].ravel(),
-            data['model2box']
-        )
-        # transform vectors, velocities
-        x_cell_u_box, y_cell_v_box = transform(
-            (data['X_CELLS'] + data['U']).ravel(),
-            (data['Y_CELLS'] + data['V']).ravel(),
-            data['model2box']
-        )
-        u_in_img = x_cell_box - x_cell_u_box
-        v_in_img = y_cell_box - y_cell_v_box
-
-        # THESE ARE NOT VELOCITIES
-        u_t, v_t = transform(
-            u.ravel().astype('float32'),
-            v.ravel().astype('float32'),
-            data['box2model']
-        )
-
-        tree = scipy.spatial.cKDTree(np.c_[data['X_CELLS'].ravel(), data['Y_CELLS'].ravel()])
-        distances_cells, ravensburger_cells = tree.query(np.c_[u_t, v_t])
-        data['ravensburger_cells'] = ravensburger_cells.reshape(HEIGHT, WIDTH)
-        data['distances_cells'] = distances_cells.reshape(HEIGHT, WIDTH)
-        tree = scipy.spatial.cKDTree(np.c_[data['X_NODES'].ravel(), data['Y_NODES'].ravel()])
-        distances_nodes, ravensburger_nodes = tree.query(np.c_[u_t, v_t])
-        data['ravensburger_nodes'] = ravensburger_nodes.reshape(HEIGHT, WIDTH)
-        data['distances_nodes'] = distances_nodes.reshape(HEIGHT, WIDTH)
-
-        data['node_mask'] = data['distances_nodes'] > 500
-        data['cell_mask'] = data['distances_cells'] > 500
-
-        waterlevel_img = data['WATERLEVEL'].ravel()[data['ravensburger_cells']]
-        u_img = u_in_img[data['ravensburger_cells']]
-        v_img = v_in_img[data['ravensburger_cells']]
-        height_cells_img = data['HEIGHT_CELLS'].ravel()[data['ravensburger_cells']]
-        height_nodes_img = data['HEIGHT_NODES'].ravel()[data['ravensburger_nodes']]
-        mag_img = np.sqrt(u_img**2 + v_img**2)
-        if have_waves:
-            wave_height_img = data['WAVE_HEIGHT'].ravel()[data['ravensburger_cells']]
-            dissipation_img = data['WAVE_DISSIPATION'].ravel()[data['ravensburger_cells']]
-            erosion_img = data['EROSION'].ravel()[data['ravensburger_cells']]
-
-        # plot satellite image background
-        if self.background is not None:
-            self.im_background = self.ax.imshow(
-                self.background,
-                extent=[0, 640, 480, 0]
-            )
-
+    def add_kinect_height(self, data):
         # Plot scanned height
-        self.im_height = self.ax.imshow(
-            warped_height,
-            'jet',
+        self.handles['kinect_height'] = self.ax.imshow(
+            data['kinect_height_img'],
+            colombia,
             alpha=1,
-            vmin=data['z'][0],
-            vmax=data['z'][-1],
-            visible=False
+            vmin=-12,
+            vmax=12
         )
-
-
-        # Plot waterheight
-        # data['hh'] in xbeach
-        self.im_waterlevel = self.ax.imshow(
-            np.ma.masked_less_equal(waterlevel_img - height_cells_img, 0.1),
-            cmap='Blues',
-            alpha=1.0,
-            vmin=0,
-            vmax=3,
-            visible=False
-        )
-
-        # Plot bed level
-        self.im_height_cells = self.ax.imshow(
-            height_cells_img,
-            cmap=terrajet2,  # 'gist_earth',
-            alpha=1,
-            vmin=data['z'][0],
-            vmax=data['z'][-1],
-            visible=False
-        )
-
-        # Plot flow magnitude
-        self.im_mag = self.ax.imshow(
-            mag_img,
-            'jet',
-            alpha=1,
-            vmin=0,
-            visible=False
-        )
-
-        self.im_wave_height = self.ax.imshow(
-            wave_height_img,
-            'jet',
-            alpha=1,
-            vmin=0,
-            visible=False
-        )
-
-        self.im_erosion = self.ax.imshow(
-            erosion_img,
-            cmocean.cm.balance_r,     # or balance
-            alpha=1,
-            vmin=-1,
-            vmax=1,
-            visible=False
-        )
-
-        # Plot particles
-        self.im_flow = self.ax.imshow(
-            self.lic,
-            alpha=0.8,
-            interpolation='none',
-            visible=True
-        )
-
-        # add waves to plot
-        for wave in self.waves:
-            self.ax.add_collection(wave, autolim=False)
-
-        # self.ax.set_xlim(xlim[0] + 80, xlim[1] - 80)
-        # self.ax.set_ylim(ylim[0] + 80, ylim[1] - 80)
-        self.ax.axis('tight')
-        # self.ax.axis('off')
-        self.fig.canvas.draw()
-        self.fig.canvas.mpl_connect('button_press_event', self.notify)
-        self.fig.canvas.mpl_connect('key_press_event', self.notify)
-
-    #@profile
-    def update(self, data):
-        i = next(self.counter)
-
+    def update_kinect_height(self, data):
         #############################################
         # Update camera visualisation
         warped_height = cv2.warpPerspective(
@@ -410,16 +249,212 @@ class Visualization():
             np.array(data['img2box']),
             data['kinect_height'].shape[::-1]
         )
+        data['kinect_height_img'] = warped_height
 
+    def blit_kinect_height(self, data):
+        # Update scanned height
+        self.handles['kinect_height'].set_data(data['kinect_height_img'])
+
+
+
+
+    def init_height_cells(self, data):
+        self.update_height_cells(data)
+
+    def add_height_cells(self, data):
+        # Plot bed level
+
+        self.handles['height_cells'] = self.ax.imshow(
+            data['height_cells_img'],
+            cmap=colombia,
+            alpha=1,
+            vmin=-12,
+            vmax=12
+        )
+    def update_height_cells(self, data):
+        height_cells_img = data['HEIGHT_CELLS'].ravel()[data['ravensburger_cells']]
+        data['height_cells_img'] = height_cells_img
+    def blit_height_cells(self, data):
+        self.handles['height_cells'].set_data(data['height_cells_img'])
+
+
+    def init_height_nodes(self, data):
+        self.update_height_nodes()
+    def update_height_nodes(self, data):
+        # Convert to simple arrays
+        height_nodes_img = data['HEIGHT_NODES'].ravel()[data['ravensburger_nodes']]
+        data['height_nodes_img'] = height_nodes_img
+
+
+
+    def init_waterheight(self, data):
+        self.update_waterheight(data)
+
+    def add_waterheight(self, data):
+        self.handles['waterheight'] = self.ax.imshow(
+            data['waterheight_img'],
+            cmap=transparent_water,
+            alpha=1.0,
+            vmin=0,
+            vmax=10
+        )
+    def update_waterheight(self, data):
+        self.update_height_cells(data)
+        waterlevel_img = data['WATERLEVEL'].ravel()[data['ravensburger_cells']]
+        height_cells_img = data['height_cells_img']
+        waterheight = waterlevel_img - height_cells_img
+        mask = waterheight < 0.1
+        data['watermask'] = mask
+        data['waterlevel_img'] = waterlevel_img
+        data['waterheight_img'] = np.ma.masked_array(waterheight, mask=mask)
+
+    def blit_waterheight(self, data):
+        self.handles['waterheight'].set_data(data['waterheight_img'])
+
+
+
+    def init_wave_features(self, data):
+        waves = []
+        waves.append(create_wave(data))
+        data['wave_features'] = waves
+
+    def add_wave_features(self, data):
+        self.handles['wave_features'] = []
+        # add waves to plot
+        for wave in data['wave_features']:
+            self.handles['wave_features'].append(self.ax.add_collection(wave, autolim=False))
+
+    def update_wave_features(self, data):
+
+        x_cells_box, y_cells_box = data['x_cells_box'], data['y_cells_box']
+        # compute wave celerities
+        x_cells_wave_u_box, y_cells_wave_v_box = transform(
+            data['X_CELLS'].ravel() + data['WAVE_U'].ravel(),
+            data['Y_CELLS'].ravel() + data['WAVE_V'].ravel(),
+            data['model2box']
+        )
+        wave_u_in_img = x_cells_wave_u_box - x_cells_box
+        wave_v_in_img = y_cells_wave_v_box - y_cells_box
+        wave_u_img = wave_u_in_img[data['ravensburger_cells']]
+        wave_v_img = wave_v_in_img[data['ravensburger_cells']]
+        data['wave_u_img'] = wave_u_img
+        data['wave_v_img'] = wave_v_img
+    def blit_wave_features(self, data):
+        wave_u_img, wave_v_img = data['wave_u_img'], data['wave_v_img']
+        waves_flow = np.dstack([wave_u_img, wave_v_img])
+        data['wave_features'] = warp_waves(data['wave_features'], waves_flow, data)
+
+    def seed_wave_features(self, data):
+        wave = create_wave(data)
+        data['wave_features'].append(wave)
+        self.handles['wave_features'].append(self.ax.add_collection(wave))
+        if len(data['wave_features']) > 10:
+            wave = data['wave_features'].pop(0)
+            # TODO: remove, not implementedc
+            wave.set_visible(False)
+            wave.remove()
+
+    def init_wave_height(self, data):
+        wave_height_img = data['WAVE_HEIGHT'].ravel()[data['ravensburger_cells']]
+        dissipation_img = data['WAVE_DISSIPATION'].ravel()[data['ravensburger_cells']]
+        data['wave_height_img'] = wave_height_img
+        data['dissipation_img'] = dissipation_img
+
+    def add_wave_height(self, data):
+        self.handles['wave_height'] = self.ax.imshow(
+            data['wave_height_img'],
+            'jet',
+            alpha=1,
+            vmin=0
+        )
+
+    def update_wave_height(self, data):
+        wave_height_img = data['WAVE_HEIGHT'].ravel()[data['ravensburger_cells']]
+        dissipation_img = data['WAVE_DISSIPATION'].ravel()[data['ravensburger_cells']]
+        data['wave_height_img'] = wave_height_img
+        data['dissipation_img'] = dissipation_img
+
+    def blit_wave_height(self, data):
+        self.handles['wave_height'].set_data(data['wave_height_img'])
+
+
+    def init_wavesurface(self, data):
+        self.update_wavesurface(data)
+
+    def add_wavesurface(self, data):
+        self.handles['wavesurface'] = self.ax.imshow(
+            data['waterlevel_gradient_img'],
+            cmocean.cm.ice_r,
+            vmin=-2,
+            vmax=1
+        )
+
+    def update_wavesurface(self, data):
+        self.update_waterheight(data)
+        waterlevel_gradient = np.gradient(data['WATERLEVEL'], axis=1)
+        waterlevel_gradient_img = waterlevel_gradient.ravel()[
+            data['ravensburger_cells']
+        ]
+        data['waterlevel_gradient_img'] = np.ma.masked_array(waterlevel_gradient_img, mask=data['watermask'])
+
+    def blit_wavesurface(self, data):
+        self.handles['wavesurface'].set_data(data['waterlevel_gradient_img'])
+
+
+    def init_erosion(self, data):
+        erosion_img = data['EROSION'].ravel()[data['ravensburger_cells']]
+        data['erosion_img'] = erosion_img
+
+    def add_erosion(self, data):
+        self.handles['erosion'] = self.ax.imshow(
+            data['erosion_img'],
+            cmocean.cm.balance_r,     # or balance
+            alpha=1,
+            vmin=-1,
+            vmax=1
+        )
+
+    def update_erosion(self, data):
+        erosion_img = data['EROSION'].ravel()[data['ravensburger_cells']]
+        data['erosion_img'] = erosion_img
+
+    def blit_erosion(self, data):
+        self.handles['erosion'].set_data(data['erosion_img'])
+
+    def init_background(self, data):
+        if data['background_name']:
+            data['background_img'] = plt.imread(data['background_name'])
+        else:
+            # 10 black pixels
+            data['background_img'] = np.zeros((10, 10, 3))
+            logger.warn('could not find background image: %s', data['background_name'])
+
+    def add_background(self, data):
+        self.handles['background'] = self.ax.imshow(
+            data['background_img'],
+            extent=[0, 640, 480, 0]
+        )
+
+    def update_background(self, data):
+        pass
+
+    def blit_background(self, data):
+        pass
+
+
+
+    def init_uv(self, data):
+        # xy of model in image coordinates
+
+        self.update_uv(data)
+
+
+    def update_uv(self, data):
         #############################################
         # Update model parameters
         #
         # Transform velocity
-        x_cells_box, y_cells_box = transform(
-            data['X_CELLS'].ravel(),
-            data['Y_CELLS'].ravel(),
-            data['model2box']
-        )
+        x_cells_box, y_cells_box = data['x_cells_box'], data['y_cells_box']
 
         # transform vectors
         x_cells_u_box, y_cells_v_box = transform(
@@ -431,110 +466,277 @@ class Visualization():
         u_in_img = x_cells_u_box - x_cells_box
         v_in_img = y_cells_v_box - y_cells_box
 
-        # compute wave velocities
-        have_waves = 'WAVE_V' in data
-
-        if have_waves:
-            x_cells_wave_u_box, y_cells_wave_v_box = transform(
-                data['X_CELLS'].ravel() + data['WAVE_U'].ravel(),
-                data['Y_CELLS'].ravel() + data['WAVE_V'].ravel(),
-                data['model2box']
-            )
-            wave_u_in_img = x_cells_wave_u_box - x_cells_box
-            wave_v_in_img = y_cells_wave_v_box - y_cells_box
-
-
-
-        # Convert to simple arrays
-        height_nodes_img = data['HEIGHT_NODES'].ravel()[data['ravensburger_nodes']]
-        waterlevel_img = data['WATERLEVEL'].ravel()[data['ravensburger_cells']]
         u_img = u_in_img.ravel()[data['ravensburger_cells']]
         v_img = v_in_img.ravel()[data['ravensburger_cells']]
 
-        height_cells_img = data['HEIGHT_CELLS'].ravel()[data['ravensburger_cells']]
+        data['u_img'] = u_img
+        data['v_img'] = v_img
+
+
+    def init_mag(self, data):
+        self.init_uv(data)
+        self.update_mag(data)
+
+    def add_mag(self, data):
+        # Plot flow magnitude
+        self.handles['mag'] = self.ax.imshow(
+            data['mag_img'],
+            cmocean.cm.speed,
+            alpha=1,
+            vmin=0,
+            vmax=2,
+            animated=True
+        )
+    def update_mag(self, data):
+        self.update_waterheight(data)
+        self.update_uv(data)
+        u_img = data['u_img']
+        v_img = data['v_img']
         mag_img = np.sqrt(u_img**2 + v_img**2)
-        if have_waves:
-            wave_u_img = wave_u_in_img[data['ravensburger_cells']]
-            wave_v_img = wave_v_in_img[data['ravensburger_cells']]
-            wave_height_img = data['WAVE_HEIGHT'].ravel()[data['ravensburger_cells']]
-            dissipation_img = data['WAVE_DISSIPATION'].ravel()[data['ravensburger_cells']]
-            erosion_img = data['EROSION'].ravel()[data['ravensburger_cells']]
+        data['mag_img'] = np.ma.masked_array(mag_img, mask=data['watermask'])
 
-        # Update scanned height
-        self.im_height.set_data(warped_height)
-        self.im_waterlevel.set_data(np.ma.masked_less_equal(waterlevel_img - height_cells_img, 0.1))
-        self.im_height_cells.set_data(height_cells_img)
-        self.im_mag.set_data(mag_img)
-        self.im_mag.set_clim(0, 2.5)
-        if have_waves:
-            self.im_wave_height.set_data(wave_height_img)
-            self.im_wave_height.set_clim(0, 7)
-            self.im_erosion.set_data(erosion_img)
 
+    def blit_mag(self, data):
+        self.handles['mag'].set_data(data['mag_img'])
+
+
+    def init_lic(self, data):
+        lic = cv2.warpPerspective(
+            np.zeros_like(data['kinect_image']).astype('float32'),
+            np.array(data['img2box']),
+            data['kinect_height'].shape[::-1]
+        )
+
+        if lic.shape[-1] == 3:
+            # add height channel
+            lic = np.dstack([lic, np.zeros_like(lic[:, :, 0])])
+        data['lic'] = lic
+
+    def add_lic(self, data):
+        # Plot particles
+        self.handles['lic'] = self.ax.imshow(
+            data['lic'],
+            alpha=0.8,
+            interpolation='none'
+        )
+
+    def update_lic(self, data):
+        self.update_waterheight(data)
+        self.update_uv(data)
         #################################################
         # Compute liquid added to the model
         #
         # Multiplier on the flow velocities
-        scale = data.get('scale', 10.0)
+        scale = data.get('scale', 1.0)
+        u_img = data['u_img']
+        v_img = data['v_img']
         flow = np.dstack([u_img, v_img]) * scale
-
-        if have_waves:
-            waves_flow = np.dstack([wave_u_img, wave_v_img]) * scale
-
         # compute new flow timestep
-        self.lic = warp_flow(
-            self.lic.astype('float32'),
+        data['lic'] = warp_flow(
+            data['lic'].astype('float32'),
             flow.astype('float32')
         )
         # fade out
         # self.lic[..., 3] -= 0.01
         # but not < 0
-        self.lic[..., 3][self.lic[..., 3] < 0] = 0
-        self.lic[..., 3][data['cell_mask']] = 0
-
+        data['lic'][..., 3][data['lic'][..., 3] < 0] = 0
+        data['lic'][..., 3][data['cell_mask']] = 0
+        data['lic'][..., 3][data['watermask']] = 0
         # Update liquid
-        self.im_flow.set_data(self.lic)
 
-        # update waves
+    def seed_lic(self, data):
+        # we need waterheights
+        self.update_waterheight(data)
+        self.update_height_nodes(data)
 
         # Put in new white dots (to be plotted next time step)
         n_dots = data.get('n_dots', 4)
         for u, v in zip(np.random.random(n_dots), np.random.random(n_dots)):
-            rgb = (random.random(), random.random(), 1.0)
+            # random light blue
+            rgb = (random.random() * 0.1 + 0.8, random.random() * 0.1 + 0.8, 1.0)
             # make sure outline has the same color
             # create a little dot
             r, c = skimage.draw.circle(v * HEIGHT, u * WIDTH, 4,
                                        shape=(HEIGHT, WIDTH))
             # Don't plot on (nearly) dry cells
             if (
-                    waterlevel_img[int(v * HEIGHT), int(u * WIDTH)] -
-                    height_nodes_img[int(v * HEIGHT), int(u * WIDTH)]
+                    data['waterheight_img'][int(v * HEIGHT), int(u * WIDTH)]
             ) < 0.5:
                 continue
             # if zk_img[int(v * HEIGHT), int(u * WIDTH)] > 0:
             #     continue
-            self.lic[r, c, :] = tuple(rgb) + (1, )
+            data['lic'][r, c, :] = tuple(rgb) + (1, )
 
         # Remove liquid on dry places
-        self.lic[height_cells_img >= waterlevel_img, 3] = 0.0
-        self.lic[height_nodes_img >= waterlevel_img, 3] = 0.0
+        # data['lic'][data['height_cells_img'] >= data['waterlevel_img'], 3] = 0.0
+        # data['lic'][data['height_nodes_img'] >= data['waterlevel_img'], 3] = 0.0
+        data['lic'][data['watermask'], 3] = 0
+    def blit_lic(self, data):
+        self.handles['lic'].set_data(data['lic'])
 
-        # compute new waves
-        if have_waves:
-            if i % 20 == 0:
-                wave = create_wave(data)
-                self.waves.append(wave)
-                self.ax.add_collection(wave)
-            if len(self.waves) > 10:
-                wave = self.waves.pop(0)
-                # TODO: remove, not implementedc
-                wave.set_visible(False)
-            self.waves = warp_waves(self.waves, waves_flow, data, wave_height_img, dissipation_img)
+    def init_streamplot(self, data):
+        self.update_uv(data)
+        self.seed_streamplot(data)
+
+    def add_streamplot(self, data):
+        self.update_streamplot(data)
+        x = data['streamplot_x']
+        y = data['streamplot_y']
+        seed_x = data['streamplot_seed_x']
+        seed_y = data['streamplot_seed_y']
+        start_points = np.c_[seed_x, seed_y]
+        u = data['u_img']
+        v = data['v_img']
+        self.handles['streamplot'] = self.ax.streamplot(x, y, u, v) # , start_points=start_points)
+
+    def update_streamplot(self, data):
+        self.update_waterheight(data)
+        self.update_uv(data)
+
+
+    # def blit_streamplot(self, data):
+    #     # remove all arrows (and everything else)
+    #     old_streamplot = self.handles['streamplot']
+    #     # remove old arrows
+    #     for patch in self.ax.patches:
+    #         if isinstance(patch, matplotlib.patches.FancyArrowPatch):
+    #             logger.info('removing %s', patch)
+    #             patch.remove()
+    #     self.add_streamplot(data)
+    #     old_streamplot.lines.remove()
+    #     del old_streamplot
+    #     self.add_streamplot(data)
+
+
+
+    def seed_streamplot(self, data):
+        # number of seeds
+        N = 100
+        # domain
+        x_0 = data['box'][0][0]
+        x_1 = data['box'][1][0]
+        y_0 = data['box'][0][1]
+        y_1 = data['box'][2][1]
+
+        # x coordinates for u, v
+        data['streamplot_x'] = np.arange(x_0, x_1)
+        data['streamplot_y'] = np.arange(y_0, y_1)
+        # y coordinates for u, v
+
+        n, m = np.mgrid[:HEIGHT, :WIDTH]
+        if (
+                'gestures' in data
+                and len(data['gestures'])
+                and data['gestures'][0]["name"] == "hand"
+        ):
+            # use gesture if available
+            # mask out points that are not the feature and not water
+            mask = np.logical_or(
+                ~data['gestures'][0]['feature'],
+                data['watermask']
+            )
+            n_filtered = n[~mask]
+            m_filtered = m[~mask]
+        else:
+            # otherwise use watermask
+            m_filtered = m[~data['watermask']]
+            n_filtered = n[~data['watermask']]
+        m_points = m_filtered.ravel()
+        n_points = n_filtered.ravel()
+        points = np.array(
+            random.sample(
+                list(np.c_[m_points, n_points]),
+                N
+            )
+        )
+        data['streamplot_seed_x'] = points[:, 0]
+        data['streamplot_seed_y'] = points[:, 1]
+
+
+    def init_grid(self, data):
+        # column and row numbers
+        n, m = np.mgrid[:HEIGHT, :WIDTH]
+        # transformed to model coordinates
+        m_t, n_t = transform(
+            m.ravel().astype('float32'),
+            n.ravel().astype('float32'),
+            data['box2model']
+        )
+
+        # lookup  closest cells
+        tree = scipy.spatial.cKDTree(np.c_[data['X_CELLS'].ravel(), data['Y_CELLS'].ravel()])
+        distances_cells, ravensburger_cells = tree.query(np.c_[m_t, n_t])
+        data['ravensburger_cells'] = ravensburger_cells.reshape(HEIGHT, WIDTH)
+        data['distances_cells'] = distances_cells.reshape(HEIGHT, WIDTH)
+        # lookup closest nodes
+        tree = scipy.spatial.cKDTree(np.c_[data['X_NODES'].ravel(), data['Y_NODES'].ravel()])
+        distances_nodes, ravensburger_nodes = tree.query(np.c_[m_t, n_t])
+        data['ravensburger_nodes'] = ravensburger_nodes.reshape(HEIGHT, WIDTH)
+        data['distances_nodes'] = distances_nodes.reshape(HEIGHT, WIDTH)
+
+        # not sure what this does....
+        data['node_mask'] = data['distances_nodes'] > 500
+        data['cell_mask'] = data['distances_cells'] > 500
+
+        # cell centers
+        x_cells_box, y_cells_box = transform(
+            data['X_CELLS'].ravel(),
+            data['Y_CELLS'].ravel(),
+            data['model2box']
+        )
+        data['x_cells_box'] = x_cells_box
+        data['y_cells_box'] = y_cells_box
+
+
+
+    def initialize(self, data):
+        """"""
+        self.init_grid(data)
+
+        # initialize data for all layers
+        for layer in self.current_view['layers']:
+            init = getattr(self, 'init_' + layer)
+            logger.info("initializing layer %s", layer)
+            init(data)
+
+        for layer in self.current_view['layers']:
+            add = getattr(self, 'add_' + layer)
+            logger.info("adding layer %s", layer)
+            add(data)
+
+        self.ax.axis('tight')
+        self.fig.canvas.draw()
+        self.fig.canvas.mpl_connect('button_press_event', self.notify)
+        self.fig.canvas.mpl_connect('key_press_event', self.notify)
+        plt.show(block=False)
+        plt.ion()
+
+    def update(self, data):
+        i = next(self.counter)
+
+        # update
+        for layer in self.current_view['layers']:
+            update = getattr(self, 'update_' + layer)
+            update(data)
+
+        # animate
+        for layer in self.current_view['layers']:
+            blit = getattr(self, 'blit_' + layer)
+            blit(data)
+
+        # reseed
+        for layer in self.current_view['layers']:
+            if hasattr(self, 'seed_' + layer):
+                seed = getattr(self, 'seed_' + layer)
+                logger.info("seeding layer %s", layer)
+                seed(data)
 
 
         #################################################
         # Draw updated canvas
         #
+
+        # The optimal choice of draw commands depends on the backend...
         # TODO: this can be faster, this also redraws axis
         # self.fig.canvas.draw()
         # for artist in [self.im_height_cells, self.im_s1, self.im_flow]:
@@ -543,6 +745,9 @@ class Visualization():
         # self.ax.redraw_in_frame()
         # interact with window and click events
         self.fig.canvas.draw()
+        # for artist in self.handles.values():
+        #     if artist is not None:
+        #         self.ax.draw_artist(artist)
         try:
             self.fig.canvas.flush_events()
         except NotImplementedError:
