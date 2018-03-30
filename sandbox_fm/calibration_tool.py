@@ -1,7 +1,6 @@
 import pathlib
 import json
 import logging
-import pathlib
 
 import cv2
 import numpy as np
@@ -550,6 +549,7 @@ class Calibration(object):
         height_points = self.old_calibration.get("height_points", 2)
         height_poly = self.add_edit_polygon(axes[1, 0], points=2)
 
+
         z_values = self.z_values
 
         msg = """1) shows the raw kinect image, use the dots to select the area
@@ -584,6 +584,7 @@ The lowest point should be with the highest value (distance from kinect to botto
                 self.height_points = list(zip(
                     *height_poly.line.get_data()
                 ))
+                print("HOOOOOOOOOOOOOOOOOOOOOI", self.height_points)
                 u0, v0 = (
                     int(np.round(self.height_points[0][0])),
                     int(np.round(self.height_points[0][1]))
@@ -593,11 +594,12 @@ The lowest point should be with the highest value (distance from kinect to botto
                     int(np.round(self.height_points[1][1]))
                 )
 
-                self.z_values = [
-                    raw[v0, u0],
-                    raw[v1, u1]
-                ]
-
+                # self.z_values = [
+                #     raw[v0, u0],
+                #     raw[v1, u1]
+                # ]
+                self.z_values = [ raw.min(), raw.max()]
+                print("HOOOOOOOOOOOOOOOOOOOOOI", self.z_values, raw.min(), raw.max())
                 if not self.z_values[0] > self.z_values[1]:
                     axes[1, 2].set_title('Choose a min z lower than high z')
                     logger.warn("I had to reverse your z points, please select lower value with the bottom left dot. Coordinates: %s, raw: %s.",

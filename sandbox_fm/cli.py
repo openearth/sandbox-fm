@@ -41,7 +41,7 @@ from .calibrate import (
     transform,
     compute_transforms
 )
-from .calibration_tool import Calibration
+from .calibration_wizard import Calibration
 from .plots import (
     Visualization,
     process_events
