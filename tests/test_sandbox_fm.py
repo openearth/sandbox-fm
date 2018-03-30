@@ -42,20 +42,21 @@ class TestSandbox_fm(object):
         runner = CliRunner()
 
         # run with test input
-        result = runner.invoke(cli.main, [
-            'tests/depthimage.png',
+        result = runner.invoke(cli.run, [
             'tests/zandmotor/zm_tide.mdu',
             '--max-iterations=1'
         ])
         logger.info(result.output)
-        log_ex(result.exception)
         assert result.exit_code == 0, (result)
-        assert 'sandbox_fm.cli.main' in result.output
+        assert 'sandbox' in result.output.lower()
 
+
+    def test_help(self):
+        runner = CliRunner()
         # run help
-        help_result = runner.invoke(cli.main, ['--help'])
+        help_result = runner.invoke(cli.run, ['--help'])
         assert help_result.exit_code == 0
-        assert '--help  Show this message and exit.' in help_result.output
+        assert 'Show this message and exit.' in help_result.output
 
     @classmethod
     def teardown_class(cls):

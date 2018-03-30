@@ -38,6 +38,7 @@ You probably want to create a virtual_ environment or an anaconda_ environment. 
 Once you are in your python environment of choice you can install the required python libraries:
 * ``pip install -r requirements.txt``
 
+Make sure your libdflowfm.so/libxbeach.so
 
 Windows Install
 ----------------
@@ -51,10 +52,14 @@ Windows Install
 - ``pip install tqdm``
 - ``pip install -r requirements.txt``
 - ``pip install cmocean``
-- Make sure the dflowfm.dll is somewhere in your PATH definition
+- Make sure the dflowfm.dll/xbeach.dll is somewhere in your PATH definition
+ 
 
+
+  
 Running
 -------
+If you are using a virtual enviroment, make sure it is loaded. You can load your environment using the command `workon main`, assuming you have virtualenv wrapper installed.
 
 - ``sandbox-fm --help``
 - ``sandbox-fm calibrate``  calibrate the sandbox by selecting a quad in the box, a quad in the model and a high and low point.
