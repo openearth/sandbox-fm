@@ -97,9 +97,10 @@ def cli():
     logging.root.setLevel(logging.INFO)
     logger.info("Welcome to the sandbox software.")
 
+
 @cli.command()
 def record():
-    """record 10 frames, for testing"""
+    """record 5 frames, for testing"""
     videos = video_images()
     raws = depth_images()
     for i, (video, raw) in enumerate(zip(videos, raws)):
@@ -207,6 +208,10 @@ def run(schematization, engine, max_iterations, mmi):
         # default empty
         configuration = {}
     data.update(configuration)
+
+    if 'visualisations' not in data:
+        logger.error('Could not find visualisation keywords in config.json. Loading the defaults values is not yet implemented')
+        # Get defaults from plots-> defaults
 
     # model
     if not mmi:

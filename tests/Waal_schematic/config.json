@@ -1,4 +1,11 @@
 {
     "debug": false,
-    "scale": 5.0
+    "scale": 5.0,
+    "visualisation": {
+        "height" : {
+            "colormap": "terrajet2",
+            "vmin": 0,
+            "vmax": 9
+        }
+    }
 }
