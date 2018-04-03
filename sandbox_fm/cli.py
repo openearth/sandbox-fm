@@ -21,6 +21,7 @@ import matplotlib.pyplot as plt
 
 import bmi.wrapper
 from mmi.mmi_client import MMIClient
+from mmi import recv_array
 
 HAVE_MPI = False
 try:
@@ -49,7 +50,7 @@ from .plots import (
 from .sandbox_fm import (
     update_initial_vars,
     update_vars,
-    update_with_event
+    update_with_message
 )
 from .gestures import (
     recognize_gestures
@@ -121,8 +122,7 @@ def anomaly():
 @cli.command()
 @click.argument(
     'schematization',
-    type=click.File('rb'),
-    help='model schematization configuration file'
+    type=click.File('rb')
 )
 @click.option(
     '--engine',
@@ -181,8 +181,7 @@ def view():
 @cli.command()
 @click.argument(
     'schematization',
-    type=click.File('rb'),
-    help='model schematisation'
+    type=click.File('rb')
 )
 @click.option(
     '--engine',
@@ -318,12 +317,25 @@ def run(schematization, engine, max_iterations, mmi):
     )
     iterator = enumerate(tqdm.tqdm(zip(kinect_images, kinect_heights)))
     tics = {}
+    if mmi:
+        sub_poller = model.subscribe()
+        # syncronize data when received
+        model.remote('play')
     for i, (kinect_image, kinect_height) in iterator:
         tics['t0'] = time.time()
 
         # Get data from model
-        # TODO: async data using mmi subscribe
-        update_vars(data, model)
+        if not mmi:
+            update_vars(data, model)
+        else:
+            # listen for at most 10 variables
+            for sock, n in sub_poller.poll(10):
+                for i in range(n):
+                    message = recv_array(sock)
+                    update_with_message(data, model, message)
+
+
+
         # update kinect
         data['kinect_height'] = kinect_height
         data['kinect_image'] = kinect_image
@@ -340,15 +352,14 @@ def run(schematization, engine, max_iterations, mmi):
             break
         tics['vis'] = time.time()
 
-        dt = model.get_time_step()
-        # HACK: fix unstable timestep in xbeach
-        if model.engine == 'xbeach':
-            dt = 60
-        # update model
-        # for i in range(data.get('iterations.per.visualization', 1)):
-        model.update(dt)
-        tics['model'] = time.time()
+        if not mmi:
+            dt = model.get_time_step()
+            # HACK: fix unstable timestep in xbeach
+            if model.engine == 'xbeach':
+                dt = 60
 
+            model.update(dt)
+        tics['model'] = time.time()
         logger.info("tics: %s", tic_report(tics))
 
 

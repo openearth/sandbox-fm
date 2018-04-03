@@ -39,9 +39,10 @@ def update_vars(data, model):
     for key, val in meta["mapping"].items():
         data[key] = data[val]
 
-def update_with_event(data, model, event):
+
+def update_with_message(data, model, message):
     """update the data with an event from a model subscription"""
-    arr, meta_msg = event
+    arr, meta_msg = message
     meta_model = available[model.engine]
     mapped_name = meta_model['reverse_mapping'][meta_msg['name']]
     data[mapped_name] = arr
