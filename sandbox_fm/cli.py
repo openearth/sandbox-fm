@@ -112,7 +112,6 @@ def record():
 @cli.command()
 def anomaly():
     """calibrate the kinect anomaly for a flat surface"""
-
     raws = depth_images()
     raw = next(raws)
     anomaly = raw - raw.mean()
@@ -120,8 +119,18 @@ def anomaly():
 
 
 @cli.command()
-@click.argument('schematization', type=click.File('rb'))
-@click.option('--engine', default='dflowfm', type=click.Choice(['dflowfm', 'xbeach']))
+@click.argument(
+    'schematization',
+    type=click.File('rb'),
+    help='model schematization configuration file'
+)
+@click.option(
+    '--engine',
+    default='dflowfm',
+    type=click.Choice(['dflowfm', 'xbeach']),
+    help='BMI compatible model engine'
+
+)
 def calibrate(schematization, engine):
     """calibrate the sandbox by selecting both 4 points in box and in model"""
 
@@ -170,10 +179,28 @@ def view():
 
 
 @cli.command()
-@click.argument('schematization', type=click.File('rb'))
-@click.option('--engine', default='dflowfm', type=click.Choice(['dflowfm', 'xbeach']))
-@click.option('--max-iterations', default=0, type=int)
-@click.option('--mmi', type=str)
+@click.argument(
+    'schematization',
+    type=click.File('rb'),
+    help='model schematisation'
+)
+@click.option(
+    '--engine',
+    default='dflowfm',
+    type=click.Choice(['dflowfm', 'xbeach']),
+    help='BMI comptabile model engine'
+)
+@click.option(
+    '--max-iterations',
+    default=0,
+    type=int,
+    help='maximum number of iterations'
+)
+@click.option(
+    '--mmi',
+    type=str,
+    help='mmi zmq address for example tcp://localhost:62000'
+)
 def run(schematization, engine, max_iterations, mmi):
     """Console script for sandbox_fm
 
