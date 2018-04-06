@@ -43,7 +43,7 @@ class TestSandbox_fm(object):
 
         # run with test input
         result = runner.invoke(cli.run, [
-            'tests/zandmotor/zm_tide.mdu',
+            'models/zandmotor/zm_tide.mdu',
             '--max-iterations=1'
         ])
         logger.info(result.output)
