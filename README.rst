@@ -53,10 +53,17 @@ Windows Install
 - ``pip install -r requirements.txt``
 - ``pip install cmocean``
 - Make sure the dflowfm.dll/xbeach.dll is somewhere in your PATH definition
- 
 
 
-  
+Using models
+------------
+To be able to run the sandbox you need to have a model and a model schematization available. The model schematizations that were tested with the sandbox are available through https://svn.oss.deltares.nl/repos/openearthmodels/trunk/deltares/sandbox. You can register for access (open source) through http://oss.deltares.nl.
+
+You can dowload all models using the following command:
+
+`svn co https://svn.oss.deltares.nl/repos/openearthmodels/trunk/deltares/sandbox`
+
+
 Running
 -------
 If you are using a virtual enviroment, make sure it is loaded. You can load your environment using the command `workon main`, assuming you have virtualenv wrapper installed.
