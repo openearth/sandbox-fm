@@ -177,7 +177,6 @@ def view():
 
 
 
-
 @cli.command()
 @click.argument(
     'schematization',
@@ -259,9 +258,6 @@ def run(schematization, engine, max_iterations, mmi):
     # mmi model is already initialized
     if not mmi:
         model.initialize(str(schematization_name.absolute()))
-    else:
-        # listen for incomming messges
-        model.subscribe()
     update_initial_vars(data, model)
 
 
@@ -328,11 +324,12 @@ def run(schematization, engine, max_iterations, mmi):
         if not mmi:
             update_vars(data, model)
         else:
-            # listen for at most 10 variables
+            # listen for at most 10 miliseconds for incomming data (flush the queue)
             for sock, n in sub_poller.poll(10):
                 for i in range(n):
                     message = recv_array(sock)
                     update_with_message(data, model, message)
+
 
 
 

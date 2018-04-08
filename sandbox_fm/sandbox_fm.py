@@ -43,10 +43,18 @@ def update_vars(data, model):
 def update_with_message(data, model, message):
     """update the data with an event from a model subscription"""
     arr, meta_msg = message
+    # lookup the var name in the array
+    var_name = meta_msg['name']
+    # store it
+    data[var_name] = arr
+    # lookup the metadata for this model
     meta_model = available[model.engine]
-    mapped_name = meta_model['reverse_mapping'][meta_msg['name']]
-    data[mapped_name] = arr
-    logger.info("updated %s", mapped_name)
+    # compute derivitave variables
+    meta_model["compute"](data)
+    # store in the "known name"
+    mapped_name = meta_model['reverse_mapping'][var_name]
+    data[mapped_name] = data[var_name]
+
 
 
 def compute_delta_height(data, idx):
