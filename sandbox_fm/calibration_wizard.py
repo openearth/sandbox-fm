@@ -170,6 +170,10 @@ class Calibration(object):
             vmax=self.z[-1],
 
         )
+
+        self.kinect_max = warped_height.max()
+        self.kinect_min = warped_height.min()
+
         if cbar:
             self.cb1 = plt.colorbar(plot, ax=ax)
         plt.show()
@@ -224,7 +228,7 @@ class Calibration(object):
         self.delta_height = compute_delta_height(data, idx)
         height_copy[idx] += self.delta_height
         title = "{} and {}".format(height_copy.min(), height_copy.max())
-        plot = ax.scatter(
+        self.data_plot = ax.scatter(
             data['X_NODES'].ravel(),
             data['Y_NODES'].ravel(),
             c=height_copy.ravel(),
@@ -237,16 +241,6 @@ class Calibration(object):
         plt.show()
 
     def run(self):
-        mng = plt.get_current_fig_manager()
-        # try and maximize
-        try:
-            mng.window.showMaximized()
-        except AttributeError:
-            try:
-                mng.resize(*mng.window.maxsize())
-            except AttributeError:
-                logging.warn('could not maximize, unknown interface')
-
         self.raws = next(self.raws)
         self.videos = next(self.videos)
         # initiliaze the first window, where self.count = 1
@@ -255,101 +249,93 @@ class Calibration(object):
         plt.show(block=True)
 
     def make_window(self):
-        self.fig = plt.figure()
-        self.titleAx = self.fig.add_axes([0.1, 0.8, 0.8, 0.15])
-        self.titleAx.axis('off')
+        self.model_points = self.old_calibration.get("model_points", 4)
+        self.fig = plt.figure('Step: ' + str(self.count), figsize=(16, 9))
+        self.title_ax = self.fig.add_axes([0.1, 0.8, 0.8, 0.15])
+        self.plot_ax_left = self.fig.add_axes([0.1, 0.2, 0.4, 0.6])
 
-        self.plotAxLeft = self.fig.add_axes([0.1, 0.2, 0.4, 0.6])
-        self.plotAxRight = self.fig.add_axes([0.5, 0.2, 0.4, 0.6])
-        self.prevAx = self.fig.add_axes([0.3, 0.05, 0.1, 0.05])
-        self.nextAx = self.fig.add_axes([0.6, 0.05, 0.1, 0.05])
-        self.saveExitAx = self.fig.add_axes([0.8, 0.05, 0.1, 0.05])
-        self.sliderminAx = self.fig.add_axes([0.60, 0.5, 0.2, 0.03])
-        self.slidermaxAx = self.fig.add_axes([0.60, 0.3, 0.2, 0.03])
-
-        self.bnext = Button(self.nextAx, 'Next')
-        self.bprev = Button(self.prevAx, 'Previous')
-        self.bsave = Button(self.saveExitAx, 'Save and Exit')
-
+        # Functions for the callback of next button
         def callback_next(event):
             self.count += 1
+            plt.close('all')
+            self.make_window()
             self.update_window()
-        self.bnext.on_clicked(callback_next)
 
+        # Functions for the callback of previous button
         def callback_previous(event):
             self.count -= 1
+            plt.close('all')
+            self.make_window()
             self.update_window()
-        self.bprev.on_clicked(callback_previous)
 
+        # Functions for the callback of save button
         def callback_save(event):
             self.save()
             plt.close(self.fig)
             plt.close(self.secondfig)
-        self.bsave.on_clicked(callback_save)
 
+        # Set axis for when the figure of step 1 is displayed
+        if self.count == 1:
+            self.next_ax = self.fig.add_axes([0.65, 0.05, 0.1, 0.05])
+            self.plot_ax_right = self.fig.add_axes([0.5, 0.2, 0.4, 0.6])
+
+            self.bnext = Button(self.next_ax, 'Next')
+            self.bnext.on_clicked(callback_next)
+
+        # Set axis for when the figure of step 2 is displayed
+        if self.count == 2:
+            self.prev_ax = self.fig.add_axes([0.25, 0.05, 0.1, 0.05])
+            self.next_ax = self.fig.add_axes([0.65, 0.05, 0.1, 0.05])
+            self.plot_ax_right = self.fig.add_axes([0.5, 0.2, 0.4, 0.6])
+
+            self.bnext = Button(self.next_ax, 'Next')
+            self.bprev = Button(self.prev_ax, 'Previous')
+
+            self.bprev.on_clicked(callback_previous)
+            self.bnext.on_clicked(callback_next)
+
+        # Set axis for when the figure of step 3 is displayed
+        if self.count == 3:
+            self.prev_ax = self.fig.add_axes([0.25, 0.05, 0.1, 0.05])
+            self.save_exit_ax = self.fig.add_axes([0.8, 0.05, 0.1, 0.05])
+            self.slider_min_ax = self.fig.add_axes([0.60, 0.5, 0.2, 0.03])
+            self.slider_max_ax = self.fig.add_axes([0.60, 0.3, 0.2, 0.03])
+
+            self.bprev = Button(self.prev_ax, 'Previous')
+            self.bsave = Button(self.save_exit_ax, 'Save and Exit')
+
+            self.bprev.on_clicked(callback_previous)
+            self.bsave.on_clicked(callback_save)
+
+        self.title_ax.axis('off')
+        self.plot_ax_right.axis('off')
+        self.plot_ax_left.axis('off')
+
+    # Update the plots in the window using the self.count to indicate which step we're at
     def update_window(self):
-        # Clean the figure up a bit
-        # When initializing update_window, colorbars are note yet created
-        self.titleAx.clear()
-        self.plotAxLeft.clear()
-        self.plotAxRight.clear()
-        self.fig.delaxes(self.plotAxLeft)
-        self.fig.delaxes(self.plotAxRight)
-
-        plt.draw()
-        try:
-            plt.close(self.secondfig)
-        except Exception:
-            pass
-
-        self.plotAxLeft = self.fig.add_axes([0.1, 0.2, 0.4, 0.6])
-        self.plotAxRight = self.fig.add_axes([0.5, 0.2, 0.4, 0.6])
-
         if (self.count == 1):
-            self.prevAx.set_visible(False)
-            self.nextAx.set_visible(True)
-            self.saveExitAx.set_visible(False)
-            self.sliderminAx.set_visible(False)
-            self.slidermaxAx.set_visible(False)
-            self.bprev.active = False
-            self.bnext.active = True
-            self.bsave.active = False
-            self.titleAx.axis('off')
-            self.plotAxRight.axis('off')
-            self.plotAxLeft.axis('off')
-
-            self.titleAx.text(0.4, 0.5, """
+            self.title_ax.text(0.4, 0.5, """
                                 Step 1: The image to the left shows the raw image of the kinect device. Drag the corners of the
                                 polygon to cut out the section to be used from the raw image. The corners should all lie between
                                 the borders of the box. The image to the right is an photo made by the kinect and can be used
                                 as a guide to identify what is seen by the raw data.
+                                TL = Top Left, TR = Top Right, BL = Bottom Left, BR = Bottom Right
                                 """,
                                 horizontalalignment='center',
                                 verticalalignment='center',
-                                fontsize=20)
-            self.plot1 = self.plotAxLeft.imshow(self.raws)
-            # self.cbLeft = plt.colorbar(self.plot1, ax=self.plotAxLeft)
+                                fontsize=15)
+            self.plot1 = self.plot_ax_left.imshow(self.raws)
+            self.plot_ax_left.set_title('Raw kinect image. Use the red dots to select polygon.')
+            self.cbLeft = plt.colorbar(self.plot1, cax=self.fig.add_axes([0.15, 0.15, 0.3, 0.03]),  orientation="horizontal")
 
-            self.plot2 = self.plotAxRight.imshow(self.videos)
-
-            img_points = self.old_calibration.get("img_points", 4)
-            self.img_poly = self.add_edit_polygon(self.plotAxLeft, points=img_points)
+            self.plot2 = self.plot_ax_right.imshow(self.videos)
+            self.plot_ax_right.set_title('Photo taken by kinect (as indication, no interaction)')
+            self.img_points = self.old_calibration.get("img_points", 4)
+            self.img_poly = self.add_edit_polygon(self.plot_ax_left, points=self.img_points)
             plt.draw()
 
         elif (self.count == 2):
-            self.prevAx.set_visible(True)
-            self.nextAx.set_visible(True)
-            self.saveExitAx.set_visible(False)
-            self.sliderminAx.set_visible(False)
-            self.slidermaxAx.set_visible(False)
-            self.bprev.active = True
-            self.bnext.active = True
-            self.bsave.active = False
-            self.titleAx.axis('off')
-            self.plotAxRight.axis('off')
-            self.plotAxLeft.axis('off')
-
-            self.titleAx.text(0.4, 0.5, """
+            self.title_ax.text(0.4, 0.5, """
                                 Step 2: Now select which part of the model should be used. To the left you see the image cut out in
                                 step 1. to the right you see the entire model domain. Use to corners of the polygon to cut out the
                                 section to be used.
@@ -358,60 +344,49 @@ class Calibration(object):
                                 verticalalignment='center',
                                 fontsize=20)
 
-            self.plotLeft = self.plotAxLeft.imshow(self.raws)
-            # self.cbLeft = plt.colorbar(self.plotLeft, ax=self.plotAxLeft)
-            self.plotAxLeft.text(1,1, 'TR',
-                    horizontalalignment='left',
-                    verticalalignment='bottom',
-                    transform=self.plotAxLeft.transAxes)
-            self.plotAxLeft.text(0, 1, 'TL',
+            self.plotLeft = self.plot_ax_left.imshow(self.raws)
+            xy =self.img_poly.poly.xy
+            self.plot_ax_left.plot(np.append(xy[:, 0], xy[0, 0]), np.append(xy[:, 1], xy[0, 1]), 'red')
+
+            self.cbLeft = plt.colorbar(self.plotLeft, cax=self.fig.add_axes([0.15, 0.15, 0.3, 0.03]), orientation="horizontal")
+            self.plot_ax_left.set_title('Selected polygon with raw kinect image (no interaction)')
+            self.plot_ax_left.text(xy[1, 0], xy[1, 1], 'TR',
                     horizontalalignment='right',
-                    verticalalignment='bottom',
-                    transform=self.plotAxLeft.transAxes)
-            self.plotAxLeft.text(1, 0, 'BR',
-                    horizontalalignment='right',
-                    verticalalignment='top',
-                    transform=self.plotAxLeft.transAxes)
-            self.plotAxLeft.text(0, 0, 'BL',
+                    verticalalignment='bottom')
+            self.plot_ax_left.text(xy[0, 0], xy[0, 1], 'TL',
                     horizontalalignment='left',
-                    verticalalignment='top',
-                    transform=self.plotAxLeft.transAxes)
-            self.plotRight = self.plotAxRight.scatter(
+                    verticalalignment='bottom')
+            self.plot_ax_left.text(xy[2, 0], xy[2, 1], 'BR',
+                    horizontalalignment='right',
+                    verticalalignment='top')
+            self.plot_ax_left.text(xy[3, 0], xy[3, 1], 'BL',
+                    horizontalalignment='left',
+                    verticalalignment='top')
+
+
+            self.plotRight = self.plot_ax_right.scatter(
                 self.data['X_NODES'].ravel(),
                 self.data['Y_NODES'].ravel(),
                 c=self.data['HEIGHT_NODES'].ravel(),
                 cmap='viridis',
                 edgecolor='none'
             )
-            # self.cbRight = plt.colorbar(self.plotRight, ax=self.plotAxRight)
-            model_points = self.old_calibration.get("model_points", 4)
-            print('model points', model_points)
-            self.model_poly = self.add_edit_polygon(self.plotAxRight, points=model_points)
+            self.plot_ax_right.set_title('Bathymetry of the model. Use red dots to select polygon of bathymetry to use')
+            self.cbRight = plt.colorbar(self.plotRight, cax=self.fig.add_axes([0.55, 0.15, 0.3, 0.03]), orientation="horizontal")
+
+
+            self.model_poly = self.add_edit_polygon(self.plot_ax_right, points=model_points)
             plt.draw()
 
         elif (self.count == 3):
             self.save()
-            self.plotAxRight.clear()
-            self.plotAxRight.set_visible(False)
-            self.prevAx.set_visible(True)
-            self.nextAx.set_visible(False)
-            self.saveExitAx.set_visible(True)
-            self.sliderminAx.set_visible(True)
-            self.slidermaxAx.set_visible(True)
-            self.bprev.active = True
-            self.bnext.active = False
-            self.bsave.active = True
-            self.titleAx.axis('off')
-            self.plotAxLeft.axis('off')
-
-            self.titleAx.text(0.4, 0.5, """
+            self.title_ax.text(0.4, 0.5, """
                                 Step 3: If necessary the height of the cut out section can be adjusted to correctly match the height
                                 in the model. Use the sliders to change the min and max height of the cut out section.
                                 """,
                                 horizontalalignment='center',
                                 verticalalignment='center',
-                                fontsize=20)
-
+                                fontsize=15)
 
             self.img_points = list(zip(
                 *self.img_poly.line.get_data()
@@ -424,10 +399,14 @@ class Calibration(object):
             self.rangeminz = self.z_values[0]
             self.rangemaxz = self.z_values[1]
 
-            self.slidermin = Slider(self.sliderminAx, 'min',
-                                    self.rangeminz - 50, self.rangeminz + 50, valinit = self.z_values[0])
-            self.slidermax = Slider(self.slidermaxAx, 'max',
-                                    self.rangemaxz - 50, self.rangemaxz + 50, valinit = self.z_values[1])
+            self.min_slider_text_ax = self.fig.add_axes([0.60, 0.6, 0.2, 0.03])
+            self.max_slider_text_ax = self.fig.add_axes([0.60, 0.4, 0.2, 0.03])
+            self.min_slider_text_ax.axis('off')
+            self.max_slider_text_ax.axis('off')
+            self.slidermin = Slider(self.slider_min_ax, 'min of raw kinect image:',
+                                    self.rangeminz - 50, self.rangeminz + 50, valinit = self.z_values[0], dragging=True)
+            self.slidermax = Slider(self.slider_max_ax, 'max of raw kinect image: ',
+                                    self.rangemaxz - 50, self.rangemaxz + 50, valinit = self.z_values[1], dragging=True)
             self.slidermin.on_changed(self.min_slider)
             self.slidermax.on_changed(self.max_slider)
 
@@ -441,20 +420,34 @@ class Calibration(object):
             self.fig2ax.axis('off')
             self.firstenter = False
             self.show_result(self.fig2ax, cbar=False)
-            self.show_data(self.plotAxLeft)
-            plt.draw()
+            self.show_data(self.plot_ax_left)
+
+            self.min_slider_text_ax.text(0, 0, "min of selecteed bathymetry [m]: " + str(self.kinect_min))
+            self.max_slider_text_ax.text(0, 0, "max of selecteed bathymetry [m]: " + str(self.kinect_max))
+
+            self.plot_ax_left.set_title('Bathymetry of the model and the integration of the selected polygon from the raw kinect image.')
+            self.plot_ax_left.axis('off')
+            self.cbLeft = plt.colorbar(self.data_plot, cax=self.fig.add_axes([0.15, 0.15, 0.3, 0.03]), orientation="horizontal")
 
     def min_slider(self, val):
         self.z_values[0] = val
         self.save()
         self.show_result(self.fig2ax, cbar=False)
-        self.show_data(self.plotAxLeft)
+        self.show_data(self.plot_ax_left)
+        self.min_slider_text_ax.clear()
+        self.min_slider_text_ax.text(0, 0, "min of selecteed bathymetry [m]: " + str(self.kinect_min))
+        self.min_slider_text_ax.axis('off')
+        self.plot_ax_left.axis('off')
 
     def max_slider(self, val):
         self.z_values[1] = val
         self.save()
         self.show_result(self.fig2ax, cbar=False)
-        self.show_data(self.plotAxLeft)
+        self.show_data(self.plot_ax_left)
+        self.max_slider_text_ax.clear()
+        self.max_slider_text_ax.text(0, 0, "max of selecteed bathymetry [m]: " + str(self.kinect_max))
+        self.min_slider_text_ax.axis('off')
+        self.plot_ax_left.axis('off')
 
     def add_edit_polygon(self, ax, points=4):
         xmin, xmax = ax.get_xlim()
