@@ -74,7 +74,7 @@ class Calibration(object):
 
         # save the current working directory
         self.curdir = pathlib.Path.cwd()
-        self.make_window()
+
         # get data from model
         update_initial_vars(self.data, self.model)
         if self.path.exists():
@@ -82,6 +82,7 @@ class Calibration(object):
                 self.old_calibration = json.load(f)
         else:
             self.old_calibration = {}
+        self.make_window()
 
     def save(self):
         with open(str(self.path), 'w') as f:
@@ -375,7 +376,7 @@ class Calibration(object):
             self.cbRight = plt.colorbar(self.plotRight, cax=self.fig.add_axes([0.55, 0.15, 0.3, 0.03]), orientation="horizontal")
 
 
-            self.model_poly = self.add_edit_polygon(self.plot_ax_right, points=model_points)
+            self.model_poly = self.add_edit_polygon(self.plot_ax_right, points=self.model_points)
             plt.draw()
 
         elif (self.count == 3):
