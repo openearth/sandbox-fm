@@ -249,10 +249,10 @@ def run(schematization, engine, max_iterations, mmi):
     data['cell_in_box'] = model_bbox.contains_points(np.c_[data['X_CELLS'].ravel(), data['Y_CELLS'].ravel()])
 
     img_bbox = matplotlib.path.Path([
-        (40, 40),
-        (40, 440),
-        (600, 440),
-        (600, 40)
+        (0, 0),
+        (0, 480),
+        (640, 480),
+        (640, 0)
     ])
     x_nodes_box, y_nodes_box = transform(
         data['X_NODES'].ravel(),

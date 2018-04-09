@@ -57,12 +57,12 @@ views = [
     },
     {
         "name": "Bed level",
-        "layers": ["height_cells"],
+        "layers": ["height_cells", "lic"],
         "key": "3"
     },
     {
         "name": "Flow magnitude",
-        "layers": ["background", "mag"],
+        "layers": ["background", "mag", "lic"],
         "key": "4"
     },
     {
@@ -461,10 +461,10 @@ class Visualization():
         # Plot flow magnitude
         self.handles['mag'] = self.ax.imshow(
             data['mag_img'],
-            cmocean.cm.speed,
+            'jet',
             alpha=1,
             vmin=0,
-            vmax=2,
+            vmax=0.05,
             animated=True
         )
     def update_mag(self, data):
