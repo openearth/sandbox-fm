@@ -264,6 +264,8 @@ class Calibration(object):
         self.prevAx = self.fig.add_axes([0.3, 0.05, 0.1, 0.05])
         self.nextAx = self.fig.add_axes([0.6, 0.05, 0.1, 0.05])
         self.saveExitAx = self.fig.add_axes([0.8, 0.05, 0.1, 0.05])
+        self.sliderminAx = self.fig.add_axes([0.60, 0.5, 0.2, 0.03])
+        self.slidermaxAx = self.fig.add_axes([0.60, 0.3, 0.2, 0.03])
 
         self.bnext = Button(self.nextAx, 'Next')
         self.bprev = Button(self.prevAx, 'Previous')
@@ -293,17 +295,28 @@ class Calibration(object):
         self.plotAxRight.clear()
         self.fig.delaxes(self.plotAxLeft)
         self.fig.delaxes(self.plotAxRight)
+
+        plt.draw()
+        try:
+            plt.close(self.secondfig)
+        except Exception:
+            pass
+
         self.plotAxLeft = self.fig.add_axes([0.1, 0.2, 0.4, 0.6])
         self.plotAxRight = self.fig.add_axes([0.5, 0.2, 0.4, 0.6])
 
-        plt.draw()
         if (self.count == 1):
             self.prevAx.set_visible(False)
             self.nextAx.set_visible(True)
             self.saveExitAx.set_visible(False)
+            self.sliderminAx.set_visible(False)
+            self.slidermaxAx.set_visible(False)
             self.bprev.active = False
             self.bnext.active = True
             self.bsave.active = False
+            self.titleAx.axis('off')
+            self.plotAxRight.axis('off')
+            self.plotAxLeft.axis('off')
 
             self.titleAx.text(0.4, 0.5, """
                                 Step 1: The image to the left shows the raw image of the kinect device. Drag the corners of the
@@ -313,26 +326,28 @@ class Calibration(object):
                                 """,
                                 horizontalalignment='center',
                                 verticalalignment='center',
-                                fontsize=20, color='red')
+                                fontsize=20)
             self.plot1 = self.plotAxLeft.imshow(self.raws)
             # self.cbLeft = plt.colorbar(self.plot1, ax=self.plotAxLeft)
 
-            plot2 = self.plotAxRight.imshow(self.videos)
+            self.plot2 = self.plotAxRight.imshow(self.videos)
 
             img_points = self.old_calibration.get("img_points", 4)
             self.img_poly = self.add_edit_polygon(self.plotAxLeft, points=img_points)
+            plt.draw()
 
         elif (self.count == 2):
-            try:
-                plt.close(self.secondfig)
-            except AttributeError:
-                pass
             self.prevAx.set_visible(True)
             self.nextAx.set_visible(True)
             self.saveExitAx.set_visible(False)
+            self.sliderminAx.set_visible(False)
+            self.slidermaxAx.set_visible(False)
             self.bprev.active = True
             self.bnext.active = True
             self.bsave.active = False
+            self.titleAx.axis('off')
+            self.plotAxRight.axis('off')
+            self.plotAxLeft.axis('off')
 
             self.titleAx.text(0.4, 0.5, """
                                 Step 2: Now select which part of the model should be used. To the left you see the image cut out in
@@ -341,11 +356,26 @@ class Calibration(object):
                                 """,
                                 horizontalalignment='center',
                                 verticalalignment='center',
-                                fontsize=20, color='red')
+                                fontsize=20)
 
             self.plotLeft = self.plotAxLeft.imshow(self.raws)
             # self.cbLeft = plt.colorbar(self.plotLeft, ax=self.plotAxLeft)
-
+            self.plotAxLeft.text(1,1, 'TR',
+                    horizontalalignment='left',
+                    verticalalignment='bottom',
+                    transform=self.plotAxLeft.transAxes)
+            self.plotAxLeft.text(0, 1, 'TL',
+                    horizontalalignment='right',
+                    verticalalignment='bottom',
+                    transform=self.plotAxLeft.transAxes)
+            self.plotAxLeft.text(1, 0, 'BR',
+                    horizontalalignment='right',
+                    verticalalignment='top',
+                    transform=self.plotAxLeft.transAxes)
+            self.plotAxLeft.text(0, 0, 'BL',
+                    horizontalalignment='left',
+                    verticalalignment='top',
+                    transform=self.plotAxLeft.transAxes)
             self.plotRight = self.plotAxRight.scatter(
                 self.data['X_NODES'].ravel(),
                 self.data['Y_NODES'].ravel(),
@@ -355,18 +385,24 @@ class Calibration(object):
             )
             # self.cbRight = plt.colorbar(self.plotRight, ax=self.plotAxRight)
             model_points = self.old_calibration.get("model_points", 4)
+            print('model points', model_points)
             self.model_poly = self.add_edit_polygon(self.plotAxRight, points=model_points)
+            plt.draw()
 
         elif (self.count == 3):
             self.save()
-            self.fig.delaxes(self.plotAxRight)
-
+            self.plotAxRight.clear()
+            self.plotAxRight.set_visible(False)
             self.prevAx.set_visible(True)
             self.nextAx.set_visible(False)
             self.saveExitAx.set_visible(True)
+            self.sliderminAx.set_visible(True)
+            self.slidermaxAx.set_visible(True)
             self.bprev.active = True
             self.bnext.active = False
             self.bsave.active = True
+            self.titleAx.axis('off')
+            self.plotAxLeft.axis('off')
 
             self.titleAx.text(0.4, 0.5, """
                                 Step 3: If necessary the height of the cut out section can be adjusted to correctly match the height
@@ -374,7 +410,7 @@ class Calibration(object):
                                 """,
                                 horizontalalignment='center',
                                 verticalalignment='center',
-                                fontsize=20, color='red')
+                                fontsize=20)
 
 
             self.img_points = list(zip(
@@ -385,13 +421,12 @@ class Calibration(object):
             ))
 
             self.z_values = [self.raws.max(), self.raws.min()]
-
-
             self.rangeminz = self.z_values[0]
             self.rangemaxz = self.z_values[1]
-            self.slidermin = Slider(plt.axes([0.60, 0.5, 0.2, 0.03]), 'min',
+
+            self.slidermin = Slider(self.sliderminAx, 'min',
                                     self.rangeminz - 50, self.rangeminz + 50, valinit = self.z_values[0])
-            self.slidermax = Slider(plt.axes([0.60, 0.3, 0.2, 0.03]), 'max',
+            self.slidermax = Slider(self.slidermaxAx, 'max',
                                     self.rangemaxz - 50, self.rangemaxz + 50, valinit = self.z_values[1])
             self.slidermin.on_changed(self.min_slider)
             self.slidermax.on_changed(self.max_slider)
@@ -407,9 +442,7 @@ class Calibration(object):
             self.firstenter = False
             self.show_result(self.fig2ax, cbar=False)
             self.show_data(self.plotAxLeft)
-            self.plotAxLeft.text(0, 0, "plotAxLeft")
-            self.plotAxRight.text(0, 0, "plotAxRight")
-        self.titleAx.axis('off')
+            plt.draw()
 
     def min_slider(self, val):
         self.z_values[0] = val
@@ -450,7 +483,7 @@ class Calibration(object):
             list(zip(xs, ys)),
             animated=True,
             closed=False,
-            facecolor='red',
+            facecolor='blue',
             alpha=0.3
         )
         ax.add_patch(poly)
@@ -645,3 +678,21 @@ class PolygonInteractor(object):
         self.ax.draw_artist(self.line)
         # update our little axis
         self.canvas.blit(self.ax.bbox)
+
+if __name__=='__main__':
+    """calibrate the sandbox by selecting both 4 points in box and in model"""
+
+    schematization_path = pathlib.Path(schematization.name)
+    path = schematization_path.with_name('calibration.json').absolute()
+    # raw images
+    videos = video_images()
+    raws = depth_images()
+    # start the model (changes directory)
+    model = bmi.wrapper.BMIWrapper(engine)
+    # this stores current path
+
+    # this changes directory
+    model.initialize(str(schematization_path.absolute()))
+
+    calibration = Calibration(path, videos, raws, model)
+    calibration.run()
