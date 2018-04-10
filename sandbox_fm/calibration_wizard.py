@@ -12,9 +12,6 @@ from matplotlib.mlab import dist_point_to_segment
 from matplotlib.widgets import Slider, Button
 import matplotlib.pyplot as plt
 
-from .calibrate import (
-    compute_transforms
-)
 from .sandbox_fm import (
     update_initial_vars,
     compute_delta_height
@@ -30,6 +27,7 @@ from .calibrate import (
 
 logger = logging.getLogger(__name__)
 
+
 class NumpyEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, np.integer):
@@ -40,6 +38,7 @@ class NumpyEncoder(json.JSONEncoder):
             return obj.tolist()
         else:
             return super(NumpyEncoder, self).default(obj)
+
 
 class Calibration(object):
     """
@@ -101,7 +100,6 @@ class Calibration(object):
         box = self.box
         z_values = self.z_values
 
-
         comment = """
         This file contains calibrations for model %s.
         It is generated with the perspective transform from opencv.
@@ -133,23 +131,6 @@ class Calibration(object):
         # add the transforms
         data.update(compute_transforms(self.result))
 
-        xy_node = np.c_[
-            data['X_NODES'].ravel(),
-            data['Y_NODES'].ravel(),
-            np.ones_like(data['X_NODES'].ravel())
-        ].astype('float32')
-
-        # now for showing results
-        xy_nodes_in_img = np.squeeze(
-            cv2.perspectiveTransform(
-                np.dstack([
-                    xy_node[:, np.newaxis, 0],
-                    xy_node[:, np.newaxis, 1]
-                ]).astype('float32'),
-                np.array(data['model2box'], dtype='float32')
-            )
-        )
-
         kinect_heights = calibrated_height_images(
             self.z_values,
             self.z,
@@ -164,12 +145,11 @@ class Calibration(object):
             kinect_height.shape[::-1]
         )
 
-        #self.data['height'] = self.sandbox_height
-        plot = ax.imshow(warped_height,
+        plot = ax.imshow(
+            warped_height,
             cmap='jet',
             vmin=self.z[0],
-            vmax=self.z[-1],
-
+            vmax=self.z[-1]
         )
 
         self.kinect_max = warped_height.max()
@@ -186,7 +166,6 @@ class Calibration(object):
             except KeyError:
                 # not sure why we get this error
                 pass
-
 
         ax.clear()
         img_bbox = matplotlib.path.Path([
@@ -228,7 +207,6 @@ class Calibration(object):
         height_copy = data['HEIGHT_NODES'].copy()
         self.delta_height = compute_delta_height(data, idx)
         height_copy[idx] += self.delta_height
-        title = "{} and {}".format(height_copy.min(), height_copy.max())
         self.data_plot = ax.scatter(
             data['X_NODES'].ravel(),
             data['Y_NODES'].ravel(),
@@ -238,7 +216,6 @@ class Calibration(object):
             vmin=self.z[0],
             vmax=self.z[-1]
         )
-        # self.cb2 = plt.colorbar(plot, ax=ax)
         plt.show()
 
     def run(self):
@@ -313,122 +290,131 @@ class Calibration(object):
         self.plot_ax_left.axis('off')
 
     # Update the plots in the window using the self.count to indicate which step we're at
+    def update_kinect_bbox(self):
+        self.title_ax.text(
+            0.4, 0.5, """
+            Step 1: The image to the left shows the raw image of the kinect device. Drag the corners of the
+            polygon to cut out the section to be used from the raw image. The corners should all lie between
+            the borders of the box. The image to the right is an photo made by the kinect and can be used
+            as a guide to identify what is seen by the raw data.
+            TL = Top Left, TR = Top Right, BL = Bottom Left, BR = Bottom Right
+            """,
+            horizontalalignment='center',
+            verticalalignment='center',
+            fontsize=15
+        )
+        self.plot1 = self.plot_ax_left.imshow(self.raws)
+        self.plot_ax_left.set_title('Raw kinect image. Use the red dots to select polygon.')
+        self.cbLeft = plt.colorbar(self.plot1, cax=self.fig.add_axes([0.15, 0.15, 0.3, 0.03]),  orientation="horizontal")
+
+        self.plot2 = self.plot_ax_right.imshow(self.videos)
+        self.plot_ax_right.set_title('Photo taken by kinect (as indication, no interaction)')
+        self.img_points = self.old_calibration.get("img_points", 4)
+        self.img_poly = self.add_edit_polygon(self.plot_ax_left, points=self.img_points)
+        plt.draw()
+
+    def update_model_bbox(self):
+        self.title_ax.text(0.4, 0.5, """
+            Step 2: Now select which part of the model should be used. To the left you see the image cut
+            out in step 1. to the right you see the entire model domain. Use to corners of the polygon to
+            cut out the section to be used.
+            """,
+            horizontalalignment='center',
+            verticalalignment='center',
+            fontsize=20)
+
+        self.plotLeft = self.plot_ax_left.imshow(self.raws)
+        xy = self.img_poly.poly.xy
+        self.plot_ax_left.plot(np.append(xy[:, 0], xy[0, 0]), np.append(xy[:, 1], xy[0, 1]), 'red')
+
+        self.cbLeft = plt.colorbar(self.plotLeft, cax=self.fig.add_axes([0.15, 0.15, 0.3, 0.03]), orientation="horizontal")
+        self.plot_ax_left.set_title('Selected polygon with raw kinect image (no interaction)')
+        self.plot_ax_left.text(xy[1, 0], xy[1, 1], 'TR',
+                horizontalalignment='right',
+                verticalalignment='bottom')
+        self.plot_ax_left.text(xy[0, 0], xy[0, 1], 'TL',
+                horizontalalignment='left',
+                verticalalignment='bottom')
+        self.plot_ax_left.text(xy[2, 0], xy[2, 1], 'BR',
+                horizontalalignment='right',
+                verticalalignment='top')
+        self.plot_ax_left.text(xy[3, 0], xy[3, 1], 'BL',
+                horizontalalignment='left',
+                verticalalignment='top')
+
+
+        self.plotRight = self.plot_ax_right.scatter(
+            self.data['X_NODES'].ravel(),
+            self.data['Y_NODES'].ravel(),
+            c=self.data['HEIGHT_NODES'].ravel(),
+            cmap='viridis',
+            edgecolor='none'
+        )
+        self.plot_ax_right.set_title('Bathymetry of the model. Use red dots to select polygon of bathymetry to use')
+        self.cbRight = plt.colorbar(self.plotRight, cax=self.fig.add_axes([0.55, 0.15, 0.3, 0.03]), orientation="horizontal")
+
+
+        self.model_poly = self.add_edit_polygon(self.plot_ax_right, points=self.model_points)
+        plt.draw()
+
+    def update_vertical_match(self):
+        self.save()
+        self.title_ax.text(0.4, 0.5, """
+                            Step 3: If necessary the height of the cut out section can be adjusted to correctly match the height
+                            in the model. Use the sliders to change the min and max height of the cut out section.
+                            """,
+                            horizontalalignment='center',
+                            verticalalignment='center',
+                            fontsize=15)
+
+        self.img_points = list(zip(
+            *self.img_poly.line.get_data()
+        ))
+        self.model_points = list(zip(
+            *self.model_poly.line.get_data()
+        ))
+
+        self.z_values = [self.raws.max(), self.raws.min()]
+        self.rangeminz = self.z_values[0]
+        self.rangemaxz = self.z_values[1]
+
+        self.min_slider_text_ax = self.fig.add_axes([0.60, 0.6, 0.2, 0.03])
+        self.max_slider_text_ax = self.fig.add_axes([0.60, 0.4, 0.2, 0.03])
+        self.min_slider_text_ax.axis('off')
+        self.max_slider_text_ax.axis('off')
+        self.slidermin = Slider(self.slider_min_ax, 'min of raw kinect image:',
+                                self.rangeminz - 50, self.rangeminz + 50, valinit = self.z_values[0], dragging=True)
+        self.slidermax = Slider(self.slider_max_ax, 'max of raw kinect image: ',
+                                self.rangemaxz - 50, self.rangemaxz + 50, valinit = self.z_values[1], dragging=True)
+        self.slidermin.on_changed(self.min_slider)
+        self.slidermax.on_changed(self.max_slider)
+
+        self.secondfig, self.fig2ax = plt.subplots()
+        self.secondfig.subplots_adjust(
+            left=0,
+            right=1,
+            bottom=0,
+            top=1
+        )
+        self.fig2ax.axis('off')
+        self.firstenter = False
+        self.show_result(self.fig2ax, cbar=False)
+        self.show_data(self.plot_ax_left)
+
+        self.min_slider_text_ax.text(0, 0, "min of selecteed bathymetry [m]: " + str(self.kinect_min))
+        self.max_slider_text_ax.text(0, 0, "max of selecteed bathymetry [m]: " + str(self.kinect_max))
+
+        self.plot_ax_left.set_title('Bathymetry of the model and the integration of the selected polygon from the raw kinect image.')
+        self.plot_ax_left.axis('off')
+        self.cbLeft = plt.colorbar(self.data_plot, cax=self.fig.add_axes([0.15, 0.15, 0.3, 0.03]), orientation="horizontal")
+
     def update_window(self):
         if (self.count == 1):
-            self.title_ax.text(0.4, 0.5, """
-                                Step 1: The image to the left shows the raw image of the kinect device. Drag the corners of the
-                                polygon to cut out the section to be used from the raw image. The corners should all lie between
-                                the borders of the box. The image to the right is an photo made by the kinect and can be used
-                                as a guide to identify what is seen by the raw data.
-                                TL = Top Left, TR = Top Right, BL = Bottom Left, BR = Bottom Right
-                                """,
-                                horizontalalignment='center',
-                                verticalalignment='center',
-                                fontsize=15)
-            self.plot1 = self.plot_ax_left.imshow(self.raws)
-            self.plot_ax_left.set_title('Raw kinect image. Use the red dots to select polygon.')
-            self.cbLeft = plt.colorbar(self.plot1, cax=self.fig.add_axes([0.15, 0.15, 0.3, 0.03]),  orientation="horizontal")
-
-            self.plot2 = self.plot_ax_right.imshow(self.videos)
-            self.plot_ax_right.set_title('Photo taken by kinect (as indication, no interaction)')
-            self.img_points = self.old_calibration.get("img_points", 4)
-            self.img_poly = self.add_edit_polygon(self.plot_ax_left, points=self.img_points)
-            plt.draw()
-
+            self.update_kinect_bbox()
         elif (self.count == 2):
-            self.title_ax.text(0.4, 0.5, """
-                                Step 2: Now select which part of the model should be used. To the left you see the image cut out in
-                                step 1. to the right you see the entire model domain. Use to corners of the polygon to cut out the
-                                section to be used.
-                                """,
-                                horizontalalignment='center',
-                                verticalalignment='center',
-                                fontsize=20)
-
-            self.plotLeft = self.plot_ax_left.imshow(self.raws)
-            xy =self.img_poly.poly.xy
-            self.plot_ax_left.plot(np.append(xy[:, 0], xy[0, 0]), np.append(xy[:, 1], xy[0, 1]), 'red')
-
-            self.cbLeft = plt.colorbar(self.plotLeft, cax=self.fig.add_axes([0.15, 0.15, 0.3, 0.03]), orientation="horizontal")
-            self.plot_ax_left.set_title('Selected polygon with raw kinect image (no interaction)')
-            self.plot_ax_left.text(xy[1, 0], xy[1, 1], 'TR',
-                    horizontalalignment='right',
-                    verticalalignment='bottom')
-            self.plot_ax_left.text(xy[0, 0], xy[0, 1], 'TL',
-                    horizontalalignment='left',
-                    verticalalignment='bottom')
-            self.plot_ax_left.text(xy[2, 0], xy[2, 1], 'BR',
-                    horizontalalignment='right',
-                    verticalalignment='top')
-            self.plot_ax_left.text(xy[3, 0], xy[3, 1], 'BL',
-                    horizontalalignment='left',
-                    verticalalignment='top')
-
-
-            self.plotRight = self.plot_ax_right.scatter(
-                self.data['X_NODES'].ravel(),
-                self.data['Y_NODES'].ravel(),
-                c=self.data['HEIGHT_NODES'].ravel(),
-                cmap='viridis',
-                edgecolor='none'
-            )
-            self.plot_ax_right.set_title('Bathymetry of the model. Use red dots to select polygon of bathymetry to use')
-            self.cbRight = plt.colorbar(self.plotRight, cax=self.fig.add_axes([0.55, 0.15, 0.3, 0.03]), orientation="horizontal")
-
-
-            self.model_poly = self.add_edit_polygon(self.plot_ax_right, points=self.model_points)
-            plt.draw()
-
+            self.update_model_bbox()
         elif (self.count == 3):
-            self.save()
-            self.title_ax.text(0.4, 0.5, """
-                                Step 3: If necessary the height of the cut out section can be adjusted to correctly match the height
-                                in the model. Use the sliders to change the min and max height of the cut out section.
-                                """,
-                                horizontalalignment='center',
-                                verticalalignment='center',
-                                fontsize=15)
-
-            self.img_points = list(zip(
-                *self.img_poly.line.get_data()
-            ))
-            self.model_points = list(zip(
-                *self.model_poly.line.get_data()
-            ))
-
-            self.z_values = [self.raws.max(), self.raws.min()]
-            self.rangeminz = self.z_values[0]
-            self.rangemaxz = self.z_values[1]
-
-            self.min_slider_text_ax = self.fig.add_axes([0.60, 0.6, 0.2, 0.03])
-            self.max_slider_text_ax = self.fig.add_axes([0.60, 0.4, 0.2, 0.03])
-            self.min_slider_text_ax.axis('off')
-            self.max_slider_text_ax.axis('off')
-            self.slidermin = Slider(self.slider_min_ax, 'min of raw kinect image:',
-                                    self.rangeminz - 50, self.rangeminz + 50, valinit = self.z_values[0], dragging=True)
-            self.slidermax = Slider(self.slider_max_ax, 'max of raw kinect image: ',
-                                    self.rangemaxz - 50, self.rangemaxz + 50, valinit = self.z_values[1], dragging=True)
-            self.slidermin.on_changed(self.min_slider)
-            self.slidermax.on_changed(self.max_slider)
-
-            self.secondfig, self.fig2ax = plt.subplots()
-            self.secondfig.subplots_adjust(
-                left=0,
-                right=1,
-                bottom=0,
-                top=1
-            )
-            self.fig2ax.axis('off')
-            self.firstenter = False
-            self.show_result(self.fig2ax, cbar=False)
-            self.show_data(self.plot_ax_left)
-
-            self.min_slider_text_ax.text(0, 0, "min of selecteed bathymetry [m]: " + str(self.kinect_min))
-            self.max_slider_text_ax.text(0, 0, "max of selecteed bathymetry [m]: " + str(self.kinect_max))
-
-            self.plot_ax_left.set_title('Bathymetry of the model and the integration of the selected polygon from the raw kinect image.')
-            self.plot_ax_left.axis('off')
-            self.cbLeft = plt.colorbar(self.data_plot, cax=self.fig.add_axes([0.15, 0.15, 0.3, 0.03]), orientation="horizontal")
+            self.update_vertical_match()
 
     def min_slider(self, val):
         self.z_values[0] = val
@@ -530,9 +516,7 @@ class PolygonInteractor(object):
             self.high = self.ax.text(x[0] + self.margin, y[0] + self.margin, 'high', animated=True, color=textc)
             self.low = self.ax.text(x[1] + self.margin, y[1] + self.margin, 'low', animated=True, color=textc)
         self.ax.add_line(self.line)
-        #self._update_line(poly)
 
-        cid = self.poly.add_callback(self.poly_changed)
         self._ind = None  # the active vert
 
         canvas.mpl_connect('draw_event', self.draw_callback)
@@ -643,7 +627,6 @@ class PolygonInteractor(object):
         if event.button != 1:
             return
         x, y = event.xdata, event.ydata
-        ind = self._ind
 
         self.poly.xy[self._ind] = x, y
         self.line.set_data(zip(*self.poly.xy))
