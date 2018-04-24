@@ -10,6 +10,7 @@ import cmocean.cm
 import scipy.interpolate
 import numpy as np
 import skimage.draw
+from PIL import Image
 
 from .cm import (
     terrajet2,
@@ -72,21 +73,6 @@ default_config = {
 }
 
 
-def timeit(f):
-
-    def timed(*args, **kw):
-        ts = time.time()
-        result = f(*args, **kw)
-        te = time.time()
-        with open('vistiminglog.txt', 'a') as flog:
-            flog.write('{}, {:2.6f}\n'.format(f.__name__, te - ts))
-        print('Function: {}, Time taken: {:2.4f}'.format(f.__name__, te - ts))
-        return result
-
-    return timed
-
-
-# @timeit
 def combine_images(image, image_add, alpha=None):
     '''
     This function combines two figures based on the alpha value of the added images
@@ -110,6 +96,15 @@ def combine_images(image, image_add, alpha=None):
         background = (image[..., :3].transpose([2, 0, 1]) * (1 - image_add[..., 3])).transpose([1, 2, 0])
         foreground = (image_add[..., :3].transpose([2, 0, 1]) * image_add[..., 3]).transpose([1, 2, 0])
         image = background + foreground
+
+        # image1_c = (image * 255)
+        # image2_c = (image_add * 255)
+        # image1_t = image1_c.astype('uint8')
+        # image2_t = image2_c.astype('uint8')
+        # image1_I = Image.fromarray(image1_t)
+        # image2_I = Image.fromarray(image2_t)
+        # image3_I = Image.alpha_composite(image1_I, image2_I)
+        # image = np.array(image3_I)
     return image
 
 
@@ -130,7 +125,6 @@ class Visualization():
         self.current_view = views[1]
         self.subscribers = []  # Not used, but included to not break old scripts
 
-    # @timeit
     def update_kinect_height(self, data):
         # Update camera visualisation
         warped_height = cv2.warpPerspective(
@@ -140,24 +134,20 @@ class Visualization():
         )
         data['kinect_height_img'] = warped_height
 
-    # @timeit
     def vis_kinect_height(self, data):
         # image = terrajet2(self.N_height(data['kinect_height_img']))
         image = matplotlib.cm.gnuplot(self.N_height(data['kinect_height_img']))
         return image
 
-    # @timeit
     def update_height_cells(self, data):
         height_cells_img = data['HEIGHT_CELLS'].ravel()[
             data['ravensburger_cells']]
         data['height_cells_img'] = height_cells_img
 
-    # @timeit
     def vis_height_cells(self, data):
         image = terrajet2(self.N_height(data['height_cells_img']))
         return image
 
-    # @timeit
     def update_waterdepth(self, data):
         self.update_height_cells(data)
         waterlevel_img = data['WATERLEVEL'].ravel()[data['ravensburger_cells']]
@@ -168,12 +158,10 @@ class Visualization():
         data['waterlevel_img'] = waterlevel_img
         data['waterdepth_img'] = np.ma.masked_array(waterdepth, mask=mask)
 
-    # @timeit
     def vis_waterdepth(self, data):
         image = transparent_water(self.N_waterdepth(data['waterdepth_img']))
         return image
 
-    # @timeit
     def update_velocities(self, data):
         self.update_waterdepth(data)
         self.update_uv(data)
@@ -182,7 +170,6 @@ class Visualization():
         mag_img = np.sqrt(u_img**2 + v_img**2)
         data['mag_img'] = np.ma.masked_array(mag_img, mask=data['watermask'])
 
-    # @timeit
     def update_uv(self, data):
         #############################################
         # Update model parameters
@@ -206,14 +193,12 @@ class Visualization():
         data['u_img'] = u_img
         data['v_img'] = v_img
 
-    # @timeit
     def vis_velocities(self, data):
         image = matplotlib.cm.inferno(self.N_velocities(data['mag_img']))
         return image
 
     # Plot liquid (photo or particles)
 
-    # @timeit
     def init_lic(self, data):
         lic = cv2.warpPerspective(
             np.zeros_like(data['kinect_image']).astype('float32'),
@@ -226,7 +211,6 @@ class Visualization():
             lic = np.dstack([lic, np.zeros_like(lic[:, :, 0])])
         data['lic'] = lic
 
-    # @timeit
     def update_lic(self, data):
         # self.update_waterdepth(data)
         self.update_uv(data)
@@ -252,7 +236,6 @@ class Visualization():
 
         self.seed_lic(data)
 
-    # @timeit
     def seed_lic(self, data):
         # we need waterheights
         # self.update_waterdepth(data)
@@ -280,12 +263,10 @@ class Visualization():
         # Remove liquid on dry places
         data['lic'][data['watermask'], 3] = 0
 
-    # @timeit
     def vis_lic(self, data):
         image = data['lic']
         return image
 
-    # @timeit
     def init_grid(self, data):
         # column and row numbers
         n, m = np.mgrid[:HEIGHT, :WIDTH]
@@ -338,8 +319,6 @@ class Visualization():
 
         self.init_lic(data)
 
-
-    # @timeit
     def update(self, data):
         # Function that creates a plot with updated data
         next(self.counter)
@@ -364,7 +343,6 @@ class Visualization():
         if k and k < 255:
             self.process_events(data, k)
 
-    # @timeit
     def process_events(self, data, k):
         view_id = {ord(str(v)): v for v in [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]}
         if k in view_id:

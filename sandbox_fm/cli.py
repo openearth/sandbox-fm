@@ -42,9 +42,12 @@ from .calibrate import (
     compute_transforms
 )
 from .calibration_tool import Calibration
-from .plots import (
+
+# from .plots import (
+from .plots_cv2 import (
     Visualization,
-    process_events
+    process_events,
+    default_config
 )
 from .sandbox_fm import (
     update_initial_vars,
@@ -141,13 +144,14 @@ def calibrate(schematization, engine):
     calibration = Calibration(path, videos, raws, model)
     calibration.run()
 
+
 @cli.command()
 def view():
     """view raw kinect images"""
     with open("calibration.json") as f:
         calibration = json.load(f)
     images = calibrated_height_images(calibration["z_values"], calibration["z"])
-    origin = 'bottom'
+#    origin = 'bottom'
 
     fig, ax = plt.subplots(frameon=False)
     manager = plt.get_current_fig_manager()
@@ -166,8 +170,6 @@ def view():
     for img in tqdm.tqdm(images):
         im.set_data(img)
         fig.canvas.draw()
-
-
 
 
 @cli.command()
@@ -199,19 +201,21 @@ def run(schematization, engine, max_iterations, mmi):
         calibration = json.load(f)
     data.update(calibration)
     data.update(compute_transforms(data))
+
     # if we have a configuration file
     if config_name.exists():
         # open it
         with open(str(config_name)) as f:
             configuration = json.load(f)
+
+        # combine with defaults
+        configuration = {**default_config, **configuration}
     else:
         # default empty
-        configuration = {}
+        configuration = default_config
+    with open(str(config_name), 'w') as f:
+        json.dump(configuration, f, indent=2)
     data.update(configuration)
-
-    if 'visualisations' not in data:
-        logger.error('Could not find visualisation keywords in config.json. Loading the defaults values is not yet implemented')
-        # Get defaults from plots-> defaults
 
     # model
     if not mmi:
@@ -242,7 +246,6 @@ def run(schematization, engine, max_iterations, mmi):
         # listen for incomming messges
         model.subscribe()
     update_initial_vars(data, model)
-
 
     # compute the model bounding box that is shown on the screen
     model_bbox = matplotlib.path.Path(data['model_points'])

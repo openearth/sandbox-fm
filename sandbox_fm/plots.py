@@ -81,16 +81,25 @@ views = [
         "name": "Bastei",
         "layers": ["kinect_height", "waterdepth", "lic"],
         "key": "7"
+    },
+    {
+        "name": "Bastei2",
+        "layers": ["height_depth_combined"],
+        "key": "8"
     }
 ]
 
 # TODO: these defaults are not used yet, include the loading in the cli.py script
-defaults = {
-    "height": {
-        "colormap": "terrajet2",
-        "vmin": 0,
-        "vmax": 9
-    }
+
+default_config = {
+    "debug": False,
+    "scale": 5.0,
+    "height_vmin": 0,
+    "height_vmax": 9,
+    "velocities_vmin": 0,
+    "velocities_vmax": 2,
+    "depth_vmin": 0,
+    "depth_vmax": 3
 }
 
 
@@ -251,10 +260,9 @@ class Visualization():
         # Plot scanned height
         self.handles['kinect_height'] = self.ax.imshow(
             data['kinect_height_img'],
-            exec(data['visualisation']['height']['colormap']),
-            alpha=1,
-            vmin=-data['visualisation']['height']['vmin'],
-            vmax=data['visualisation']['height']['vmax']
+            terrajet2,
+            vmin=data['height_vmin'],
+            vmax=data['height_vmax']
         )
 
     def update_kinect_height(self, data):
@@ -281,10 +289,10 @@ class Visualization():
 
         self.handles['height_cells'] = self.ax.imshow(
             data['height_cells_img'],
-            cmap=exec(data['visualisation']['height']['colormap']),
+            cmap=terrajet2,
             alpha=1,
-            vmin=-data['visualisation']['height']['vmin'],
-            vmax=data['visualisation']['height']['vmax']
+            vmin=data['height_vmin'],
+            vmax=data['height_vmax']
         )
 
     def update_height_cells(self, data):
@@ -330,6 +338,46 @@ class Visualization():
 
     def blit_waterdepth(self, data):
         self.handles['waterdepth'].set_data(data['waterdepth_img'])
+
+    # Combine kinect height and waterdepth in one data plot
+
+    def init_height_depth_combined(self, data):
+        self.update_height_depth_combined(data)
+        self.init_lic(data)
+
+    def add_height_depth_combined(self, data):
+        self.handles['height_depth_combined'] = self.ax.imshow(
+            data['depth_height_rgb']
+        )
+
+    def seed_height_depth_combined(self, data):
+        self.seed_lic(data)
+
+    def update_height_depth_combined(self, data):
+        self.update_waterdepth(data)
+        self.update_kinect_height(data)
+
+        # Or as colors
+        N_water = matplotlib.colors.Normalize(0, 5)
+        color_water = transparent_water(N_water(data['waterdepth_img']))
+        N_land = matplotlib.colors.Normalize(data['height_vmin'], data['height_vmax'])
+        color_land = terrajet2(N_land(data['kinect_height_img']))
+        color_combined = color_water
+
+        color_combined[data['watermask'], :] = color_land[data['watermask'], :]
+
+        self.update_lic(data)
+
+        for ii in range(3):
+            background = color_combined[..., ii] * (1 - data['lic'][..., 3])
+            foreground = data['lic'][..., ii] * data['lic'][..., 3]
+            color_combined[..., ii] = background + foreground
+
+        data['depth_height_rgb'] = color_combined
+
+    def blit_height_depth_combined(self, data):
+        # self.handles['height_depth_combined'].set_data(data['height_depth_img'])
+        self.handles['height_depth_combined'].set_data(data['depth_height_rgb'])
 
     # Plot waves
 
@@ -464,7 +512,6 @@ class Visualization():
     def blit_background(self, data):
         pass
 
-
     # Plot flow velocities 
 
     def init_uv(self, data):
@@ -522,7 +569,6 @@ class Visualization():
 
     def blit_mag(self, data):
         self.handles['mag'].set_data(data['mag_img'])
-
 
     # Plot liquid (photo or particles)
 
@@ -773,7 +819,10 @@ class Visualization():
         # self.fig.canvas.blit(self.ax.bbox)
         # self.ax.redraw_in_frame()
         # interact with window and click events
-        self.fig.canvas.draw()
+
+        # self.fig.canvas.draw()
+        plt.draw()
+
         # for artist in self.handles.values():
         #     if artist is not None:
         #         self.ax.draw_artist(artist)
