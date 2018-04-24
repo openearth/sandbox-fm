@@ -47,7 +47,7 @@ Windows Install
 - ``conda update conda``
 - ``conda create --name main --file package-list-win.txt``
 - ``activate main``  (You should now see a (main) at the start of your command line)
-- ``conda install -c https://conda.binstar.org/menpo opencv3``
+- ``conda install opencv``
 - Install the sandbox-fm software in develop mode ``pip install -e .`` (from the sandbox-fm directory)
 - ``pip install tqdm``
 - ``pip install -r requirements.txt``
