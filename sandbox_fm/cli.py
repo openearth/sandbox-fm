@@ -21,6 +21,7 @@ import matplotlib.pyplot as plt
 
 import bmi.wrapper
 from mmi.mmi_client import MMIClient
+from mmi import recv_array
 
 HAVE_MPI = False
 try:
@@ -41,7 +42,7 @@ from .calibrate import (
     transform,
     compute_transforms
 )
-from .calibration_tool import Calibration
+from .calibration_wizard import Calibration
 
 # from .plots import (
 from .plots_cv2 import (
@@ -52,7 +53,7 @@ from .plots_cv2 import (
 from .sandbox_fm import (
     update_initial_vars,
     update_vars,
-    update_with_event
+    update_with_message
 )
 from .gestures import (
     recognize_gestures
@@ -116,7 +117,6 @@ def record():
 @cli.command()
 def anomaly():
     """calibrate the kinect anomaly for a flat surface"""
-
     raws = depth_images()
     raw = next(raws)
     anomaly = raw - raw.mean()
@@ -124,8 +124,17 @@ def anomaly():
 
 
 @cli.command()
-@click.argument('schematization', type=click.File('rb'))
-@click.option('--engine', default='dflowfm', type=click.Choice(['dflowfm', 'xbeach']))
+@click.argument(
+    'schematization',
+    type=click.File('rb')
+)
+@click.option(
+    '--engine',
+    default='dflowfm',
+    type=click.Choice(['dflowfm', 'xbeach']),
+    help='BMI compatible model engine'
+
+)
 def calibrate(schematization, engine):
     """calibrate the sandbox by selecting both 4 points in box and in model"""
 
@@ -173,10 +182,27 @@ def view():
 
 
 @cli.command()
-@click.argument('schematization', type=click.File('rb'))
-@click.option('--engine', default='dflowfm', type=click.Choice(['dflowfm', 'xbeach']))
-@click.option('--max-iterations', default=0, type=int)
-@click.option('--mmi', type=str)
+@click.argument(
+    'schematization',
+    type=click.File('rb')
+)
+@click.option(
+    '--engine',
+    default='dflowfm',
+    type=click.Choice(['dflowfm', 'xbeach']),
+    help='BMI comptabile model engine'
+)
+@click.option(
+    '--max-iterations',
+    default=0,
+    type=int,
+    help='maximum number of iterations'
+)
+@click.option(
+    '--mmi',
+    type=str,
+    help='mmi zmq address for example tcp://localhost:62000'
+)
 def run(schematization, engine, max_iterations, mmi):
     """Console script for sandbox_fm
 
@@ -242,9 +268,6 @@ def run(schematization, engine, max_iterations, mmi):
     # mmi model is already initialized
     if not mmi:
         model.initialize(str(schematization_name.absolute()))
-    else:
-        # listen for incomming messges
-        model.subscribe()
     update_initial_vars(data, model)
 
     # compute the model bounding box that is shown on the screen
@@ -299,12 +322,26 @@ def run(schematization, engine, max_iterations, mmi):
     )
     iterator = enumerate(tqdm.tqdm(zip(kinect_images, kinect_heights)))
     tics = {}
+    if mmi:
+        sub_poller = model.subscribe()
+        # syncronize data when received
+        model.remote('play')
     for i, (kinect_image, kinect_height) in iterator:
         tics['t0'] = time.time()
 
         # Get data from model
-        # TODO: async data using mmi subscribe
-        update_vars(data, model)
+        if not mmi:
+            update_vars(data, model)
+        else:
+            # listen for at most 10 miliseconds for incomming data (flush the queue)
+            for sock, n in sub_poller.poll(10):
+                for i in range(n):
+                    message = recv_array(sock)
+                    update_with_message(data, model, message)
+
+
+
+
         # update kinect
         data['kinect_height'] = kinect_height
         data['kinect_image'] = kinect_image
@@ -321,15 +358,14 @@ def run(schematization, engine, max_iterations, mmi):
             break
         tics['vis'] = time.time()
 
-        dt = model.get_time_step()
-        # HACK: fix unstable timestep in xbeach
-        if model.engine == 'xbeach':
-            dt = 60
-        # update model
-        # for i in range(data.get('iterations.per.visualization', 1)):
-        model.update(dt)
-        tics['model'] = time.time()
+        if not mmi:
+            dt = model.get_time_step()
+            # HACK: fix unstable timestep in xbeach
+            if model.engine == 'xbeach':
+                dt = 60
 
+            model.update(dt)
+        tics['model'] = time.time()
         logger.info("tics: %s", tic_report(tics))
 
 

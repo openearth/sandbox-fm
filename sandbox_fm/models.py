@@ -9,7 +9,6 @@ dflowfm_vars = ['bl', 'ucx', 'ucy', 's1', 'zk']
 
 def dflowfm_compute(data):
     """compute variables that are missing/buggy/not available"""
-    data['is_wet'] = data['s1'] > data['bl']
     numk = data['zk'].shape[0]
     data['numk'] = numk
     # fix shapes
@@ -32,6 +31,8 @@ def dflowfm_compute(data):
                 var_name
             )
             raise ValueError(msg)
+        # compute derivitave variables, should be consistent shape now.
+    data['is_wet'] = data['s1'] > data['bl']
 
 
 def update_height_dflowfm(idx, height_nodes_copy, data, model):

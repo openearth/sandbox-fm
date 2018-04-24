@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+import os
 
 from setuptools import setup
 
@@ -45,6 +46,12 @@ setup(
             'sandbox-fm=sandbox_fm.cli:cli'
         ]
     },
+    # install all scripts
+    scripts=[
+        os.path.join('scripts', path)
+        for path
+        in os.listdir('scripts')
+    ],
     include_package_data=True,
     install_requires=requirements,
     license="GNU General Public License v3",
