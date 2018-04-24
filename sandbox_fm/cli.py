@@ -232,10 +232,10 @@ def run(schematization, engine, max_iterations, mmi):
     if config_name.exists():
         # open it
         with open(str(config_name)) as f:
-            configuration = json.load(f)
-
+            configuration_read = json.load(f)
         # combine with defaults
-        configuration = {**default_config, **configuration}
+        configuration = default_config.copy()
+        configuration.update(configuration_read)
     else:
         # default empty
         configuration = default_config
