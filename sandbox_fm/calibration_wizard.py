@@ -383,9 +383,9 @@ class Calibration(object):
         self.min_slider_text_ax.axis('off')
         self.max_slider_text_ax.axis('off')
         self.slidermin = Slider(self.slider_min_ax, 'min of raw kinect image:',
-                                self.rangemaxz + 50, self.rangeminz + 50, valinit = self.z_values[0], dragging=True)
+                                self.rangemaxz - 50, self.rangeminz + 50, valinit = self.z_values[0], dragging=True)
         self.slidermax = Slider(self.slider_max_ax, 'max of raw kinect image: ',
-                                self.rangemaxz - 50, self.rangeminz - 50, valinit = self.z_values[1], dragging=True)
+                                self.rangemaxz - 50, self.rangeminz + 50, valinit = self.z_values[1], dragging=True)
         self.slidermin.on_changed(self.min_slider)
         self.slidermax.on_changed(self.max_slider)
 
@@ -433,7 +433,7 @@ class Calibration(object):
         self.show_data(self.plot_ax_left)
         self.max_slider_text_ax.clear()
         self.max_slider_text_ax.text(0, 0, "max of selecteed bathymetry [m]: " + str(self.kinect_max))
-        self.min_slider_text_ax.axis('off')
+        self.max_slider_text_ax.axis('off')
         self.plot_ax_left.axis('off')
 
     def add_edit_polygon(self, ax, points=4):
