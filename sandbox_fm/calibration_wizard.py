@@ -12,7 +12,7 @@ from matplotlib.mlab import dist_point_to_segment
 from matplotlib.widgets import Slider, Button
 import matplotlib.pyplot as plt
 
-from .sandbox_fm import (
+from .variables import (
     update_initial_vars,
     compute_delta_height
 )
