@@ -249,8 +249,9 @@ def run(schematization, engine, max_iterations, mmi):
     else:
         model = MMIClient(mmi)
         model.engine = engine
-        logger.info('Connected to {}: {}'.format(mmi, model))
-        print(mmi, model)
+        logger.info('Connected to MMI: {}'.format(mmi))
+
+
     # initialize model schematization, changes directory
 
     # search for a background image
