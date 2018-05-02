@@ -44,8 +44,8 @@ from .calibrate import (
 )
 from .calibration_wizard import Calibration
 
-# from .plots import (
-from .plots_cv2 import (
+from .plots import (
+# from .plots_cv2 import (
     Visualization,
     process_events,
     default_config
@@ -249,6 +249,8 @@ def run(schematization, engine, max_iterations, mmi):
     else:
         model = MMIClient(mmi)
         model.engine = engine
+        logger.info('Connected to {}: {}'.format(mmi, model))
+        print(mmi, model)
     # initialize model schematization, changes directory
 
     # search for a background image
@@ -324,7 +326,7 @@ def run(schematization, engine, max_iterations, mmi):
     tics = {}
     if mmi:
         sub_poller = model.subscribe()
-        # syncronize data when received
+        # synchronize data when received
         model.remote('play')
     for i, (kinect_image, kinect_height) in iterator:
         tics['t0'] = time.time()

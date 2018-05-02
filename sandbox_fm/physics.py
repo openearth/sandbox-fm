@@ -4,21 +4,6 @@ import matplotlib.cm
 import cv2
 import time
 
-
-def timeit(f):
-
-    def timed(*args, **kw):
-
-        ts = time.time()
-        result = f(*args, **kw)
-        te = time.time()
-        with open('vistiminglog.txt', 'a') as flog:
-            flog.write('{}, {:2.6f}\n'.format(f.__name__, te - ts))
-        print('Function: {}, Time taken: {:2.4f}'.format(f.__name__, te - ts))
-        return result
-
-    return timed
-
 def apply_hillshade(z, vertical_exageration=1.0):
     ls = matplotlib.colors.LightSource(azdeg=315, altdeg=45)
     hillshaded = ls.shade(z, vert_exag=vertical_exageration, blend_mode='hsv', cmap=matplotlib.cm.gist_earth)
@@ -88,8 +73,6 @@ def warp_particles(particles, flow, data):
     particles.set_xdata(new_points[:, 0])
     particles.set_ydata(new_points[:, 1])
 
-
-@timeit
 def warp_flow(img, flow):
     """transform image with flow field"""
     h, w = flow.shape[:2]

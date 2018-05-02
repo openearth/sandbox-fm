@@ -46,48 +46,48 @@ logger.setLevel(logging.INFO)
 
 
 # TODO: the script is not using the key below, but the order of this array (=key -1)
-views = [
-    {
+views = {
+    1: {
         "name": "Kinect",
         "layers": ["kinect_height", "lic"],
         "key": "1"
     },
-    {
+    2: {
         "name": "Waterdepth",
         "layers": ["background", "waterdepth", "lic"],
         "key": "2"
     },
-    {
+    3: {
         "name": "Bed level",
         "layers": ["height_cells"],
         "key": "3"
     },
-    {
+    4: {
         "name": "Flow magnitude",
         "layers": ["background", "mag"],
         "key": "4"
     },
-    {
+    5: {
         "name": "Waves",
         "layers": ["background", "wavesurface"],
         "key": "5"
     },
-    {
+    6: {
         "name": "Erosion",
         "layers": ["erosion"],
         "key": "6"
     },
-    {
+    7: {
         "name": "Bastei",
         "layers": ["kinect_height", "waterdepth", "lic"],
         "key": "7"
     },
-    {
+    8: {
         "name": "Bastei2",
         "layers": ["height_depth_combined"],
         "key": "8"
     }
-]
+}
 
 # TODO: these defaults are not used yet, include the loading in the cli.py script
 
@@ -99,7 +99,8 @@ default_config = {
     "velocities_vmin": 0,
     "velocities_vmax": 2,
     "depth_vmin": 0,
-    "depth_vmax": 3
+    "depth_vmax": 3,
+    'default_view': 1,
 }
 
 
@@ -112,7 +113,7 @@ def process_events(evt, data, model, vis):
 
     # we are switching views if evt.key is a number
     if evt.key in ['1', '2', '3', '4', '5', '6', '7', '8', '9']:
-        new_view_idx = int(evt.key) - 1
+        new_view_idx = int(evt.key)
         old_view = vis.current_view
         # remove handles
 
@@ -236,7 +237,7 @@ class Visualization():
         plt.ion()
         plt.show(block=False)
         self.counter = itertools.count()
-        self.current_view = views[0]
+
         # handles per view name
         self.handles = {
         }
@@ -512,7 +513,7 @@ class Visualization():
     def blit_background(self, data):
         pass
 
-    # Plot flow velocities 
+    # Plot flow velocities
 
     def init_uv(self, data):
         # xy of model in image coordinates
@@ -767,6 +768,8 @@ class Visualization():
     def initialize(self, data):
         """"""
         self.init_grid(data)
+        
+        self.current_view = views[data['default_view']]
 
         # initialize data for all layers
         for layer in self.current_view['layers']:
