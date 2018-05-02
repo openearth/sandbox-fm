@@ -33,29 +33,29 @@ except ImportError:
 # don't import before MPI, otherwise segfault under OSX
 import skimage.io
 
-from .depth import (
+from sandbox_fm.depth import (
     depth_images,
     calibrated_height_images,
     video_images
 )
-from .calibrate import (
+from sandbox_fm.calibrate import (
     transform,
     compute_transforms
 )
-from .calibration_wizard import Calibration
 
-from .plots import (
-# from .plots_cv2 import (
+from sandbox_fm.calibration_wizard import Calibration
+from sandbox_fm.plots import (
+# from sandbox_fm.plots_cv2 import (
     Visualization,
     process_events,
     default_config
 )
-from .sandbox_fm import (
+from sandbox_fm.variables import (
     update_initial_vars,
     update_vars,
     update_with_message
 )
-from .gestures import (
+from sandbox_fm.gestures import (
     recognize_gestures
 )
 
