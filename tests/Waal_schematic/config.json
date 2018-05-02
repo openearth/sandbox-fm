@@ -1,0 +1,10 @@
+{
+  "debug": false,
+  "scale": 5.0,
+  "height_vmin": 0,
+  "height_vmax": 9,
+  "velocities_vmin": 0,
+  "velocities_vmax": 2,
+  "depth_vmin": 0,
+  "depth_vmax": 3
+}

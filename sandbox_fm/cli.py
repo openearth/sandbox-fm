@@ -43,9 +43,11 @@ from sandbox_fm.calibrate import (
     compute_transforms
 )
 from sandbox_fm.calibration_wizard import Calibration
-from sandbox_fm.plots import (
+# from sandbox_fm.plots import (
+from sandbox_fm.plots_cv2 import (
     Visualization,
-    process_events
+    process_events,
+    default_config
 )
 from sandbox_fm.variables import (
     update_initial_vars,
@@ -98,9 +100,10 @@ def cli():
     logging.root.setLevel(logging.INFO)
     logger.info("Welcome to the sandbox software.")
 
+
 @cli.command()
 def record():
-    """record 10 frames, for testing"""
+    """record 5 frames, for testing"""
     videos = video_images()
     raws = depth_images()
     for i, (video, raw) in enumerate(zip(videos, raws)):
@@ -149,13 +152,14 @@ def calibrate(schematization, engine):
     calibration = Calibration(path, videos, raws, model)
     calibration.run()
 
+
 @cli.command()
 def view():
     """view raw kinect images"""
     with open("calibration.json") as f:
         calibration = json.load(f)
     images = calibrated_height_images(calibration["z_values"], calibration["z"])
-    origin = 'bottom'
+#    origin = 'bottom'
 
     fig, ax = plt.subplots(frameon=False)
     manager = plt.get_current_fig_manager()
@@ -174,7 +178,6 @@ def view():
     for img in tqdm.tqdm(images):
         im.set_data(img)
         fig.canvas.draw()
-
 
 
 @cli.command()
@@ -223,14 +226,20 @@ def run(schematization, engine, max_iterations, mmi):
         calibration = json.load(f)
     data.update(calibration)
     data.update(compute_transforms(data))
+
     # if we have a configuration file
     if config_name.exists():
         # open it
         with open(str(config_name)) as f:
-            configuration = json.load(f)
+            configuration_read = json.load(f)
+        # combine with defaults
+        configuration = default_config.copy()
+        configuration.update(configuration_read)
     else:
         # default empty
-        configuration = {}
+        configuration = default_config
+    with open(str(config_name), 'w') as f:
+        json.dump(configuration, f, indent=2)
     data.update(configuration)
 
     # model
@@ -259,7 +268,6 @@ def run(schematization, engine, max_iterations, mmi):
     if not mmi:
         model.initialize(str(schematization_name.absolute()))
     update_initial_vars(data, model)
-
 
     # compute the model bounding box that is shown on the screen
     model_bbox = matplotlib.path.Path(data['model_points'])

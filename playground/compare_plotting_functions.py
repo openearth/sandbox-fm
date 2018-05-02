@@ -2,25 +2,27 @@ import matplotlib.pyplot as plt
 import numpy as np
 import matplotlib.gridspec as gridspec
 import matplotlib.animation as animation
+import matplotlib
 import time
 
 
 # Create sample data
 y, x = np.meshgrid(np.linspace(-10, 10, 100), np.linspace(-10, 10, 100))
-nframes = 100
+nframes = 1000
 z={}
 for ii in np.arange(0, nframes):
     z[ii] = np.sin(x-ii/(2*np.pi))*np.sin(x-ii/(2*np.pi))+np.sin(y)*np.sin(y)
 
 print('Method 1: matplotlib, imshow')
 fig = plt.figure(figsize=(16, 8), facecolor='white')
-t_0 = time.process_time()
+
+t_0 = time.time()
 for ii in np.arange(0, nframes):
     plt.cla()
     plt.imshow(z[ii])
     plt.pause(0.001)
 plt.close()
-total_time = (time.process_time() - t_0)
+total_time = (time.time() - t_0)
 frequency = nframes / total_time
 print('Time taken: {}. A frequency of: {}'.format(total_time, frequency))
 
@@ -30,13 +32,14 @@ ii = 0
 fig = plt.figure(figsize=(16, 8), facecolor='white')
 plt.ion()
 im = plt.imshow(z[ii])
-t_0 = time.process_time()
+plt.axis('off')
+t_0 = time.time()
 for ii in np.arange(0, nframes):
     im.set_data(z[ii])
     plt.draw()
     plt.pause(0.001)
 plt.close()
-total_time = (time.process_time() - t_0)
+total_time = (time.time() - t_0)
 frequency = nframes / total_time
 print('Time taken: {}. A frequency of: {}'.format(total_time, frequency))
 
@@ -45,13 +48,13 @@ ii = 0
 fig = plt.figure(figsize=(16, 8), facecolor='white')
 plt.ion()
 quad = plt.pcolormesh(z[ii])
-t_0 = time.process_time()
+t_0 = time.time()
 for ii in np.arange(0, nframes):
     quad.set_array(z[ii].ravel())
     plt.draw()
     plt.pause(0.001)
 plt.close()
-total_time = (time.process_time() - t_0)
+total_time = (time.time() - t_0)
 frequency = nframes / total_time
 print('Time taken: {}. A frequency of: {}'.format(total_time, frequency))
 
@@ -61,13 +64,13 @@ ii = 0
 fig = plt.figure(figsize=(40, 30), facecolor='white')
 plt.ion()
 quad = plt.pcolormesh(z[ii])
-t_0 = time.process_time()
+t_0 = time.time()
 for ii in np.arange(0, nframes):
     quad.set_array(z[ii].ravel())
     plt.draw()
     plt.pause(0.001)
 plt.close()
-total_time = (time.process_time() - t_0)
+total_time = (time.time() - t_0)
 frequency = nframes / total_time
 print('Time taken: {}. A frequency of: {}'.format(total_time, frequency))
 
@@ -182,11 +185,11 @@ class Canvas(app.Canvas):
         self.update()
 
 
-t_0 = time.process_time()
+t_0 = time.time()
 canvas = Canvas()
 app.run()
 
-total_time = (time.process_time() - t_0)
+total_time = (time.time() - t_0)
 frequency = nframes / total_time
 print('Time taken: {}. A frequency of: {}'.format(total_time, frequency))
 
@@ -238,9 +241,45 @@ print('Time taken: {}. A frequency of: {}'.format(total_time, frequency))
 # img.setImage(z[ii])
 # QtGui.QApplication.instance().exec_()
 
-
 # for ii in np.arange(0, nframes):
 #     img.setImage(z[ii])
 # #     img.save(os.path.join(outputdir,'test_{}'.format(ii)))
 
 # # img.save(os.path.join(outputdir,'test_{}'.format(ii)))
+
+
+
+print('Method 5: cv2')
+
+import cv2
+
+ii = 0
+t_0 = time.time()
+# for ii in np.arange(0, nframes):
+# cap = cv2.VideoCapture(0)
+cv2.namedWindow('frame', cv2.WINDOW_NORMAL)
+cv2.resizeWindow('frame', 600, 600)
+
+
+for ii in np.arange(0, nframes):
+    # _, frame = cap.read()
+    # gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    # print(gray)
+    # cv2.imshow('frame', z[ii])
+    im_gray = z[ii]
+
+    N = matplotlib.colors.Normalize(im_gray.min(), im_gray.max())
+
+    jet = cm = plt.get_cmap('jet')
+    im_color = jet(N(im_gray))
+    cv2.imshow('frame', im_color)
+    ii = ii + 1
+
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        break
+    # plt.pause(0.1)
+    # time.sleep(0.1)
+cv2.destroyAllWindows()
+total_time = (time.time() - t_0)
+frequency = nframes / total_time
+print('Time taken: {}. A frequency of: {}'.format(total_time, frequency))

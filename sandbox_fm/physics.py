@@ -2,28 +2,43 @@ import numpy as np
 import matplotlib.colors
 import matplotlib.cm
 import cv2
+import time
 
+
+def timeit(f):
+
+    def timed(*args, **kw):
+
+        ts = time.time()
+        result = f(*args, **kw)
+        te = time.time()
+        with open('vistiminglog.txt', 'a') as flog:
+            flog.write('{}, {:2.6f}\n'.format(f.__name__, te - ts))
+        print('Function: {}, Time taken: {:2.4f}'.format(f.__name__, te - ts))
+        return result
+
+    return timed
 
 def apply_hillshade(z, vertical_exageration=1.0):
     ls = matplotlib.colors.LightSource(azdeg=315, altdeg=45)
     hillshaded = ls.shade(z, vert_exag=vertical_exageration, blend_mode='hsv', cmap=matplotlib.cm.gist_earth)
     return hillshaded
 
+
 def create_wave(data):
     """generate a wave in the dataset"""
     n_segments = 100
     wave_x = np.linspace(data['box'][0][0], data['box'][1][0], num=n_segments + 1)
-    wave_y = np.zeros(n_segments + 1) + 10.0 # y-pixels
+    wave_y = np.zeros(n_segments + 1) + 10.0  # y-pixels
     wave_xy = np.c_[wave_x, wave_y]
     segments = []               # preallocate segments structure
     for i in range(n_segments):
         segments.append([
             wave_xy[i],         # from
-            wave_xy[i+1]        # to
+            wave_xy[i + 1]      # to
         ])
     wave = matplotlib.collections.LineCollection(segments, color='white')
     return wave
-
 
 
 def warp_waves(waves, flow, data):
@@ -73,6 +88,8 @@ def warp_particles(particles, flow, data):
     particles.set_xdata(new_points[:, 0])
     particles.set_ydata(new_points[:, 1])
 
+
+@timeit
 def warp_flow(img, flow):
     """transform image with flow field"""
     h, w = flow.shape[:2]
