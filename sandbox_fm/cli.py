@@ -254,19 +254,18 @@ def run(schematization, engine, max_iterations, mmi):
 
     # initialize model schematization, changes directory
 
-    # search for a background image
-    known_background_paths = [
-        pathlib.Path(schematization.name).with_suffix('.jpg'),
-        pathlib.Path(schematization.name).with_suffix('.png'),
-        pathlib.Path(schematization.name).with_name('background.jpg'),
-        pathlib.Path(schematization.name).with_name('background.png')
-    ]
-    for path in known_background_paths:
-        if path.exists():
-            data['background_name'] = str(path.absolute())
-            break
-    else:
-        data['background_name'] = None
+    # search for a background or overlay image
+    for layerimage in ['background','overlay']:
+        known_background_paths = [
+            pathlib.Path(schematization.name).with_name(layerimage + '.jpg'),
+            pathlib.Path(schematization.name).with_name(layerimage + '.png')
+        ]
+        for path in known_background_paths:
+            if path.exists():
+                data[layerimage + '_name'] = str(path.absolute())
+                break
+        else:
+            data[layerimage + '_name'] = None
 
     # mmi model is already initialized
     if not mmi:

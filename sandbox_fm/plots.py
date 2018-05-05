@@ -86,6 +86,11 @@ views = {
         "name": "Bastei2",
         "layers": ["height_depth_combined"],
         "key": "8"
+    },
+    9: {
+        "name": "Bastei3",
+        "layers": ["height_depth_combined","overlay"],
+        "key": "9"
     }
 }
 
@@ -492,7 +497,6 @@ class Visualization():
         self.handles['erosion'].set_data(data['erosion_img'])
 
     # Plot background map
-
     def init_background(self, data):
         if data['background_name']:
             data['background_img'] = plt.imread(data['background_name'])
@@ -512,6 +516,28 @@ class Visualization():
 
     def blit_background(self, data):
         pass
+
+    # Plot overlay map
+    def init_overlay(self, data):
+        if data['overlay_name']:
+            data['overlay_img'] = plt.imread(data['overlay_name'])
+        else:
+            # 10x10 see through pixels
+            data['overlay_img'] = np.zeros((10, 10, 4))
+            logger.warn('could not find overlay image: %s', data['overlay_name'])
+
+    def add_overlay(self, data):
+        self.handles['overlay'] = self.ax.imshow(
+            data['overlay_img'],
+            extent=[0, 640, 480, 0]
+        )
+
+    def update_overlay(self, data):
+        pass
+
+    def blit_overlay(self, data):
+        pass
+
 
     # Plot flow velocities
 
@@ -768,7 +794,7 @@ class Visualization():
     def initialize(self, data):
         """"""
         self.init_grid(data)
-        
+
         self.current_view = views[data['default_view']]
 
         # initialize data for all layers
