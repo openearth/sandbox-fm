@@ -73,7 +73,8 @@ views = {
     },
     7: {
         "name": "Bastei",
-        "layers": ["kinect_height", "waterdepth", "lic"]
+        "layers": ["height_cells", "waterdepth", "lic"]
+        # "layers": ["kinect_height", "waterdepth", "lic"]
     },
     8: {
         "name": "Bastei2",

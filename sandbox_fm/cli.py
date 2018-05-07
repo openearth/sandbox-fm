@@ -341,9 +341,6 @@ def run(schematization, engine, max_iterations, mmi):
                     message = recv_array(sock)
                     update_with_message(data, model, message)
 
-
-
-
         # update kinect
         data['kinect_height'] = kinect_height
         data['kinect_image'] = kinect_image

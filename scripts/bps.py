@@ -14,6 +14,8 @@ import threading
 WIDTH = 1000
 HEIGHT = 1000
 
+HIS_XY = (189020, 430051) # Inflow Boundary
+# HIS_XY = (188252, 429208) # Bastei_1
 
 def create_fig():
     """create a figure with axes"""
@@ -50,6 +52,7 @@ def update(frame, ln, ax, data):
     val = HEIGHT - (matplotlib.colors.Normalize(3, 6, clip=True)(data['s1']) * HEIGHT)
     ln.set_data([0, WIDTH], [val, val])
     ax.set_title('Current water level: {:.2f} ({})'.format(data['s1'], data['counter']))
+    plt.pause(5)
 
 
 def connect_model():
@@ -57,20 +60,29 @@ def connect_model():
     model = mmi.mmi_client.MMIClient('tcp://localhost:62000')
     model.remote('play')
     poller = model.subscribe()
-    return poller
+    return model, poller
 
 
 def update_data(poller, data):
     """update a shared array"""
     while True:
-        for sock, n in poller.poll(100):
+        for sock, n in poller.poll(1000):
             for i in range(n):
                 message = mmi.recv_array(sock)
                 arr, meta = message
                 if meta['name'] == 's1':
                     # just pick a value
                     data['counter'] += 1
-                    data['s1'] = arr[739]
+                    data['s1'] = arr[data['id']]
+
+
+def XY_to_array(model, xy):
+    X = model.get_var('xzw')
+    Y = model.get_var('yzw')
+
+    distsquared = ((X - xy[0])**2 + (Y - xy[1])**2)
+    idmin = np.argmin(distsquared)
+    return idmin
 
 
 if __name__ == '__main__':
@@ -79,7 +91,10 @@ if __name__ == '__main__':
         's1': 0
     }
     # connect to model
-    poller = connect_model()
+    model, poller = connect_model()
+
+    # Find find index for HIS Data
+    data['id'] = XY_to_array(model, HIS_XY)
 
     # start the data update in the background
     threading.Thread(
