@@ -8,19 +8,33 @@ import mmi.mmi_client
 import matplotlib.pyplot as plt
 import matplotlib.colors
 import matplotlib.animation
+from matplotlib.offsetbox import OffsetImage
 import threading
 
 WIDTH = 1000
 HEIGHT = 1000
 
+
 def create_fig():
     """create a figure with axes"""
     fig, ax = plt.subplots()
+    fig.subplots_adjust(
+            left=0,
+            right=1,
+            bottom=0,
+            top=1
+        )
     ax.axis('off')
     ax.autoscale('off')
-    img = plt.imread('https://www.visserenvisser.nl/media/catalog/product/cache/1/image/c337cbb1759470c48c1849f8095cafa7/h/3/h360-peilschaal-emaille-zonder-logo.png')
+    img = plt.imread('bps/background.jpg')
     ax.imshow(img)
-    return fig, ax
+
+    ax2 = plt.axes((0, 0, 1, 1))
+    img2 = plt.imread('bps/BPS.png')
+    ax2.axis('off')
+
+    ax2.imshow(img2)
+    return fig, ax2
 
 
 def init(ln):
@@ -35,7 +49,7 @@ def update(frame, ln, ax, data):
     # range 3 - 6 m
     val = HEIGHT - (matplotlib.colors.Normalize(3, 6, clip=True)(data['s1']) * HEIGHT)
     ln.set_data([0, WIDTH], [val, val])
-    ax.set_title("%.2f -> %.0f (%s)" % (data['s1'], val, data['counter']))
+    ax.set_title('Current water level: {:.2f} ({})'.format(data['s1'], data['counter']))
 
 
 def connect_model():
@@ -59,14 +73,12 @@ def update_data(poller, data):
                     data['s1'] = arr[739]
 
 
-
 if __name__ == '__main__':
-
     data = {
         'counter': 0,
         's1': 0
     }
-    # connect to moddel
+    # connect to model
     poller = connect_model()
 
     # start the data update in the background
@@ -89,7 +101,7 @@ if __name__ == '__main__':
     animation = matplotlib.animation.FuncAnimation(
         fig,
         functools.partial(update, data=data, ln=ln, ax=ax),
-        frames=np.linspace(0, 2*np.pi, 128),
+        interval=200,
         init_func=functools.partial(init, ln=ln)
     )
     plt.show()

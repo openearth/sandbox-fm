@@ -49,43 +49,35 @@ logger.setLevel(logging.INFO)
 views = {
     1: {
         "name": "Kinect",
-        "layers": ["kinect_height", "lic"],
-        "key": "1"
+        "layers": ["kinect_height", "lic"]
     },
     2: {
         "name": "Waterdepth",
-        "layers": ["background", "waterdepth", "lic"],
-        "key": "2"
+        "layers": ["background", "waterdepth", "lic"]
     },
     3: {
         "name": "Bed level",
-        "layers": ["height_cells"],
-        "key": "3"
+        "layers": ["height_cells"]
     },
     4: {
         "name": "Flow magnitude",
-        "layers": ["background", "mag"],
-        "key": "4"
+        "layers": ["background", "mag"]
     },
     5: {
         "name": "Waves",
-        "layers": ["background", "wavesurface"],
-        "key": "5"
+        "layers": ["background", "wavesurface"]
     },
     6: {
         "name": "Erosion",
-        "layers": ["erosion"],
-        "key": "6"
+        "layers": ["erosion"]
     },
     7: {
         "name": "Bastei",
-        "layers": ["kinect_height", "waterdepth", "lic"],
-        "key": "7"
+        "layers": ["kinect_height", "waterdepth", "lic"]
     },
     8: {
         "name": "Bastei2",
-        "layers": ["height_depth_combined"],
-        "key": "8"
+        "layers": ["height_depth_combined"]
     }
 }
 
@@ -768,7 +760,7 @@ class Visualization():
     def initialize(self, data):
         """"""
         self.init_grid(data)
-        
+
         self.current_view = views[data['default_view']]
 
         # initialize data for all layers

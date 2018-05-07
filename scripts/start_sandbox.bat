@@ -1,7 +1,7 @@
 set PATH=%PATH%;d:\software\dflowfm-x64-1.1.269.53512;D:\software\Anaconda3\envs\main\Scripts\
 start mmi runner dflowfm ../models/Waal_schematic/waal_with_side.mdu --port 62000 --pause -o s1 -o bl -o ucx -o ucy -o zk
 start sandbox-fm run --mmi tcp://localhost:62000 ../models/Waal_schematic/waal_with_side.mdu
-
+start bps.py
 pause
 
 
