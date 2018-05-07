@@ -356,7 +356,7 @@ class Visualization():
         self.update_kinect_height(data)
 
         # Or as colors
-        N_water = matplotlib.colors.Normalize(0, 5)
+        N_water = matplotlib.colors.Normalize(data['depth_vmin'], data['depth_vmax'])
         color_water = transparent_water(N_water(data['waterdepth_img']))
         N_land = matplotlib.colors.Normalize(data['height_vmin'], data['height_vmax'])
         color_land = terrajet2(N_land(data['kinect_height_img']))
