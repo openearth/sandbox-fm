@@ -228,6 +228,7 @@ class Calibration(object):
 
     def make_window(self):
         self.model_points = self.old_calibration.get("model_points", 4)
+        # if not hasattr(self, 'fig'):
         self.fig = plt.figure('Step: ' + str(self.count), figsize=(16, 9))
         self.title_ax = self.fig.add_axes([0.1, 0.8, 0.8, 0.15])
         self.plot_ax_left = self.fig.add_axes([0.1, 0.2, 0.4, 0.6])
@@ -235,22 +236,25 @@ class Calibration(object):
         # Functions for the callback of next button
         def callback_next(event):
             self.count += 1
-            plt.close('all')
+            prevwindow = self.fig
             self.make_window()
             self.update_window()
+            plt.close(prevwindow)
 
         # Functions for the callback of previous button
         def callback_previous(event):
             self.count -= 1
-            plt.close('all')
+            prevwindow = self.fig
             self.make_window()
             self.update_window()
+            plt.close(prevwindow)
 
         # Functions for the callback of save button
         def callback_save(event):
             self.save()
             plt.close(self.fig)
             plt.close(self.secondfig)
+            plt.pause(0.5)
 
         # Set axis for when the figure of step 1 is displayed
         if self.count == 1:
@@ -401,8 +405,8 @@ class Calibration(object):
         self.show_result(self.fig2ax, cbar=False)
         self.show_data(self.plot_ax_left)
 
-        self.min_slider_text_ax.text(0, 0, "min of selecteed bathymetry [m]: " + str(self.kinect_min))
-        self.max_slider_text_ax.text(0, 0, "max of selecteed bathymetry [m]: " + str(self.kinect_max))
+        self.min_slider_text_ax.text(0, 0, "Deepest point now gets bathymetry of [m]: " + str(self.kinect_min))
+        self.max_slider_text_ax.text(0, 0, "Highest point now gets bathymetry of [m]: " + str(self.kinect_max))
 
         self.plot_ax_left.set_title('Bathymetry of the model and the integration of the selected polygon from the raw kinect image.')
         self.plot_ax_left.axis('off')

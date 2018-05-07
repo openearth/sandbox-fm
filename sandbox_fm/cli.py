@@ -255,7 +255,7 @@ def run(schematization, engine, max_iterations, mmi):
     # initialize model schematization, changes directory
 
     # search for a background or overlay image
-    for layerimage in ['background','overlay']:
+    for layerimage in ['background', 'overlay']:
         known_background_paths = [
             pathlib.Path(schematization.name).with_name(layerimage + '.jpg'),
             pathlib.Path(schematization.name).with_name(layerimage + '.png')
