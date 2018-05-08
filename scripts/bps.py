@@ -1,4 +1,9 @@
 #!/usr/bin/env python
+# TODO: add line of previous maximum waterLevel
+# TODO: More realistic water setLevel
+# TODO: background image as slide show
+# TODO: Show water level change in time (e.g. water level in the last 2 days)
+
 import functools
 
 import numpy as np
@@ -8,18 +13,21 @@ import mmi.mmi_client
 import matplotlib.pyplot as plt
 import matplotlib.colors
 import matplotlib.animation
-from matplotlib.offsetbox import OffsetImage
+from matplotlib.patches import Rectangle
 import threading
 
 WIDTH = 1000
 HEIGHT = 1000
 
-HIS_XY = (189020, 430051) # Inflow Boundary
+HIS_XY = (189020, 430051)  # Inflow Boundary
 # HIS_XY = (188252, 429208) # Bastei_1
+
 
 def create_fig():
     """create a figure with axes"""
     fig, ax = plt.subplots()
+
+    # Background figure
     fig.subplots_adjust(
             left=0,
             right=1,
@@ -29,13 +37,18 @@ def create_fig():
     ax.axis('off')
     ax.autoscale('off')
     img = plt.imread('bps/background.jpg')
-    ax.imshow(img)
+    ax.imshow(img, aspect='auto')  # aspect on auto for fullscreen figure
 
-    ax2 = plt.axes((0, 0, 1, 1))
+    # BPS figure
+    ax2 = plt.axes((0, 0, 1, 0.7))
     img2 = plt.imread('bps/BPS.png')
+    img2_dim = np.shape(img2)
     ax2.axis('off')
+    xshift = 200
+    ax2.set_xlim(0, 3000)
+    ax2.imshow(img2, extent=[xshift, img2_dim[1] + xshift, 0, img2_dim[0]],
+               aspect='auto')
 
-    ax2.imshow(img2)
     return fig, ax2
 
 
@@ -45,14 +58,12 @@ def init(ln):
     return ln,
 
 
-def update(frame, ln, ax, data):
+def update(frame, ln, ax, data, rect):
     """update the line"""
-    # noramlize to imshow coordinates TODO: normalize image
-    # range 3 - 6 m
-    val = HEIGHT - (matplotlib.colors.Normalize(3, 6, clip=True)(data['s1']) * HEIGHT)
-    ln.set_data([0, WIDTH], [val, val])
-    ax.set_title('Current water level: {:.2f} ({})'.format(data['s1'], data['counter']))
-    plt.pause(5)
+    val = normalize_s1(data['s1']) * ax.get_ylim()[1]
+    ln.set_data([ax.get_xlim()[0], ax.get_xlim()[1]], [val, val])
+    # ax.set_title('Current water level: {:.2f}'.format(data['s1']))
+    rect.set_height(val)
 
 
 def connect_model():
@@ -108,14 +119,19 @@ if __name__ == '__main__':
 
     # we need this part global
     ln, = ax.plot(
-        [0, WIDTH],
-        [HEIGHT/2, HEIGHT/2],
+        [0, 0],
+        [0, 0],
         'k-'
     )
 
+    rect = Rectangle((0, 0), ax.get_xlim()[1], 0, facecolor='b', alpha=0.5)
+    ax.add_patch(rect)
+
+    normalize_s1 = matplotlib.colors.Normalize(7, 15, clip=True)
+
     animation = matplotlib.animation.FuncAnimation(
         fig,
-        functools.partial(update, data=data, ln=ln, ax=ax),
+        functools.partial(update, data=data, ln=ln, ax=ax, rect=rect),
         interval=200,
         init_func=functools.partial(init, ln=ln)
     )

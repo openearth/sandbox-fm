@@ -762,6 +762,7 @@ class Visualization():
         distances_cells, ravensburger_cells = tree.query(np.c_[m_t, n_t])
         data['ravensburger_cells'] = ravensburger_cells.reshape(HEIGHT, WIDTH)
         data['distances_cells'] = distances_cells.reshape(HEIGHT, WIDTH)
+
         # lookup closest nodes
         tree = scipy.spatial.cKDTree(np.c_[data['X_NODES'].ravel(), data['Y_NODES'].ravel()])
         distances_nodes, ravensburger_nodes = tree.query(np.c_[m_t, n_t])
