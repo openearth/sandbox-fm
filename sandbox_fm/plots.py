@@ -99,7 +99,7 @@ default_config = {
     'default_view': 1,
     'auto_bedlevel_update_interval': 0
 }
-    
+
 
 def process_events(evt, data, model, vis):
     """handle keystrokes and other interactions"""
@@ -155,7 +155,7 @@ def process_events(evt, data, model, vis):
 
     if evt.key == 'b':  # Set bed level to current camera bed level
         run_update_bedlevel(data, model)
-        
+
     if evt.key == 'h':  # mark high objects as non erodable ([H]ard structure)
         idx = np.logical_and(data['node_in_box'], data['node_in_img_bbox'])
         height_nodes_copy = data['HEIGHT_NODES'].copy()
@@ -252,7 +252,7 @@ class Visualization():
         # Plot scanned height
         self.handles['kinect_height'] = self.ax.imshow(
             data['kinect_height_img'],
-            terrajet2,
+            colombia,
             vmin=data['height_vmin'],
             vmax=data['height_vmax']
         )
@@ -324,6 +324,12 @@ class Visualization():
         height_cells_img = data['height_cells_img']
         waterdepth = waterlevel_img - height_cells_img
         mask = waterdepth < 0.1
+
+        if 'background_img_mask' in data:
+            # should be same dimensions
+            # if mask > 0, (white painted), always make dry
+            mask = np.logical_or(mask, data['background_img_mask'])
+
         data['watermask'] = mask
         data['waterlevel_img'] = waterlevel_img
         data['waterdepth_img'] = np.ma.masked_array(waterdepth, mask=mask)
@@ -486,10 +492,15 @@ class Visualization():
     def init_background(self, data):
         if data['background_name']:
             data['background_img'] = plt.imread(data['background_name'])
+            # read the mask where to always show the background
+            if data['background_mask_name']:
+                background_img_mask = plt.imread(data['background_mask_name'])
+                data['background_img_mask'] = background_img_mask > 0
+
         else:
             # 10 black pixels
             data['background_img'] = np.zeros((10, 10, 3))
-            logger.warn('could not find background image: %s', data['background_name'])
+            logger.warn('could not find background image: %s, default names background.jpg/png', data['background_name'])
 
     def add_background(self, data):
         self.handles['background'] = self.ax.imshow(
