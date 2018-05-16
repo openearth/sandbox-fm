@@ -1,0 +1,9 @@
+Using dflowfm-build-linux64-gnu on buldserver. Build 55669 is pinned for sandbox.
+
+http://build.deltares.nl/viewLog.html?buildId=910175&tab=artifacts&buildTypeId=DFlowFlexibleMesh_DflowfmBuildLinux64gnu
+
+Following dll's are required:
+libdflowfm.so        libflow1d.so        libgfortran.so.3  libgridgeom.so.0.0.0  libmetis.so       libmpi.so.12     libpetsc.so       libsigwatch.so.0.0.0
+libdflowfm.so.0      libflow1d.so.0      libgridgeom.so    libhdf5_hl.so.9       libmpicxx.so.12   libnetcdff.so.6  libsigwatch.so
+libdflowfm.so.0.0.0  libflow1d.so.0.0.0  libgridgeom.so.0  libhdf5.so.9          libmpifort.so.12  libnetcdf.so.7   libsigwatch.so.0
+
