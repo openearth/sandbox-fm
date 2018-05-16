@@ -70,7 +70,7 @@ If you are using a virtual enviroment, make sure it is loaded. You can load your
 
 - ``sandbox-fm --help``
 - ``sandbox-fm calibrate``  calibrate the sandbox by selecting a quad in the box, a quad in the model and a high and low point.
-- ``sandbox-fm record``     record 10 frames, for testing
+- ``sandbox-fm record``     record 10 frames, for testing. You can use a directory with recorded images using by setting the `FREENECT_RECORD_DIR` directory.
 - ``sandbox-fm run``        run the sandbox program.
 - ``sandbox-fm anomaly``    store the vertical anomaly for a plane in anomaly.npy
 - ``sandbox-fm view``       view raw kinect images
