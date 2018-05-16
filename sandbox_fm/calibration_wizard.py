@@ -80,9 +80,26 @@ class Calibration(object):
         update_initial_vars(self.data, self.model)
         if self.path.exists():
             with open(str(self.path)) as f:
-                self.old_calibration = json.load(f)
+                try:
+                    self.old_calibration = json.load(f)
+                except json.decoder.JSONDecodeError:
+                    logger.exception("could not load old configuration, resetting")
+                    self.old_calibration = {}
         else:
             self.old_calibration = {}
+
+        if not self.old_calibration:
+            # try and get date from config
+            config_path = self.path.with_name('config.json')
+            if config_path.exists():
+                # allow to set model_points and z in config
+                # TODO: always use these?
+                with open(str(config_path)) as f:
+                    config = json.load(f)
+                    if 'model_ponts' in config:
+                        self.old_calibration['model_points'] = config['model_points']
+                    if 'z' in config:
+                        self.old_calibration['z'] = config['z']
         self.make_window()
 
     def save(self):
@@ -91,8 +108,30 @@ class Calibration(object):
 
     @property
     def z(self):
-        z = self.data['HEIGHT_NODES']
-        return z.min(), z.max()
+        data = self.data
+
+        # model box
+        model_bbox = matplotlib.path.Path(self.model_points)
+        # img box
+        img_bbox = matplotlib.path.Path([
+            (40, 40),
+            (40, 440),
+            (600, 440),
+            (600, 40)
+        ])
+        node_in_box =  model_bbox.contains_points(
+            np.c_[
+                data['X_NODES'].ravel(),
+                data['Y_NODES'].ravel()
+            ]
+        )
+
+        idx = node_in_box
+        # reshape to original shape
+        idx = idx.reshape(data['X_NODES'].shape)
+
+        z = self.data['HEIGHT_NODES'][idx]
+        return [np.percentile(z, 5), np.percentile(z, 95)]
 
     @property
     def result(self):
@@ -154,8 +193,10 @@ class Calibration(object):
             vmax=self.z[-1]
         )
 
-        self.kinect_max = warped_height.max()
-        self.kinect_min = warped_height.min()
+        assert not hasattr(warped_height, 'mask'), 'warped_height should not be masked.'
+
+        self.kinect_max = np.percentile(warped_height.ravel(), 95)
+        self.kinect_min = np.percentile(warped_height.ravel(), 5)
 
         if cbar:
             self.cb1 = plt.colorbar(plot, ax=ax)
@@ -229,6 +270,7 @@ class Calibration(object):
         plt.show(block=True)
 
     def make_window(self):
+        # TODO: why 4?
         self.model_points = self.old_calibration.get("model_points", 4)
         # if not hasattr(self, 'fig'):
         self.fig = plt.figure('Step: ' + str(self.count), figsize=(16, 9))
@@ -358,7 +400,6 @@ class Calibration(object):
         )
         self.plot_ax_right.set_title('Bathymetry of the model. Use red dots to select polygon of bathymetry to use')
         self.cbRight = plt.colorbar(self.plotRight, cax=self.fig.add_axes([0.55, 0.15, 0.3, 0.03]), orientation="horizontal")
-
 
         self.model_poly = self.add_edit_polygon(self.plot_ax_right, points=self.model_points)
         plt.draw()
