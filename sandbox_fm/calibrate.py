@@ -42,7 +42,7 @@ logger.setLevel(logging.INFO)
 
 
 # Width and height
-WIDTH, HEIGHT = 720, 400
+WIDTH, HEIGHT = 640, 480
 
 DEFAULT_BOX = np.array([
     [0, 0],
