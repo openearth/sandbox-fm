@@ -22,7 +22,9 @@ from .depth import (
 )
 from .calibrate import (
     transform,
-    compute_transforms
+    compute_transforms,
+    WIDTH,
+    HEIGHT,
 )
 
 logger = logging.getLogger(__name__)
@@ -66,9 +68,9 @@ class Calibration(object):
         # 0 at bottom
         self.box = np.array([
             [0, 0],
-            [640, 0],
-            [640, 480],
-            [0, 480]
+            [WIDTH, 0],
+            [WIDTH, HEIGHT],
+            [0, HEIGHT]
         ], dtype='float32')
 
         # save the current working directory

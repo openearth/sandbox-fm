@@ -36,8 +36,8 @@ def dflowfm_compute(data):
 
 def update_height_dflowfm(idx, height_nodes_copy, data, model):
     for i in np.where(idx)[0]:
+        # Only update model where the bed level changed (by compute_delta_height)
         if data['HEIGHT_NODES'][i] != height_nodes_copy[i]:
-            # TODO: bug in zk
             model.set_var_slice('zk', [i + 1], [1], height_nodes_copy[i:i + 1])
 
 dflowfm = {
