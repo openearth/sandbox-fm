@@ -53,7 +53,8 @@ from sandbox_fm.plots import (
 from sandbox_fm.variables import (
     update_initial_vars,
     update_vars,
-    update_with_message
+    update_with_message,
+    run_update_bedlevel
 )
 from sandbox_fm.gestures import (
     recognize_gestures
@@ -324,6 +325,7 @@ def run(schematization, engine, max_iterations, mmi):
     )
     iterator = enumerate(tqdm.tqdm(zip(kinect_images, kinect_heights)))
     tics = {}
+    last_bed_update = 0  # Time since last automatic bed level update
     if mmi:
         sub_poller = model.subscribe()
         # synchronize data when received
@@ -357,6 +359,7 @@ def run(schematization, engine, max_iterations, mmi):
             break
         tics['vis'] = time.time()
 
+        
         if not mmi:
             dt = model.get_time_step()
             # HACK: fix unstable timestep in xbeach
@@ -365,8 +368,14 @@ def run(schematization, engine, max_iterations, mmi):
 
             model.update(dt)
         tics['model'] = time.time()
-        logger.info("tics: %s", tic_report(tics))
 
+        if data['auto_bedlevel_update_interval']:
+            time_since_bed_update = (time.time() - last_bed_update)
+            if time_since_bed_update >  data['auto_bedlevel_update_interval']:
+                run_update_bedlevel(data, model)
+                last_bed_update = time.time()                
+
+        logger.info("tics: %s", tic_report(tics))
 
         if max_iterations and i > max_iterations:
             break

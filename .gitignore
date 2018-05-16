@@ -3,6 +3,8 @@ tests/*
 # models are stored in svn
 # https://svn.oss.deltares.nl/repos/openearthmodels/trunk/deltares/sandbox/
 models/*
+playground/
+notebooks/
 !tests/*.py
 # anomaly correction
 anomaly.npy
