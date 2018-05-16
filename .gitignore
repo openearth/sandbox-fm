@@ -72,6 +72,9 @@ coverage.xml
 *.mo
 *.pot
 
+# Profiling
+*.lprof
+
 # Django stuff:
 *.log
 
