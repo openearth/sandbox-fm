@@ -380,7 +380,14 @@ class Calibration(object):
             *self.model_poly.line.get_data()
         ))
 
-        self.z_values = [self.raws.max(), self.raws.min()]
+        # take the middle 90% percentile of the measured data
+        z_values_robust = [
+            # deepest point
+            np.percentile(self.raws[~self.raws.mask], 95),
+            # highest point
+            np.percentile(self.raws[~self.raws.mask], 5)
+        ]
+        self.z_values = z_values_robust
         self.rangeminz = self.z_values[0]
         self.rangemaxz = self.z_values[1]
 
