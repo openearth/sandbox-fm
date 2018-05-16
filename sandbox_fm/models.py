@@ -1,11 +1,9 @@
 import numpy as np
-
 import logging
 
 logger = logging.getLogger(__name__)
 
 dflowfm_vars = ['bl', 'ucx', 'ucy', 's1', 'zk']
-
 
 def dflowfm_compute(data):
     """compute variables that are missing/buggy/not available"""
@@ -34,6 +32,7 @@ def dflowfm_compute(data):
         # compute derivitave variables, should be consistent shape now.
     data['is_wet'] = data['s1'] > data['bl']
 
+    
 
 def update_height_dflowfm(idx, height_nodes_copy, data, model):
     for i in np.where(idx)[0]:
@@ -96,6 +95,7 @@ def update_structure_height_xbeach(idx, height_nodes_copy, data, model):
     delta_height = height_nodes_copy - data['HEIGHT_NODES']
     data['STRUCTURE_HEIGHT'].ravel()[idx] = delta_height.ravel()[idx]
 
+    
 xbeach = {
     "initial_vars": [
         'x',

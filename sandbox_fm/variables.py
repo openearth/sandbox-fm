@@ -71,3 +71,18 @@ def compute_delta_height(data, idx):
     new_node_height = kinect_height[u, v].ravel()
     delta_node_height = new_node_height - data['HEIGHT_NODES'].ravel()[idx.ravel()]
     return delta_node_height
+
+    
+def run_update_bedlevel(data, model):
+    ''' update the bed level in the model'''
+    logger.info('Updating bed level')
+    
+    meta = available[model.engine]
+
+    # data['bl'][idx] += compute_delta_bl(data, idx)
+    idx = np.logical_and(data['node_in_box'], data['node_in_img_bbox'])
+    height_nodes_copy = data['HEIGHT_NODES'].copy()
+    height_nodes_copy.ravel()[idx] += compute_delta_height(data, idx)
+    # replace the part that changed
+    logger.info("updating bathymetry in  %s nodes", np.sum(idx))
+    meta['update_nodes'](idx, height_nodes_copy, data, model)

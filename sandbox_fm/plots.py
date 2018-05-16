@@ -19,11 +19,13 @@ from .cm import (
     colombia,
     transparent_water
 )
-from .variables import compute_delta_height
 from .models import (
     available
 )
 
+from .variables import (
+    run_update_bedlevel
+)
 
 from .calibrate import (
     transform,
@@ -73,8 +75,7 @@ views = {
     },
     7: {
         "name": "Bastei",
-        "layers": ["height_cells", "waterdepth", "lic"]
-        # "layers": ["kinect_height", "waterdepth", "lic"]
+        "layers": ["kinect_height", "waterdepth", "lic"]
     },
     8: {
         "name": "Bastei2",
@@ -86,8 +87,6 @@ views = {
     }
 }
 
-# TODO: these defaults are not used yet, include the loading in the cli.py script
-
 default_config = {
     "debug": False,
     "scale": 5.0,
@@ -98,12 +97,12 @@ default_config = {
     "depth_vmin": 0,
     "depth_vmax": 3,
     'default_view': 1,
+    'auto_bedlevel_update_interval': 0
 }
-
+    
 
 def process_events(evt, data, model, vis):
     """handle keystrokes and other interactions"""
-    meta = available[model.engine]
 
     if not isinstance(evt, matplotlib.backend_bases.KeyEvent):
         return
@@ -155,13 +154,8 @@ def process_events(evt, data, model, vis):
 
 
     if evt.key == 'b':  # Set bed level to current camera bed level
-        # data['bl'][idx] += compute_delta_bl(data, idx)
-        idx = np.logical_and(data['node_in_box'], data['node_in_img_bbox'])
-        height_nodes_copy = data['HEIGHT_NODES'].copy()
-        height_nodes_copy.ravel()[idx] += compute_delta_height(data, idx)
-        # replace the part that changed
-        logger.info("updating bathymetry in  %s nodes", np.sum(idx))
-        meta['update_nodes'](idx, height_nodes_copy, data, model)
+        run_update_bedlevel(data, model)
+        
     if evt.key == 'h':  # mark high objects as non erodable ([H]ard structure)
         idx = np.logical_and(data['node_in_box'], data['node_in_img_bbox'])
         height_nodes_copy = data['HEIGHT_NODES'].copy()
