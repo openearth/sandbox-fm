@@ -359,7 +359,7 @@ def run(schematization, engine, max_iterations, mmi):
             break
         tics['vis'] = time.time()
 
-        
+
         if not mmi:
             dt = model.get_time_step()
             # HACK: fix unstable timestep in xbeach
@@ -373,7 +373,7 @@ def run(schematization, engine, max_iterations, mmi):
             time_since_bed_update = (time.time() - last_bed_update)
             if time_since_bed_update >  data['auto_bedlevel_update_interval']:
                 run_update_bedlevel(data, model)
-                last_bed_update = time.time()                
+                last_bed_update = time.time()
 
         logger.info("tics: %s", tic_report(tics))
 
