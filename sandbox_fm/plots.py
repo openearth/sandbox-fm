@@ -15,9 +15,10 @@ import numpy as np
 import skimage.draw
 
 from .cm import (
-    terrajet2,
+    bastei,
     colombia,
-    transparent_water
+    transparent_water,
+    bastei
 )
 from .models import (
     available
@@ -254,7 +255,7 @@ class Visualization():
         # Plot scanned height
         self.handles['kinect_height'] = self.ax.imshow(
             data['kinect_height_img'],
-            terrajet2,
+            bastei,
             vmin=data['height_vmin'],
             vmax=data['height_vmax']
         )
@@ -283,7 +284,7 @@ class Visualization():
 
         self.handles['height_cells'] = self.ax.imshow(
             data['height_cells_img'],
-            cmap=terrajet2,
+            cmap=bastei,
             alpha=1,
             vmin=data['height_vmin'],
             vmax=data['height_vmax']
@@ -355,7 +356,7 @@ class Visualization():
         N_water = matplotlib.colors.Normalize(data['depth_vmin'], data['depth_vmax'])
         color_water = transparent_water(N_water(data['waterdepth_img']))
         N_land = matplotlib.colors.Normalize(data['height_vmin'], data['height_vmax'])
-        color_land = terrajet2(N_land(data['kinect_height_img']))
+        color_land = bastei(N_land(data['kinect_height_img']))
         color_combined = color_water
 
         color_combined[data['watermask'], :] = color_land[data['watermask'], :]
