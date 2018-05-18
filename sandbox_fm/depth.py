@@ -74,6 +74,7 @@ def percentile_depth_images(buffer_size=25, q=25):
     for img in depth_images():
         buffer.append(img)
         perc = np.percentile(buffer, q=q, axis=0)
+        perc = np.ma.masked_equal(perc, (2 ** 11) - 1)
         yield perc
 
 
@@ -92,6 +93,18 @@ def depth_images():
         # return as double because we might compute something with it
         yield depth.astype('double')
 
+def depth_images_choice():
+    kinect_depth_mode = 1  # 1 = get percentile of measured depths
+                           # 0 = get measured depths
+    """generate a chosen depth image type"""
+    if kinect_depth_mode == 1:
+        logger.info("Using averaged kinect depth")
+        for raw in percentile_depth_images():
+            yield raw
+    else:
+        logger.info("Using unfiltered kinect depth")
+        for raw in depth_images():
+            yield raw
 
 def calibrated_height_images(depth_max_min, z_min_max, anomaly_name='anomaly.npy'):
     """convert depth values (from kinect 11 bit) to z values in m.
@@ -121,7 +134,7 @@ def calibrated_height_images(depth_max_min, z_min_max, anomaly_name='anomaly.npy
         return height
     f = functools.partial(values2height, z_min_max=z_min_max, depth_max_min=depth_max_min)
 
-    for raw in depth_images():
+    for raw in depth_images_choice():
         # correct for anomaly
         height = f(raw - anomaly)
         yield height
