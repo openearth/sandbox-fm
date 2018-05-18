@@ -52,13 +52,13 @@ class Calibration(object):
 
     """
 
-    def __init__(self, path, videos, raws, model):
+    def __init__(self, path, videos, raws, model, default_config):
         # absolute path to calibration.json
         self.path = path.absolute()
         self.videos = videos
         self.raws = raws
         self.model = model
-        self.data = {}
+        self.data = default_config
         self.height_points = []
         self.model_points = []
         self.img_points = []

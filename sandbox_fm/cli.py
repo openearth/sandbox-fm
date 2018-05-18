@@ -151,7 +151,7 @@ def calibrate(schematization, engine):
     # this changes directory
     model.initialize(str(schematization_path.absolute()))
 
-    calibration = Calibration(path, videos, raws, model)
+    calibration = Calibration(path, videos, raws, model, default_config)
     calibration.run()
 
 
