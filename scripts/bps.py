@@ -101,20 +101,26 @@ if __name__ == '__main__':
         'counter': 0,
         's1': 0
     }
-    # connect to model
-    model, poller = connect_model()
 
-    # Find find index for HIS Data
-    data['id'] = XY_to_array(model, HIS_XY)
+    use_mmi = False
 
-    # start the data update in the background
-    threading.Thread(
-        target=functools.partial(
-            update_data,
-            data=data,
-            poller=poller
-        )
-    ).start()
+    if use_mmi:
+        # connect to model
+        model, poller = connect_model()
+
+        # Find find index for HIS Data
+        data['id'] = XY_to_array(model, HIS_XY)
+
+        # start the data update in the background
+        threading.Thread(
+            target=functools.partial(
+                update_data,
+                data=data,
+                poller=poller
+            )
+        ).start()
+    else:
+        data['s1'] = 8.0
     fig, ax = create_fig()
 
     # we need this part global
