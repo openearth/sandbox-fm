@@ -68,7 +68,7 @@ def uint11_to_uint8(arr):
     return arr
 
 
-def percentile_depth_images(buffer_size=25, q=25):
+def percentile_depth_images(buffer_size=50, q=25):
     """"compute running percentile images"""
     buffer = collections.deque(maxlen=buffer_size)
     for img in depth_images():
@@ -77,7 +77,7 @@ def percentile_depth_images(buffer_size=25, q=25):
         perc = np.ma.masked_equal(perc, (2 ** 11) - 1)
         yield perc
 
-def exponential_average_depth_images(xi = 0.01):
+def exponential_average_depth_images(xi = 0.99):
     """"compute exponential average images"""
     for k, img in enumerate(depth_images()):
         if k == 0:
@@ -102,7 +102,7 @@ def depth_images():
         yield depth.astype('double')
 
 def depth_images_choice():
-    kinect_depth_mode = 2  # 0 = get measured depths
+    kinect_depth_mode = 1  # 0 = get measured depths
                            # 1 = get percentile of measured depths
                            # 2 = use exponential averaged measured depth
     """generate a chosen depth image type"""

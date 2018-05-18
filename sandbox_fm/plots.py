@@ -222,10 +222,10 @@ class Visualization():
         # force low dpi
         self.quitting = False
         self.fig.subplots_adjust(
-            left=0.01,
-            right=0.85,
-            bottom=0.03,
-            top=1
+            left=0.03,
+            right=0.92,
+            bottom=0.15,
+            top=0.95
         )
         self.ax.axis('off')
         plt.ion()

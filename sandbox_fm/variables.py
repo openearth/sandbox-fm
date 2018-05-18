@@ -101,7 +101,6 @@ def run_update_bedlevel(data, model):
     # replace the part that changed
     logger.info("updating bathymetry in  %s nodes", np.sum(idx))
 
-    return # Temp, because FM is bugged localy
     meta['update_nodes'](idx, height_nodes_copy, data, model)
 
     # Save the kinect height of the last bed level update
