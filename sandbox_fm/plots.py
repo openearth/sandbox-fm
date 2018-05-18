@@ -628,7 +628,7 @@ class Visualization():
             flow.astype('float32')
         )
         # fade out
-        # self.lic[..., 3] -= 0.01
+        self.lic[..., 3] -= 0.01
         # but not < 0
         data['lic'][..., 3][data['lic'][..., 3] < 0] = 0
         data['lic'][..., 3][data['cell_mask']] = 0
