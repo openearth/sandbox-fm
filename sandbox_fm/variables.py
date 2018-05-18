@@ -63,7 +63,7 @@ def compute_delta_height(data, idx):
     kinect_height = data['kinect_height']
 
     # Only use the part of the kinect images where the changes are larger than threshold
-    kinect_threshold = 0.01  # m
+    kinect_threshold = data['bedlevel_update_threshold'] # m
     if 'kinect_height_last_update' in data.keys():
         kinect_changes = np.abs(kinect_height - data['kinect_height_last_update']) > kinect_threshold
     else:

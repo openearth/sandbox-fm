@@ -97,9 +97,10 @@ default_config = {
     "depth_vmin": 0,
     "depth_vmax": 3,
     'default_view': 1,
+    'bedlevel_update_threshold': 0.5,
     'auto_bedlevel_update_interval': 0
 }
-    
+
 
 def process_events(evt, data, model, vis):
     """handle keystrokes and other interactions"""
@@ -155,7 +156,7 @@ def process_events(evt, data, model, vis):
 
     if evt.key == 'b':  # Set bed level to current camera bed level
         run_update_bedlevel(data, model)
-        
+
     if evt.key == 'h':  # mark high objects as non erodable ([H]ard structure)
         idx = np.logical_and(data['node_in_box'], data['node_in_img_bbox'])
         height_nodes_copy = data['HEIGHT_NODES'].copy()
@@ -819,7 +820,7 @@ class Visualization():
         for layer in self.current_view['layers']:
             if hasattr(self, 'seed_' + layer):
                 seed = getattr(self, 'seed_' + layer)
-                logger.info("seeding layer %s", layer)
+                #logger.info("seeding layer %s", layer)
                 seed(data)
 
 
