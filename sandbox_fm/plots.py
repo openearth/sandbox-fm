@@ -98,7 +98,7 @@ default_config = {
     "depth_vmax": 3,
     'default_view': 1,
     'bedlevel_update_threshold': 0.5,
-    'auto_bedlevel_update_interval': 0
+    'auto_bedlevel_update_interval': 0,
 }
 
 
@@ -214,6 +214,7 @@ class Visualization():
         # This should just work....
         self.fig.set_size_inches((3, 2.4))
         self.fig.set_dpi(100)
+        self.fig.patch.set_facecolor('black')
         logger.info('dpi: %s', self.fig.get_dpi())
         logger.info('size in px %s x %s', self.fig.get_figwidth(), self.fig.get_figheight())
         logger.info('size in inches: %s', self.fig.get_size_inches())
