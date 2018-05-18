@@ -308,6 +308,7 @@ def run(schematization, engine, max_iterations, mmi):
     )
     kinect_images = video_images()
     # load model library
+
     kinect_height = next(kinect_heights)
     kinect_image = next(kinect_images)
 
@@ -323,7 +324,7 @@ def run(schematization, engine, max_iterations, mmi):
         # fill in the data parameter and subscribe to events
         functools.partial(process_events, data=data, model=model, vis=vis)
     )
-    iterator = enumerate(tqdm.tqdm(zip(kinect_images, kinect_heights)))
+    iterator = enumerate((zip(kinect_images, kinect_heights)))
     tics = {}
     last_bed_update = 0  # Time since last automatic bed level update
     if mmi:
@@ -345,6 +346,11 @@ def run(schematization, engine, max_iterations, mmi):
 
         # update kinect
         data['kinect_height'] = kinect_height
+        if i == 0:
+            kinect_height_prev = kinect_height
+        data['kinect_height_averaged'] = 0.1*kinect_height + \
+                  0.9*kinect_height_prev
+
         data['kinect_image'] = kinect_image
         tics['update_vars'] = time.time()
 
@@ -359,7 +365,7 @@ def run(schematization, engine, max_iterations, mmi):
             break
         tics['vis'] = time.time()
 
-        
+
         if not mmi:
             dt = model.get_time_step()
             # HACK: fix unstable timestep in xbeach
@@ -373,7 +379,7 @@ def run(schematization, engine, max_iterations, mmi):
             time_since_bed_update = (time.time() - last_bed_update)
             if time_since_bed_update >  data['auto_bedlevel_update_interval']:
                 run_update_bedlevel(data, model)
-                last_bed_update = time.time()                
+                last_bed_update = time.time()
 
         logger.info("tics: %s", tic_report(tics))
 
