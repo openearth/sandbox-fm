@@ -77,6 +77,14 @@ def percentile_depth_images(buffer_size=25, q=25):
         perc = np.ma.masked_equal(perc, (2 ** 11) - 1)
         yield perc
 
+def exponential_average_depth_images(xi = 0.01):
+    """"compute exponential average images"""
+    for k, img in enumerate(depth_images()):
+        if k == 0:
+            prev_img = img
+        img_exp_ave = prev_img*xi + (1-xi)*img
+        img_exp_ave = np.ma.masked_equal(img_exp_ave, (2 ** 11) - 1)
+        yield img_exp_ave
 
 def video_images():
     while True:
@@ -94,12 +102,17 @@ def depth_images():
         yield depth.astype('double')
 
 def depth_images_choice():
-    kinect_depth_mode = 1  # 1 = get percentile of measured depths
-                           # 0 = get measured depths
+    kinect_depth_mode = 2  # 0 = get measured depths
+                           # 1 = get percentile of measured depths
+                           # 2 = use exponential averaged measured depth
     """generate a chosen depth image type"""
     if kinect_depth_mode == 1:
         logger.info("Using averaged kinect depth")
         for raw in percentile_depth_images():
+            yield raw
+    elif kinect_depth_mode == 2:
+        logger.info("Using exponential averaged kinect depth")
+        for raw in exponential_average_depth_images():
             yield raw
     else:
         logger.info("Using unfiltered kinect depth")
