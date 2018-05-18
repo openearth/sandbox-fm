@@ -346,11 +346,6 @@ def run(schematization, engine, max_iterations, mmi):
 
         # update kinect
         data['kinect_height'] = kinect_height
-        if i == 0:
-            kinect_height_prev = kinect_height
-        data['kinect_height_averaged'] = 0.1*kinect_height + \
-                  0.9*kinect_height_prev
-
         data['kinect_image'] = kinect_image
         tics['update_vars'] = time.time()
 
@@ -380,6 +375,7 @@ def run(schematization, engine, max_iterations, mmi):
             if time_since_bed_update >  data['auto_bedlevel_update_interval']:
                 run_update_bedlevel(data, model)
                 last_bed_update = time.time()
+            tics['automate_bed_update'] = time.time()
 
         logger.info("tics: %s", tic_report(tics))
 
