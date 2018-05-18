@@ -220,9 +220,9 @@ class Visualization():
         # force low dpi
         self.quitting = False
         self.fig.subplots_adjust(
-            left=0,
-            right=1,
-            bottom=0,
+            left=0.01,
+            right=0.85,
+            bottom=0.03,
             top=1
         )
         self.ax.axis('off')

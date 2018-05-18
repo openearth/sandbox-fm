@@ -171,10 +171,10 @@ class Calibration(object):
 
         ax.clear()
         img_bbox = matplotlib.path.Path([
-            (40, 40),
-            (40, 440),
-            (600, 440),
-            (600, 40)
+            (00, 00),
+            (00, 480),
+            (640, 480),
+            (640, 00)
         ])
         data = self.data
         data.update(compute_transforms(self.result))
