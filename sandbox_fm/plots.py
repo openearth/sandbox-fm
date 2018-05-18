@@ -98,7 +98,7 @@ default_config = {
     "depth_vmax": 3,
     'default_view': 1,
     'bedlevel_update_threshold': 0.5,
-    'auto_bedlevel_update_interval': 0
+    'auto_bedlevel_update_interval': 0,
 }
 
 
@@ -214,15 +214,16 @@ class Visualization():
         # This should just work....
         self.fig.set_size_inches((3, 2.4))
         self.fig.set_dpi(100)
+        self.fig.patch.set_facecolor('black')
         logger.info('dpi: %s', self.fig.get_dpi())
         logger.info('size in px %s x %s', self.fig.get_figwidth(), self.fig.get_figheight())
         logger.info('size in inches: %s', self.fig.get_size_inches())
         # force low dpi
         self.quitting = False
         self.fig.subplots_adjust(
-            left=0,
-            right=1,
-            bottom=0,
+            left=0.01,
+            right=0.85,
+            bottom=0.03,
             top=1
         )
         self.ax.axis('off')
