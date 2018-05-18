@@ -99,6 +99,7 @@ default_config = {
     "depth_vmax": 3,
     'default_view': 1,
     'bedlevel_update_threshold': 0.5,
+    'bedlevel_update_maximum': 20,
     'auto_bedlevel_update_interval': 0,
 }
 

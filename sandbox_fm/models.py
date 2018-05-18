@@ -34,11 +34,16 @@ def dflowfm_compute(data):
 
     
 
-def update_height_dflowfm(idx, height_nodes_copy, data, model):
+def update_height_dflowfm(idx, height_nodes_new, data, model):
+    nn = 0
     for i in np.where(idx)[0]:
         # Only update model where the bed level changed (by compute_delta_height)
-        if data['HEIGHT_NODES'][i] != height_nodes_copy[i]:
-            model.set_var_slice('zk', [i + 1], [1], height_nodes_copy[i:i + 1])
+        if height_nodes_new[i] < data['bedlevel_update_maximum'] and np.abs(height_nodes_new[i] - data['HEIGHT_NODES'][i]) > data['bedlevel_update_threshold']:
+            nn += 1
+            print(np.abs(height_nodes_new[i] - data['HEIGHT_NODES'][i]))
+            continue
+            model.set_var_slice('zk', [i + 1], [1], height_nodes_new[i:i + 1])
+    print('Total bed level updates', nn)
 
 dflowfm = {
     "initial_vars": [
