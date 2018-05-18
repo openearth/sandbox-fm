@@ -213,6 +213,8 @@ class Visualization():
     def __init__(self):
         # create figure and axes
         self.fig, self.ax = plt.subplots()
+        self.fig.canvas.set_window_title('Sandbox_figure')
+
         # This should just work....
         self.fig.set_size_inches((3, 2.4))
         self.fig.set_dpi(100)
@@ -225,8 +227,8 @@ class Visualization():
         self.fig.subplots_adjust(
             left=0.03,
             right=0.92,
-            bottom=0.15,
-            top=0.95
+            bottom=0.25,
+            top=0.85
         )
         self.ax.axis('off')
         plt.ion()

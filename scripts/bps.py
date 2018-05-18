@@ -25,6 +25,7 @@ HIS_XY = (189020, 430051)  # Inflow Boundary
 def create_fig():
     """create a figure with axes"""
     fig, ax = plt.subplots()
+    fig.canvas.set_window_title('BPS')
 
     # Background figure
     fig.subplots_adjust(
