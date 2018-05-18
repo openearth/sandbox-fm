@@ -15,6 +15,8 @@ import matplotlib.colors
 import matplotlib.animation
 from matplotlib.patches import Rectangle
 import threading
+import matplotlib as mpl
+mpl.rcParams['toolbar'] = 'None'
 
 HIS_XY = (189020, 430051)  # Inflow Boundary
 # HIS_XY = (188252, 429208) # Bastei_1
