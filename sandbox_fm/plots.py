@@ -90,17 +90,18 @@ views = {
 
 default_config = {
     "debug": False,
-    "scale": 5.0,
-    "height_vmin": 0,
-    "height_vmax": 9,
-    "velocities_vmin": 0,
-    "velocities_vmax": 2,
-    "depth_vmin": 0,
-    "depth_vmax": 3,
-    'default_view': 1,
-    'bedlevel_update_threshold': 0.5,
-    'bedlevel_update_maximum': 20,
-    'auto_bedlevel_update_interval': 0,
+    "scale": 5.0,  # Multiplication on flow velocity for particle speed
+    "height_vmin": 0,  # Color scale bedlevel / kinect height
+    "height_vmax": 9,  # Color scale bedlevel / kinect height
+    "velocities_vmin": 0,  # Color scale velocity
+    "velocities_vmax": 2,  # Color scale velocity
+    "depth_vmin": 0,  # Color scale waterdepth
+    "depth_vmax": 3,  # Color scale waterdepth 
+    'default_view': 1,  # Default view to load
+    'bedlevel_update_threshold': 0.5,  # Threshold (model meters) at which bed level an update is being done
+    'bedlevel_update_maximum': 9999,  # Threshold (model meters) at which level the bed level is no longer updated (used for correcting for 'arms')
+    'auto_bedlevel_update_interval': 0,  # Interval (s) at which the bed level is automatically updated
+    'figure_axis': [0, 0, 1, 1],  # Left, Bottom, Right, Top. Can be used for (too large) beamer projections; to limit the part of the figure which is filled with axis. 
 }
 
 
@@ -224,11 +225,13 @@ class Visualization():
         logger.info('size in inches: %s', self.fig.get_size_inches())
         # force low dpi
         self.quitting = False
+        
+        # Adjusting the subplots 
         self.fig.subplots_adjust(
-            left=0.03,
-            right=0.94,
-            bottom=0.25,
-            top=0.85
+            left=data['figure_axis'][0],
+            bottom=data['figure_axis'][1],
+            right=data['figure_axis'][2],
+            top=data['figure_axis'][3]
         )
         self.ax.axis('off')
         plt.ion()
