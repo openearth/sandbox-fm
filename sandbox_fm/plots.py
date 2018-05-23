@@ -226,7 +226,7 @@ class Visualization():
         self.quitting = False
         self.fig.subplots_adjust(
             left=0.03,
-            right=0.92,
+            right=0.94,
             bottom=0.25,
             top=0.85
         )
@@ -628,7 +628,7 @@ class Visualization():
             flow.astype('float32')
         )
         # fade out
-        self.lic[..., 3] -= 0.01
+        data['lic'][..., 3] -= 0.01
         # but not < 0
         data['lic'][..., 3][data['lic'][..., 3] < 0] = 0
         data['lic'][..., 3][data['cell_mask']] = 0
