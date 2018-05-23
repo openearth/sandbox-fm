@@ -98,7 +98,7 @@ def run_update_bedlevel(data, model):
     idx = np.logical_and(data['node_in_box'], data['node_in_img_bbox'])
     height_nodes_new = data['HEIGHT_NODES'].copy()
     height_nodes_new.ravel()[idx] += compute_delta_height(data, idx)
-    # replace the part that changed
+    # replace the part within the screen
     logger.info("updating bathymetry in  %s nodes", np.sum(idx))
 
     meta['update_nodes'](idx, height_nodes_new, data, model)
