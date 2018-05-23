@@ -500,7 +500,7 @@ class Visualization():
     def add_background(self, data):
         self.handles['background'] = self.ax.imshow(
             data['background_img'],
-            extent=[0, 640, 480, 0]
+            extent=[0, WIDTH, HEIGHT, 0]
         )
 
     def update_background(self, data):
@@ -521,7 +521,7 @@ class Visualization():
     def add_overlay(self, data):
         self.handles['overlay'] = self.ax.imshow(
             data['overlay_img'],
-            extent=[0, 640, 480, 0]
+            extent=[0, WIDTH, HEIGHT, 0]
         )
 
     def update_overlay(self, data):

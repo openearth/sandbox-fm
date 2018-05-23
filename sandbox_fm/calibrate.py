@@ -44,11 +44,16 @@ logger.setLevel(logging.INFO)
 # Width and height
 WIDTH, HEIGHT = 640, 480
 
+# This buffer can be used to create a buffer inside of the kinect image which 
+# does is not included in the bed level update.
+# Default used to be 40 px; now 0 px.
+KINECTBUFFER = 0
+
 DEFAULT_BOX = np.array([
     [0, 0],
-    [640, 0],
-    [640, 480],
-    [0, 480]
+    [WIDTH, 0],
+    [WIDTH, HEIGHT],
+    [0, HEIGHT]
 ], dtype='float32')
 
 def depth2xyzuv(depth, u=None, v=None):

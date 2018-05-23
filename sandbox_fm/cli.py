@@ -40,7 +40,10 @@ from sandbox_fm.depth import (
 )
 from sandbox_fm.calibrate import (
     transform,
-    compute_transforms
+    compute_transforms,
+    WIDTH,
+    HEIGHT,
+    KINECTBUFFER
 )
 
 from sandbox_fm.calibration_wizard import Calibration
@@ -281,9 +284,9 @@ def run(schematization, engine, max_iterations, mmi):
 
     img_bbox = matplotlib.path.Path([
         (00, 00),
-        (00, 480),
-        (640, 480),
-        (640, 00)
+        (00, HEIGHT - KINECTBUFFER),
+        (WIDTH - KINECTBUFFER, HEIGHT - KINECTBUFFER),
+        (WIDTH - KINECTBUFFER, 00)
     ])
     x_nodes_box, y_nodes_box = transform(
         data['X_NODES'].ravel(),

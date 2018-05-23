@@ -25,6 +25,7 @@ from .calibrate import (
     compute_transforms,
     WIDTH,
     HEIGHT,
+    KINECTBUFFER
 )
 
 logger = logging.getLogger(__name__)
@@ -172,9 +173,9 @@ class Calibration(object):
         ax.clear()
         img_bbox = matplotlib.path.Path([
             (00, 00),
-            (00, 480),
-            (640, 480),
-            (640, 00)
+            (00, HEIGHT - KINECTBUFFER),
+            (WIDTH - KINECTBUFFER, HEIGHT - KINECTBUFFER),
+            (WIDTH - KINECTBUFFER, 00)
         ])
         data = self.data
         data.update(compute_transforms(self.result))
