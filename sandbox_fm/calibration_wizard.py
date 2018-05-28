@@ -12,7 +12,7 @@ from matplotlib.mlab import dist_point_to_segment
 from matplotlib.widgets import Slider, Button
 import matplotlib.pyplot as plt
 
-from .sandbox_fm import (
+from .variables import (
     update_initial_vars,
     compute_delta_height
 )
@@ -22,7 +22,10 @@ from .depth import (
 )
 from .calibrate import (
     transform,
-    compute_transforms
+    compute_transforms,
+    WIDTH,
+    HEIGHT,
+    KINECTBUFFER
 )
 
 logger = logging.getLogger(__name__)
@@ -50,13 +53,13 @@ class Calibration(object):
 
     """
 
-    def __init__(self, path, videos, raws, model):
+    def __init__(self, path, videos, raws, model, default_config):
         # absolute path to calibration.json
         self.path = path.absolute()
         self.videos = videos
         self.raws = raws
         self.model = model
-        self.data = {}
+        self.data = default_config
         self.height_points = []
         self.model_points = []
         self.img_points = []
@@ -66,9 +69,9 @@ class Calibration(object):
         # 0 at bottom
         self.box = np.array([
             [0, 0],
-            [640, 0],
-            [640, 480],
-            [0, 480]
+            [WIDTH, 0],
+            [WIDTH, HEIGHT],
+            [0, HEIGHT]
         ], dtype='float32')
 
         # save the current working directory
@@ -169,10 +172,10 @@ class Calibration(object):
 
         ax.clear()
         img_bbox = matplotlib.path.Path([
-            (40, 40),
-            (40, 440),
-            (600, 440),
-            (600, 40)
+            (00, 00),
+            (00, HEIGHT - KINECTBUFFER),
+            (WIDTH - KINECTBUFFER, HEIGHT - KINECTBUFFER),
+            (WIDTH - KINECTBUFFER, 00)
         ])
         data = self.data
         data.update(compute_transforms(self.result))
@@ -228,6 +231,7 @@ class Calibration(object):
 
     def make_window(self):
         self.model_points = self.old_calibration.get("model_points", 4)
+        # if not hasattr(self, 'fig'):
         self.fig = plt.figure('Step: ' + str(self.count), figsize=(16, 9))
         self.title_ax = self.fig.add_axes([0.1, 0.8, 0.8, 0.15])
         self.plot_ax_left = self.fig.add_axes([0.1, 0.2, 0.4, 0.6])
@@ -235,22 +239,25 @@ class Calibration(object):
         # Functions for the callback of next button
         def callback_next(event):
             self.count += 1
-            plt.close('all')
+            prevwindow = self.fig
             self.make_window()
             self.update_window()
+            plt.close(prevwindow)
 
         # Functions for the callback of previous button
         def callback_previous(event):
             self.count -= 1
-            plt.close('all')
+            prevwindow = self.fig
             self.make_window()
             self.update_window()
+            plt.close(prevwindow)
 
         # Functions for the callback of save button
         def callback_save(event):
             self.save()
             plt.close(self.fig)
             plt.close(self.secondfig)
+            plt.pause(0.5)
 
         # Set axis for when the figure of step 1 is displayed
         if self.count == 1:
@@ -401,8 +408,8 @@ class Calibration(object):
         self.show_result(self.fig2ax, cbar=False)
         self.show_data(self.plot_ax_left)
 
-        self.min_slider_text_ax.text(0, 0, "min of selecteed bathymetry [m]: " + str(self.kinect_min))
-        self.max_slider_text_ax.text(0, 0, "max of selecteed bathymetry [m]: " + str(self.kinect_max))
+        self.min_slider_text_ax.text(0, 0, "Deepest point now gets bathymetry of [m]: " + str(self.kinect_min))
+        self.max_slider_text_ax.text(0, 0, "Highest point now gets bathymetry of [m]: " + str(self.kinect_max))
 
         self.plot_ax_left.set_title('Bathymetry of the model and the integration of the selected polygon from the raw kinect image.')
         self.plot_ax_left.axis('off')

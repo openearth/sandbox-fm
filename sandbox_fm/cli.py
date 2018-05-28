@@ -21,6 +21,7 @@ import matplotlib.pyplot as plt
 
 import bmi.wrapper
 from mmi.mmi_client import MMIClient
+from mmi import recv_array
 
 HAVE_MPI = False
 try:
@@ -32,26 +33,33 @@ except ImportError:
 # don't import before MPI, otherwise segfault under OSX
 import skimage.io
 
-from .depth import (
+from sandbox_fm.depth import (
     depth_images,
     calibrated_height_images,
     video_images
 )
-from .calibrate import (
+from sandbox_fm.calibrate import (
     transform,
-    compute_transforms
+    compute_transforms,
+    WIDTH,
+    HEIGHT,
+    KINECTBUFFER
 )
-from .calibration_wizard import Calibration
-from .plots import (
+
+from sandbox_fm.calibration_wizard import Calibration
+from sandbox_fm.plots import (
+# from sandbox_fm.plots_cv2 import (
     Visualization,
-    process_events
+    process_events,
+    default_config
 )
-from .sandbox_fm import (
+from sandbox_fm.variables import (
     update_initial_vars,
     update_vars,
-    update_with_event
+    update_with_message,
+    run_update_bedlevel
 )
-from .gestures import (
+from sandbox_fm.gestures import (
     recognize_gestures
 )
 
@@ -97,9 +105,10 @@ def cli():
     logging.root.setLevel(logging.INFO)
     logger.info("Welcome to the sandbox software.")
 
+
 @cli.command()
 def record():
-    """record 10 frames, for testing"""
+    """record 5 frames, for testing"""
     videos = video_images()
     raws = depth_images()
     for i, (video, raw) in enumerate(zip(videos, raws)):
@@ -112,7 +121,6 @@ def record():
 @cli.command()
 def anomaly():
     """calibrate the kinect anomaly for a flat surface"""
-
     raws = depth_images()
     raw = next(raws)
     anomaly = raw - raw.mean()
@@ -120,8 +128,17 @@ def anomaly():
 
 
 @cli.command()
-@click.argument('schematization', type=click.File('rb'))
-@click.option('--engine', default='dflowfm', type=click.Choice(['dflowfm', 'xbeach']))
+@click.argument(
+    'schematization',
+    type=click.File('rb')
+)
+@click.option(
+    '--engine',
+    default='dflowfm',
+    type=click.Choice(['dflowfm', 'xbeach']),
+    help='BMI compatible model engine'
+
+)
 def calibrate(schematization, engine):
     """calibrate the sandbox by selecting both 4 points in box and in model"""
 
@@ -137,8 +154,9 @@ def calibrate(schematization, engine):
     # this changes directory
     model.initialize(str(schematization_path.absolute()))
 
-    calibration = Calibration(path, videos, raws, model)
+    calibration = Calibration(path, videos, raws, model, default_config)
     calibration.run()
+
 
 @cli.command()
 def view():
@@ -146,7 +164,7 @@ def view():
     with open("calibration.json") as f:
         calibration = json.load(f)
     images = calibrated_height_images(calibration["z_values"], calibration["z"])
-    origin = 'bottom'
+#    origin = 'bottom'
 
     fig, ax = plt.subplots(frameon=False)
     manager = plt.get_current_fig_manager()
@@ -167,13 +185,28 @@ def view():
         fig.canvas.draw()
 
 
-
-
 @cli.command()
-@click.argument('schematization', type=click.File('rb'))
-@click.option('--engine', default='dflowfm', type=click.Choice(['dflowfm', 'xbeach']))
-@click.option('--max-iterations', default=0, type=int)
-@click.option('--mmi', type=str)
+@click.argument(
+    'schematization',
+    type=click.File('rb')
+)
+@click.option(
+    '--engine',
+    default='dflowfm',
+    type=click.Choice(['dflowfm', 'xbeach']),
+    help='BMI comptabile model engine'
+)
+@click.option(
+    '--max-iterations',
+    default=0,
+    type=int,
+    help='maximum number of iterations'
+)
+@click.option(
+    '--mmi',
+    type=str,
+    help='mmi zmq address for example tcp://localhost:62000'
+)
 def run(schematization, engine, max_iterations, mmi):
     """Console script for sandbox_fm
 
@@ -198,14 +231,20 @@ def run(schematization, engine, max_iterations, mmi):
         calibration = json.load(f)
     data.update(calibration)
     data.update(compute_transforms(data))
+
     # if we have a configuration file
     if config_name.exists():
         # open it
         with open(str(config_name)) as f:
-            configuration = json.load(f)
+            configuration_read = json.load(f)
+        # combine with defaults
+        configuration = default_config.copy()
+        configuration.update(configuration_read)
     else:
         # default empty
-        configuration = {}
+        configuration = default_config
+    with open(str(config_name), 'w') as f:
+        json.dump(configuration, f, indent=2)
     data.update(configuration)
 
     # model
@@ -214,30 +253,28 @@ def run(schematization, engine, max_iterations, mmi):
     else:
         model = MMIClient(mmi)
         model.engine = engine
+        logger.info('Connected to MMI: {}'.format(mmi))
+
+
     # initialize model schematization, changes directory
 
-    # search for a background image
-    known_background_paths = [
-        pathlib.Path(schematization.name).with_suffix('.jpg'),
-        pathlib.Path(schematization.name).with_suffix('.png'),
-        pathlib.Path(schematization.name).with_name('background.jpg'),
-        pathlib.Path(schematization.name).with_name('background.png')
-    ]
-    for path in known_background_paths:
-        if path.exists():
-            data['background_name'] = str(path.absolute())
-            break
-    else:
-        data['background_name'] = None
+    # search for a background or overlay image
+    for layerimage in ['background', 'overlay']:
+        known_background_paths = [
+            pathlib.Path(schematization.name).with_name(layerimage + '.jpg'),
+            pathlib.Path(schematization.name).with_name(layerimage + '.png')
+        ]
+        for path in known_background_paths:
+            if path.exists():
+                data[layerimage + '_name'] = str(path.absolute())
+                break
+        else:
+            data[layerimage + '_name'] = None
 
     # mmi model is already initialized
     if not mmi:
         model.initialize(str(schematization_name.absolute()))
-    else:
-        # listen for incomming messges
-        model.subscribe()
     update_initial_vars(data, model)
-
 
     # compute the model bounding box that is shown on the screen
     model_bbox = matplotlib.path.Path(data['model_points'])
@@ -246,10 +283,10 @@ def run(schematization, engine, max_iterations, mmi):
     data['cell_in_box'] = model_bbox.contains_points(np.c_[data['X_CELLS'].ravel(), data['Y_CELLS'].ravel()])
 
     img_bbox = matplotlib.path.Path([
-        (40, 40),
-        (40, 440),
-        (600, 440),
-        (600, 40)
+        (00, 00),
+        (00, HEIGHT - KINECTBUFFER),
+        (WIDTH - KINECTBUFFER, HEIGHT - KINECTBUFFER),
+        (WIDTH - KINECTBUFFER, 00)
     ])
     x_nodes_box, y_nodes_box = transform(
         data['X_NODES'].ravel(),
@@ -274,6 +311,7 @@ def run(schematization, engine, max_iterations, mmi):
     )
     kinect_images = video_images()
     # load model library
+
     kinect_height = next(kinect_heights)
     kinect_image = next(kinect_images)
 
@@ -289,14 +327,26 @@ def run(schematization, engine, max_iterations, mmi):
         # fill in the data parameter and subscribe to events
         functools.partial(process_events, data=data, model=model, vis=vis)
     )
-    iterator = enumerate(tqdm.tqdm(zip(kinect_images, kinect_heights)))
+    iterator = enumerate((zip(kinect_images, kinect_heights)))
     tics = {}
+    last_bed_update = 0  # Time since last automatic bed level update
+    if mmi:
+        sub_poller = model.subscribe()
+        # synchronize data when received
+        model.remote('play')
     for i, (kinect_image, kinect_height) in iterator:
         tics['t0'] = time.time()
 
         # Get data from model
-        # TODO: async data using mmi subscribe
-        update_vars(data, model)
+        if not mmi:
+            update_vars(data, model)
+        else:
+            # listen for at most 10 miliseconds for incomming data (flush the queue)
+            for sock, n in sub_poller.poll(10):
+                for i in range(n):
+                    message = recv_array(sock)
+                    update_with_message(data, model, message)
+
         # update kinect
         data['kinect_height'] = kinect_height
         data['kinect_image'] = kinect_image
@@ -313,17 +363,24 @@ def run(schematization, engine, max_iterations, mmi):
             break
         tics['vis'] = time.time()
 
-        dt = model.get_time_step()
-        # HACK: fix unstable timestep in xbeach
-        if model.engine == 'xbeach':
-            dt = 60
-        # update model
-        # for i in range(data.get('iterations.per.visualization', 1)):
-        model.update(dt)
+
+        if not mmi:
+            dt = model.get_time_step()
+            # HACK: fix unstable timestep in xbeach
+            if model.engine == 'xbeach':
+                dt = 60
+
+            model.update(dt)
         tics['model'] = time.time()
 
-        logger.info("tics: %s", tic_report(tics))
+        if data['auto_bedlevel_update_interval']:
+            time_since_bed_update = (time.time() - last_bed_update)
+            if time_since_bed_update >  data['auto_bedlevel_update_interval']:
+                run_update_bedlevel(data, model)
+                last_bed_update = time.time()
+            tics['automate_bed_update'] = time.time()
 
+        logger.info("tics: %s", tic_report(tics))
 
         if max_iterations and i > max_iterations:
             break

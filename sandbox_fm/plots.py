@@ -15,15 +15,18 @@ import numpy as np
 import skimage.draw
 
 from .cm import (
-    terrajet2,
+    bastei,
     colombia,
-    transparent_water
+    transparent_water,
+    bastei
 )
-from .sandbox_fm import compute_delta_height
 from .models import (
     available
 )
 
+from .variables import (
+    run_update_bedlevel
+)
 
 from .calibrate import (
     transform,
@@ -45,51 +48,72 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 
-
-views = [
-    {
+# TODO: the script is not using the key below, but the order of this array (=key -1)
+views = {
+    1: {
         "name": "Kinect",
-        "layers": ["kinect_height", "lic"],
-        "key": "1"
+        "layers": ["kinect_height", "lic"]
     },
-    {
-        "name": "Waterheight",
-        "layers": ["background", "waterheight", "lic"],
-        "key": "2"
+    2: {
+        "name": "Waterdepth",
+        "layers": ["background", "waterdepth", "lic"]
     },
-    {
+    3: {
         "name": "Bed level",
-        "layers": ["height_cells"],
-        "key": "3"
+        "layers": ["height_cells"]
     },
-    {
+    4: {
         "name": "Flow magnitude",
-        "layers": ["background", "mag"],
-        "key": "4"
+        "layers": ["background", "mag"]
     },
-    {
+    5: {
         "name": "Waves",
-        "layers": ["background", "wavesurface"],
-        "key": "5"
+        "layers": ["background", "wavesurface"]
     },
-    {
+    6: {
         "name": "Erosion",
-        "layers": ["erosion"],
-        "key": "6"
+        "layers": ["erosion"]
+    },
+    7: {
+        "name": "Bastei",
+        "layers": ["kinect_height", "waterdepth", "lic"]
+    },
+    8: {
+        "name": "Bastei2",
+        "layers": ["height_depth_combined"]
+    },
+    9: {
+        "name": "Bastei3",
+        "layers": ["height_depth_combined","overlay"]
     }
-]
+}
+
+default_config = {
+    "debug": False,
+    "scale": 5.0,  # Multiplication on flow velocity for particle speed
+    "height_vmin": 0,  # Color scale bedlevel / kinect height
+    "height_vmax": 9,  # Color scale bedlevel / kinect height
+    "velocities_vmin": 0,  # Color scale velocity
+    "velocities_vmax": 2,  # Color scale velocity
+    "depth_vmin": 0,  # Color scale waterdepth
+    "depth_vmax": 3,  # Color scale waterdepth 
+    'default_view': 1,  # Default view to load
+    'bedlevel_update_threshold': 0.5,  # Threshold (model meters) at which bed level an update is being done
+    'bedlevel_update_maximum': 9999,  # Threshold (model meters) at which level the bed level is no longer updated (used for correcting for 'arms')
+    'auto_bedlevel_update_interval': 0,  # Interval (s) at which the bed level is automatically updated
+    'figure_axis': [0, 0, 1, 1],  # Left, Bottom, Right, Top. Can be used for (too large) beamer projections; to limit the part of the figure which is filled with axis. 
+}
 
 
 def process_events(evt, data, model, vis):
     """handle keystrokes and other interactions"""
-    meta = available[model.engine]
 
     if not isinstance(evt, matplotlib.backend_bases.KeyEvent):
         return
 
     # we are switching views if evt.key is a number
     if evt.key in ['1', '2', '3', '4', '5', '6', '7', '8', '9']:
-        new_view_idx = int(evt.key) - 1
+        new_view_idx = int(evt.key)
         old_view = vis.current_view
         # remove handles
 
@@ -102,7 +126,7 @@ def process_events(evt, data, model, vis):
             elif isinstance(vis.handles[layer], matplotlib.streamplot.StreamplotSet):
                 streamplot = vis.handles[layer]
                 try:
-                    vis.handles[layer].lines.remove()
+                    vis.handles[layer].lines.rexmove()
                 except ValueError:
                     logging.exception('no worries')
                 for line in streamplot.lines:
@@ -134,13 +158,8 @@ def process_events(evt, data, model, vis):
 
 
     if evt.key == 'b':  # Set bed level to current camera bed level
-        # data['bl'][idx] += compute_delta_bl(data, idx)
-        idx = np.logical_and(data['node_in_box'], data['node_in_img_bbox'])
-        height_nodes_copy = data['HEIGHT_NODES'].copy()
-        height_nodes_copy.ravel()[idx] += compute_delta_height(data, idx)
-        # replace the part that changed
-        logger.info("updating bathymetry in  %s nodes", np.sum(idx))
-        meta['update_nodes'](idx, height_nodes_copy, data, model)
+        run_update_bedlevel(data, model)
+
     if evt.key == 'h':  # mark high objects as non erodable ([H]ard structure)
         idx = np.logical_and(data['node_in_box'], data['node_in_img_bbox'])
         height_nodes_copy = data['HEIGHT_NODES'].copy()
@@ -195,25 +214,30 @@ class Visualization():
     def __init__(self):
         # create figure and axes
         self.fig, self.ax = plt.subplots()
+        self.fig.canvas.set_window_title('Sandbox_figure')
+
         # This should just work....
         self.fig.set_size_inches((3, 2.4))
         self.fig.set_dpi(100)
+        self.fig.patch.set_facecolor('black')
         logger.info('dpi: %s', self.fig.get_dpi())
         logger.info('size in px %s x %s', self.fig.get_figwidth(), self.fig.get_figheight())
         logger.info('size in inches: %s', self.fig.get_size_inches())
         # force low dpi
         self.quitting = False
+        
+        # Adjusting the subplots 
         self.fig.subplots_adjust(
-            left=0,
-            right=1,
-            bottom=0,
-            top=1
+            left=data['figure_axis'][0],
+            bottom=data['figure_axis'][1],
+            right=data['figure_axis'][2],
+            top=data['figure_axis'][3]
         )
         self.ax.axis('off')
         plt.ion()
         plt.show(block=False)
         self.counter = itertools.count()
-        self.current_view = views[0]
+
         # handles per view name
         self.handles = {
         }
@@ -223,6 +247,7 @@ class Visualization():
         for subscriber in self.subscribers:
             subscriber(event)
 
+    # Plot scanned height from the Kinect
 
     def init_kinect_height(self, data):
         warped_height = cv2.warpPerspective(
@@ -236,11 +261,11 @@ class Visualization():
         # Plot scanned height
         self.handles['kinect_height'] = self.ax.imshow(
             data['kinect_height_img'],
-            colombia,
-            alpha=1,
-            vmin=-12,
-            vmax=12
+            bastei,
+            vmin=data['height_vmin'],
+            vmax=data['height_vmax']
         )
+
     def update_kinect_height(self, data):
         #############################################
         # Update camera visualisation
@@ -255,8 +280,7 @@ class Visualization():
         # Update scanned height
         self.handles['kinect_height'].set_data(data['kinect_height_img'])
 
-
-
+    # Plot bed level in model
 
     def init_height_cells(self, data):
         self.update_height_cells(data)
@@ -266,52 +290,97 @@ class Visualization():
 
         self.handles['height_cells'] = self.ax.imshow(
             data['height_cells_img'],
-            cmap=colombia,
+            cmap=bastei,
             alpha=1,
-            vmin=-12,
-            vmax=12
+            vmin=data['height_vmin'],
+            vmax=data['height_vmax']
         )
+
     def update_height_cells(self, data):
         height_cells_img = data['HEIGHT_CELLS'].ravel()[data['ravensburger_cells']]
         data['height_cells_img'] = height_cells_img
+
     def blit_height_cells(self, data):
         self.handles['height_cells'].set_data(data['height_cells_img'])
 
+    # Bed level at nodes (not plotted)
 
     def init_height_nodes(self, data):
         self.update_height_nodes()
+
     def update_height_nodes(self, data):
         # Convert to simple arrays
         height_nodes_img = data['HEIGHT_NODES'].ravel()[data['ravensburger_nodes']]
         data['height_nodes_img'] = height_nodes_img
 
+    # Plot waterdepth in model
 
+    def init_waterdepth(self, data):
+        self.update_waterdepth(data)
 
-    def init_waterheight(self, data):
-        self.update_waterheight(data)
-
-    def add_waterheight(self, data):
-        self.handles['waterheight'] = self.ax.imshow(
-            data['waterheight_img'],
+    def add_waterdepth(self, data):
+        self.handles['waterdepth'] = self.ax.imshow(
+            data['waterdepth_img'],
             cmap=transparent_water,
             alpha=1.0,
             vmin=0,
-            vmax=10
+            vmax=5
         )
-    def update_waterheight(self, data):
+
+    def update_waterdepth(self, data):
         self.update_height_cells(data)
         waterlevel_img = data['WATERLEVEL'].ravel()[data['ravensburger_cells']]
         height_cells_img = data['height_cells_img']
-        waterheight = waterlevel_img - height_cells_img
-        mask = waterheight < 0.1
+        waterdepth = waterlevel_img - height_cells_img
+        mask = waterdepth < 0.1
         data['watermask'] = mask
         data['waterlevel_img'] = waterlevel_img
-        data['waterheight_img'] = np.ma.masked_array(waterheight, mask=mask)
+        data['waterdepth_img'] = np.ma.masked_array(waterdepth, mask=mask)
 
-    def blit_waterheight(self, data):
-        self.handles['waterheight'].set_data(data['waterheight_img'])
+    def blit_waterdepth(self, data):
+        self.handles['waterdepth'].set_data(data['waterdepth_img'])
 
+    # Combine kinect height and waterdepth in one data plot
 
+    def init_height_depth_combined(self, data):
+        self.update_height_depth_combined(data)
+        self.init_lic(data)
+
+    def add_height_depth_combined(self, data):
+        self.handles['height_depth_combined'] = self.ax.imshow(
+            data['depth_height_rgb']
+        )
+
+    def seed_height_depth_combined(self, data):
+        self.seed_lic(data)
+
+    def update_height_depth_combined(self, data):
+        self.update_waterdepth(data)
+        self.update_kinect_height(data)
+
+        # Or as colors
+        N_water = matplotlib.colors.Normalize(data['depth_vmin'], data['depth_vmax'])
+        color_water = transparent_water(N_water(data['waterdepth_img']))
+        N_land = matplotlib.colors.Normalize(data['height_vmin'], data['height_vmax'])
+        color_land = bastei(N_land(data['kinect_height_img']))
+        color_combined = color_water
+
+        color_combined[data['watermask'], :] = color_land[data['watermask'], :]
+
+        self.update_lic(data)
+
+        for ii in range(3):
+            background = color_combined[..., ii] * (1 - data['lic'][..., 3])
+            foreground = data['lic'][..., ii] * data['lic'][..., 3]
+            color_combined[..., ii] = background + foreground
+
+        data['depth_height_rgb'] = color_combined
+
+    def blit_height_depth_combined(self, data):
+        # self.handles['height_depth_combined'].set_data(data['height_depth_img'])
+        self.handles['height_depth_combined'].set_data(data['depth_height_rgb'])
+
+    # Plot waves
 
     def init_wave_features(self, data):
         waves = []
@@ -339,6 +408,7 @@ class Visualization():
         wave_v_img = wave_v_in_img[data['ravensburger_cells']]
         data['wave_u_img'] = wave_u_img
         data['wave_v_img'] = wave_v_img
+
     def blit_wave_features(self, data):
         wave_u_img, wave_v_img = data['wave_u_img'], data['wave_v_img']
         waves_flow = np.dstack([wave_u_img, wave_v_img])
@@ -377,7 +447,6 @@ class Visualization():
     def blit_wave_height(self, data):
         self.handles['wave_height'].set_data(data['wave_height_img'])
 
-
     def init_wavesurface(self, data):
         self.update_wavesurface(data)
 
@@ -390,7 +459,7 @@ class Visualization():
         )
 
     def update_wavesurface(self, data):
-        self.update_waterheight(data)
+        self.update_waterdepth(data)
         waterlevel_gradient = np.gradient(data['WATERLEVEL'], axis=1)
         waterlevel_gradient_img = waterlevel_gradient.ravel()[
             data['ravensburger_cells']
@@ -400,6 +469,7 @@ class Visualization():
     def blit_wavesurface(self, data):
         self.handles['wavesurface'].set_data(data['waterlevel_gradient_img'])
 
+    # Plot erosion
 
     def init_erosion(self, data):
         erosion_img = data['EROSION'].ravel()[data['ravensburger_cells']]
@@ -421,6 +491,7 @@ class Visualization():
     def blit_erosion(self, data):
         self.handles['erosion'].set_data(data['erosion_img'])
 
+    # Plot background map
     def init_background(self, data):
         if data['background_name']:
             data['background_img'] = plt.imread(data['background_name'])
@@ -432,7 +503,7 @@ class Visualization():
     def add_background(self, data):
         self.handles['background'] = self.ax.imshow(
             data['background_img'],
-            extent=[0, 640, 480, 0]
+            extent=[0, WIDTH, HEIGHT, 0]
         )
 
     def update_background(self, data):
@@ -441,7 +512,29 @@ class Visualization():
     def blit_background(self, data):
         pass
 
+    # Plot overlay map
+    def init_overlay(self, data):
+        if data['overlay_name']:
+            data['overlay_img'] = plt.imread(data['overlay_name'])
+        else:
+            # 10x10 see through pixels
+            data['overlay_img'] = np.zeros((10, 10, 4))
+            logger.warn('could not find overlay image: %s', data['overlay_name'])
 
+    def add_overlay(self, data):
+        self.handles['overlay'] = self.ax.imshow(
+            data['overlay_img'],
+            extent=[0, WIDTH, HEIGHT, 0]
+        )
+
+    def update_overlay(self, data):
+        pass
+
+    def blit_overlay(self, data):
+        pass
+
+
+    # Plot flow velocities
 
     def init_uv(self, data):
         # xy of model in image coordinates
@@ -488,7 +581,7 @@ class Visualization():
             animated=True
         )
     def update_mag(self, data):
-        self.update_waterheight(data)
+        self.update_waterdepth(data)
         self.update_uv(data)
         u_img = data['u_img']
         v_img = data['v_img']
@@ -499,6 +592,7 @@ class Visualization():
     def blit_mag(self, data):
         self.handles['mag'].set_data(data['mag_img'])
 
+    # Plot liquid (photo or particles)
 
     def init_lic(self, data):
         lic = cv2.warpPerspective(
@@ -521,7 +615,7 @@ class Visualization():
         )
 
     def update_lic(self, data):
-        self.update_waterheight(data)
+        self.update_waterdepth(data)
         self.update_uv(data)
         #################################################
         # Compute liquid added to the model
@@ -537,7 +631,7 @@ class Visualization():
             flow.astype('float32')
         )
         # fade out
-        # self.lic[..., 3] -= 0.01
+        data['lic'][..., 3] -= 0.01
         # but not < 0
         data['lic'][..., 3][data['lic'][..., 3] < 0] = 0
         data['lic'][..., 3][data['cell_mask']] = 0
@@ -546,7 +640,7 @@ class Visualization():
 
     def seed_lic(self, data):
         # we need waterheights
-        self.update_waterheight(data)
+        self.update_waterdepth(data)
         self.update_height_nodes(data)
 
         # Put in new white dots (to be plotted next time step)
@@ -560,7 +654,7 @@ class Visualization():
                                        shape=(HEIGHT, WIDTH))
             # Don't plot on (nearly) dry cells
             if (
-                    data['waterheight_img'][int(v * HEIGHT), int(u * WIDTH)]
+                    data['waterdepth_img'][int(v * HEIGHT), int(u * WIDTH)]
             ) < 0.5:
                 continue
             # if zk_img[int(v * HEIGHT), int(u * WIDTH)] > 0:
@@ -571,8 +665,11 @@ class Visualization():
         # data['lic'][data['height_cells_img'] >= data['waterlevel_img'], 3] = 0.0
         # data['lic'][data['height_nodes_img'] >= data['waterlevel_img'], 3] = 0.0
         data['lic'][data['watermask'], 3] = 0
+
     def blit_lic(self, data):
         self.handles['lic'].set_data(data['lic'])
+
+    # Plot streamplot
 
     def init_streamplot(self, data):
         self.update_uv(data)
@@ -590,7 +687,7 @@ class Visualization():
         self.handles['streamplot'] = self.ax.streamplot(x, y, u, v) # , start_points=start_points)
 
     def update_streamplot(self, data):
-        self.update_waterheight(data)
+        self.update_waterdepth(data)
         self.update_uv(data)
 
 
@@ -668,6 +765,7 @@ class Visualization():
         distances_cells, ravensburger_cells = tree.query(np.c_[m_t, n_t])
         data['ravensburger_cells'] = ravensburger_cells.reshape(HEIGHT, WIDTH)
         data['distances_cells'] = distances_cells.reshape(HEIGHT, WIDTH)
+
         # lookup closest nodes
         tree = scipy.spatial.cKDTree(np.c_[data['X_NODES'].ravel(), data['Y_NODES'].ravel()])
         distances_nodes, ravensburger_nodes = tree.query(np.c_[m_t, n_t])
@@ -692,6 +790,8 @@ class Visualization():
     def initialize(self, data):
         """"""
         self.init_grid(data)
+
+        self.current_view = views[data['default_view']]
 
         # initialize data for all layers
         for layer in self.current_view['layers']:
@@ -728,7 +828,7 @@ class Visualization():
         for layer in self.current_view['layers']:
             if hasattr(self, 'seed_' + layer):
                 seed = getattr(self, 'seed_' + layer)
-                logger.info("seeding layer %s", layer)
+                #logger.info("seeding layer %s", layer)
                 seed(data)
 
 
@@ -744,7 +844,10 @@ class Visualization():
         # self.fig.canvas.blit(self.ax.bbox)
         # self.ax.redraw_in_frame()
         # interact with window and click events
-        self.fig.canvas.draw()
+
+        # self.fig.canvas.draw()
+        plt.draw()
+
         # for artist in self.handles.values():
         #     if artist is not None:
         #         self.ax.draw_artist(artist)

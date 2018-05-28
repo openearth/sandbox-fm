@@ -10,7 +10,6 @@ Tests for `gestures` module.
 
 import logging
 
-import pytest
 import numpy as np
 
 from sandbox_fm.gestures import (
@@ -20,9 +19,7 @@ from sandbox_fm.gestures import (
 logger = logging.getLogger(__name__)
 
 
-
 class TestGestures(object):
-
     @classmethod
     def setup_class(cls):
         pass

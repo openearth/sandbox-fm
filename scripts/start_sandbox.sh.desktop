@@ -1,0 +1,13 @@
+# Save this file as ~/.config/autostart/start_sandbox.sh.desktop
+[Desktop Entry]
+Type=Application
+Exec=gnome-terminal -- /bin/bash -i -l -c "~/sandbox-fm/scripts/start_sandbox.sh"
+Hidden=false
+NoDisplay=false
+X-GNOME-Autostart-enabled=true
+Name[en_US]=Sandbox
+Name=Sandbox
+Comment[en_US]=
+Comment=
+Terminal=True
+

@@ -309,10 +309,12 @@ cm_data = [[ 0.05054409, 0.04310382, 0.51367225],
            [ 0.93444147, 0.33284891, 0.31420449]]
 
 terrajet = ListedColormap(cm_data, name=__file__)
-colors = [hex2color(hex) for hex in ('#2F3360', '#00C1FF', '#366032', '#BAA838', '#BA5C21')]
+# colors = [hex2color(hex) for hex in ('#2F3360', '#00C1FF', '#366032', '#BAA838', '#BA5C21')]
 colors = [hex2color(hex) for hex in ('#111160', '#00FFFF', '#11DD00', '#FFFF00', '#DD3322', '#FF0044', '#DDDDDD')]
 terrajet2 = make_cmap(colors)
 colombia = gmtColormap(str(data_dir / 'colombia.cpt'))
+bastei = gmtColormap(str(data_dir / 'DEM_screen.cpt'))
+
 transparent_water = matplotlib.colors.LinearSegmentedColormap.from_list(
     'transparent_water',
     [
@@ -320,7 +322,7 @@ transparent_water = matplotlib.colors.LinearSegmentedColormap.from_list(
         (0.1, (0.6, 0.6, 0.9, 0.7)),
         (0.2, (0.4, 0.5, 0.9, 0.8)),
         (0.7, (0.1, 0.2, 1.0, 0.9)),
-        (1.0, (0.0, 0.05, 0.2, 1.0))
+        (1.0, (0.1, 0.2, 0.8, 0.9))
     ]
 )
 
