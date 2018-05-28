@@ -15,6 +15,8 @@ import matplotlib.colors
 import matplotlib.animation
 from matplotlib.patches import Rectangle
 import threading
+import matplotlib as mpl
+mpl.rcParams['toolbar'] = 'None'
 
 HIS_XY = (189020, 430051)  # Inflow Boundary
 # HIS_XY = (188252, 429208) # Bastei_1
@@ -23,6 +25,7 @@ HIS_XY = (189020, 430051)  # Inflow Boundary
 def create_fig():
     """create a figure with axes"""
     fig, ax = plt.subplots()
+    fig.canvas.set_window_title('BPS')
 
     # Background figure
     fig.subplots_adjust(
@@ -34,12 +37,12 @@ def create_fig():
     ax.axis('off')
     ax.autoscale('off')
     # TODO: use proper path (something with pkgdata) for img.
-    img = plt.imread('img/background.jpg')
+    img = plt.imread('../data/background.jpg')
     ax.imshow(img, aspect='auto')  # aspect on auto for fullscreen figure
 
     # BPS figure
     ax2 = plt.axes((0, 0, 1, 0.7))
-    img2 = plt.imread('bps/BPS.png')
+    img2 = plt.imread('../data/BPS.png')
     img2_dim = np.shape(img2)
     ax2.axis('off')
     xshift = 200
@@ -99,20 +102,26 @@ if __name__ == '__main__':
         'counter': 0,
         's1': 0
     }
-    # connect to model
-    model, poller = connect_model()
 
-    # Find find index for HIS Data
-    data['id'] = XY_to_array(model, HIS_XY)
+    use_mmi = False
 
-    # start the data update in the background
-    threading.Thread(
-        target=functools.partial(
-            update_data,
-            data=data,
-            poller=poller
-        )
-    ).start()
+    if use_mmi:
+        # connect to model
+        model, poller = connect_model()
+
+        # Find find index for HIS Data
+        data['id'] = XY_to_array(model, HIS_XY)
+
+        # start the data update in the background
+        threading.Thread(
+            target=functools.partial(
+                update_data,
+                data=data,
+                poller=poller
+            )
+        ).start()
+    else:
+        data['s1'] = 8.0
     fig, ax = create_fig()
 
     # we need this part global

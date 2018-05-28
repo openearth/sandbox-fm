@@ -25,6 +25,7 @@ from .calibrate import (
     compute_transforms,
     WIDTH,
     HEIGHT,
+    KINECTBUFFER
 )
 
 logger = logging.getLogger(__name__)
@@ -52,13 +53,13 @@ class Calibration(object):
 
     """
 
-    def __init__(self, path, videos, raws, model):
+    def __init__(self, path, videos, raws, model, default_config):
         # absolute path to calibration.json
         self.path = path.absolute()
         self.videos = videos
         self.raws = raws
         self.model = model
-        self.data = {}
+        self.data = default_config
         self.height_points = []
         self.model_points = []
         self.img_points = []
@@ -212,10 +213,10 @@ class Calibration(object):
 
         ax.clear()
         img_bbox = matplotlib.path.Path([
-            (40, 40),
-            (40, 440),
-            (600, 440),
-            (600, 40)
+            (00, 00),
+            (00, HEIGHT - KINECTBUFFER),
+            (WIDTH - KINECTBUFFER, HEIGHT - KINECTBUFFER),
+            (WIDTH - KINECTBUFFER, 00)
         ])
         data = self.data
         data.update(compute_transforms(self.result))

@@ -62,12 +62,6 @@ def compute_delta_height(data, idx):
 
     kinect_height = data['kinect_height']
 
-    # Only use the part of the kinect images where the changes are larger than threshold
-    kinect_threshold = 0.01  # m
-    # if we don't have last kinect height yet use the current height
-    # this can happen if run_update_bedlevel was not run yet.
-    kinect_last_height = data.get('kinect_height_last_update', kinect_height)
-    kinect_changes = np.abs(kinect_height - kinect_last_height) > kinect_threshold
     x_nodes_box, y_nodes_box = transform(data['X_NODES'].ravel(), data['Y_NODES'].ravel(), data['model2img'])
 
     # nearest pixels
@@ -83,23 +77,17 @@ def compute_delta_height(data, idx):
 def run_update_bedlevel(data, model):
     ''' update the bed level in the model'''
 
-    # Temp, should be moved to init:
-    if 'kinect_height_last_update' not in data:
-        data['kinect_height_last_update'] = data['kinect_height']
-
-    # End Temp
-
     logger.info('Updating bed level')
 
     meta = available[model.engine]
 
     idx = np.logical_and(data['node_in_box'], data['node_in_img_bbox'])
-    height_nodes_copy = data['HEIGHT_NODES'].copy()
-    height_nodes_copy.ravel()[idx] += compute_delta_height(data, idx)
-    # replace the part that changed
+    height_nodes_new = data['HEIGHT_NODES'].copy()
+    height_nodes_new.ravel()[idx] += compute_delta_height(data, idx)
+    # replace the part within the screen
     logger.info("updating bathymetry in  %s nodes", np.sum(idx))
 
-    meta['update_nodes'](idx, height_nodes_copy, data, model)
+    meta['update_nodes'](idx, height_nodes_new, data, model)
 
     # Save the kinect height of the last bed level update
     data['kinect_height_last_update'] = data['kinect_height']

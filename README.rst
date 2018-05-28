@@ -38,7 +38,7 @@ You probably want to create a virtual_ environment or an anaconda_ environment. 
 Once you are in your python environment of choice you can install the required python libraries:
 * ``pip install -r requirements.txt``
 
-Make sure your libdflowfm.so/libxbeach.so
+Make sure your libdflowfm.so/libxbeach.so is in your path
 
 Windows Install
 ----------------

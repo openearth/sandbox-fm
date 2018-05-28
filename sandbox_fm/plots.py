@@ -15,10 +15,11 @@ import numpy as np
 import skimage.draw
 
 from .cm import (
-    terrajet2,
+    bastei,
     colombia,
     transparent_water
 )
+
 from .models import (
     available
 )
@@ -89,15 +90,18 @@ views = {
 
 default_config = {
     "debug": False,
-    "scale": 5.0,
-    "height_vmin": 0,
-    "height_vmax": 9,
-    "velocities_vmin": 0,
-    "velocities_vmax": 2,
-    "depth_vmin": 0,
-    "depth_vmax": 3,
-    'default_view': 1,
-    'auto_bedlevel_update_interval': 0
+    "scale": 5.0,  # Multiplication on flow velocity for particle speed
+    "height_vmin": 0,  # Color scale bedlevel / kinect height
+    "height_vmax": 9,  # Color scale bedlevel / kinect height
+    "velocities_vmin": 0,  # Color scale velocity
+    "velocities_vmax": 2,  # Color scale velocity
+    "depth_vmin": 0,  # Color scale waterdepth
+    "depth_vmax": 3,  # Color scale waterdepth
+    'default_view': 1,  # Default view to load
+    'bedlevel_update_threshold': 0.5,  # Threshold (model meters) at which bed level an update is being done
+    'bedlevel_update_maximum': 9999,  # Threshold (model meters) at which level the bed level is no longer updated (used for correcting for 'arms')
+    'auto_bedlevel_update_interval': 0,  # Interval (s) at which the bed level is automatically updated
+    'figure_axis': [0, 0, 1, 1],  # Left, Bottom, Right, Top. Can be used for (too large) beamer projections; to limit the part of the figure which is filled with axis.
 }
 
 
@@ -210,20 +214,18 @@ class Visualization():
     def __init__(self):
         # create figure and axes
         self.fig, self.ax = plt.subplots()
+        self.fig.canvas.set_window_title('Sandbox_figure')
+
         # This should just work....
         self.fig.set_size_inches((3, 2.4))
         self.fig.set_dpi(100)
+        self.fig.patch.set_facecolor('black')
         logger.info('dpi: %s', self.fig.get_dpi())
         logger.info('size in px %s x %s', self.fig.get_figwidth(), self.fig.get_figheight())
         logger.info('size in inches: %s', self.fig.get_size_inches())
         # force low dpi
         self.quitting = False
-        self.fig.subplots_adjust(
-            left=0,
-            right=1,
-            bottom=0,
-            top=1
-        )
+
         self.ax.axis('off')
         plt.ion()
         plt.show(block=False)
@@ -252,7 +254,7 @@ class Visualization():
         # Plot scanned height
         self.handles['kinect_height'] = self.ax.imshow(
             data['kinect_height_img'],
-            colombia,
+            bastei,
             vmin=data['height_vmin'],
             vmax=data['height_vmax']
         )
@@ -281,7 +283,7 @@ class Visualization():
 
         self.handles['height_cells'] = self.ax.imshow(
             data['height_cells_img'],
-            cmap=terrajet2,
+            cmap=bastei,
             alpha=1,
             vmin=data['height_vmin'],
             vmax=data['height_vmax']
@@ -359,7 +361,7 @@ class Visualization():
         N_water = matplotlib.colors.Normalize(data['depth_vmin'], data['depth_vmax'])
         color_water = transparent_water(N_water(data['waterdepth_img']))
         N_land = matplotlib.colors.Normalize(data['height_vmin'], data['height_vmax'])
-        color_land = terrajet2(N_land(data['kinect_height_img']))
+        color_land = bastei(N_land(data['kinect_height_img']))
         color_combined = color_water
 
         color_combined[data['watermask'], :] = color_land[data['watermask'], :]
@@ -505,7 +507,7 @@ class Visualization():
     def add_background(self, data):
         self.handles['background'] = self.ax.imshow(
             data['background_img'],
-            extent=[0, 640, 480, 0]
+            extent=[0, WIDTH, HEIGHT, 0]
         )
 
     def update_background(self, data):
@@ -526,7 +528,7 @@ class Visualization():
     def add_overlay(self, data):
         self.handles['overlay'] = self.ax.imshow(
             data['overlay_img'],
-            extent=[0, 640, 480, 0]
+            extent=[0, WIDTH, HEIGHT, 0]
         )
 
     def update_overlay(self, data):
@@ -633,7 +635,7 @@ class Visualization():
             flow.astype('float32')
         )
         # fade out
-        # self.lic[..., 3] -= 0.01
+        data['lic'][..., 3] -= 0.01
         # but not < 0
         data['lic'][..., 3][data['lic'][..., 3] < 0] = 0
         data['lic'][..., 3][data['cell_mask']] = 0
@@ -791,6 +793,13 @@ class Visualization():
 
     def initialize(self, data):
         """"""
+        # Adjusting the subplots
+        self.fig.subplots_adjust(
+            left=data['figure_axis'][0],
+            bottom=data['figure_axis'][1],
+            right=data['figure_axis'][2],
+            top=data['figure_axis'][3]
+        )
         self.init_grid(data)
 
         self.current_view = views[data['default_view']]
@@ -830,7 +839,7 @@ class Visualization():
         for layer in self.current_view['layers']:
             if hasattr(self, 'seed_' + layer):
                 seed = getattr(self, 'seed_' + layer)
-                logger.info("seeding layer %s", layer)
+                #logger.info("seeding layer %s", layer)
                 seed(data)
 
 

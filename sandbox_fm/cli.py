@@ -40,7 +40,10 @@ from .depth import (
 )
 from .calibrate import (
     transform,
-    compute_transforms
+    compute_transforms,
+    WIDTH,
+    HEIGHT,
+    KINECTBUFFER
 )
 
 from .calibration_wizard import Calibration
@@ -151,7 +154,7 @@ def calibrate(schematization, engine):
     # this changes directory
     model.initialize(str(schematization_path.absolute()))
 
-    calibration = Calibration(path, videos, raws, model)
+    calibration = Calibration(path, videos, raws, model, default_config)
     calibration.run()
 
 
@@ -280,10 +283,10 @@ def run(schematization, engine, max_iterations, mmi):
     data['cell_in_box'] = model_bbox.contains_points(np.c_[data['X_CELLS'].ravel(), data['Y_CELLS'].ravel()])
 
     img_bbox = matplotlib.path.Path([
-        (40, 40),
-        (40, 440),
-        (600, 440),
-        (600, 40)
+        (00, 00),
+        (00, HEIGHT - KINECTBUFFER),
+        (WIDTH - KINECTBUFFER, HEIGHT - KINECTBUFFER),
+        (WIDTH - KINECTBUFFER, 00)
     ])
     x_nodes_box, y_nodes_box = transform(
         data['X_NODES'].ravel(),
@@ -308,6 +311,7 @@ def run(schematization, engine, max_iterations, mmi):
     )
     kinect_images = video_images()
     # load model library
+
     kinect_height = next(kinect_heights)
     kinect_image = next(kinect_images)
 
@@ -323,7 +327,7 @@ def run(schematization, engine, max_iterations, mmi):
         # fill in the data parameter and subscribe to events
         functools.partial(process_events, data=data, model=model, vis=vis)
     )
-    iterator = enumerate(tqdm.tqdm(zip(kinect_images, kinect_heights)))
+    iterator = enumerate((zip(kinect_images, kinect_heights)))
     tics = {}
     last_bed_update = 0  # Time since last automatic bed level update
     if mmi:
@@ -374,6 +378,7 @@ def run(schematization, engine, max_iterations, mmi):
             if time_since_bed_update >  data['auto_bedlevel_update_interval']:
                 run_update_bedlevel(data, model)
                 last_bed_update = time.time()
+            tics['automate_bed_update'] = time.time()
 
         logger.info("tics: %s", tic_report(tics))
 
