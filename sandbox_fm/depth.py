@@ -1,3 +1,4 @@
+import os
 import logging
 import collections
 import itertools
@@ -17,10 +18,17 @@ class MockupFreenect(object):
     """mockup freenect in case you have no connection"""
     def __init__(self):
         data_dir = pathlib.Path(__file__).parent.parent / 'data'
+        # Allow to use environment to use record images
+        if 'FREENECT_RECORD_DIR' in os.environ:
+            data_dir = pathlib.Path(os.environ['FREENECT_RECORD_DIR'])
 
         # TODO: pkgutil.get_data('data', '*')
-        video_files = data_dir.glob('video_*.png')
-        depth_files = data_dir.glob('raw_*.npy')
+        video_files = list(data_dir.glob('video_*.png'))
+        depth_files = list(data_dir.glob('raw_*.npy'))
+
+        if not depth_files:
+            raise ValueError('No depth files found in %s' % (data_dir, ))
+
         videos = ([
             plt.imread(str(video_file))
             for video_file

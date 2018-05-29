@@ -33,12 +33,12 @@ except ImportError:
 # don't import before MPI, otherwise segfault under OSX
 import skimage.io
 
-from sandbox_fm.depth import (
+from .depth import (
     depth_images,
     calibrated_height_images,
     video_images
 )
-from sandbox_fm.calibrate import (
+from .calibrate import (
     transform,
     compute_transforms,
     WIDTH,
@@ -46,20 +46,20 @@ from sandbox_fm.calibrate import (
     KINECTBUFFER
 )
 
-from sandbox_fm.calibration_wizard import Calibration
-from sandbox_fm.plots import (
+from .calibration_wizard import Calibration
+from .plots import (
 # from sandbox_fm.plots_cv2 import (
     Visualization,
     process_events,
     default_config
 )
-from sandbox_fm.variables import (
+from .variables import (
     update_initial_vars,
     update_vars,
     update_with_message,
     run_update_bedlevel
 )
-from sandbox_fm.gestures import (
+from .gestures import (
     recognize_gestures
 )
 
@@ -259,17 +259,17 @@ def run(schematization, engine, max_iterations, mmi):
     # initialize model schematization, changes directory
 
     # search for a background or overlay image
-    for layerimage in ['background', 'overlay']:
+    for layer in ['background', 'overlay', 'background_mask']:
         known_background_paths = [
-            pathlib.Path(schematization.name).with_name(layerimage + '.jpg'),
-            pathlib.Path(schematization.name).with_name(layerimage + '.png')
+            pathlib.Path(schematization.name).with_name(layer + '.jpg'),
+            pathlib.Path(schematization.name).with_name(layer + '.png')
         ]
         for path in known_background_paths:
             if path.exists():
-                data[layerimage + '_name'] = str(path.absolute())
+                data[layer + '_name'] = str(path.absolute())
                 break
         else:
-            data[layerimage + '_name'] = None
+            data[layer + '_name'] = None
 
     # mmi model is already initialized
     if not mmi:

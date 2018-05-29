@@ -309,9 +309,10 @@ cm_data = [[ 0.05054409, 0.04310382, 0.51367225],
            [ 0.93444147, 0.33284891, 0.31420449]]
 
 terrajet = ListedColormap(cm_data, name=__file__)
-# colors = [hex2color(hex) for hex in ('#2F3360', '#00C1FF', '#366032', '#BAA838', '#BA5C21')]
-colors = [hex2color(hex) for hex in ('#111160', '#00FFFF', '#11DD00', '#FFFF00', '#DD3322', '#FF0044', '#DDDDDD')]
+colors = [hex2color(hex) for hex in ('#2F3360', '#00C1FF', '#366032', '#BAA838', '#BA5C21')]
 terrajet2 = make_cmap(colors)
+colors = [hex2color(hex) for hex in ('#111160', '#00FFFF', '#11DD00', '#FFFF00', '#DD3322', '#FF0044', '#DDDDDD')]
+bastei = make_cmap(colors)
 colombia = gmtColormap(str(data_dir / 'colombia.cpt'))
 bastei = gmtColormap(str(data_dir / 'DEM_screen.cpt'))
 

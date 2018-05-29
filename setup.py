@@ -39,7 +39,7 @@ setup(
     package_dir={'sandbox_fm':
                  'sandbox_fm'},
     package_data={
-        'sandbox_fm': ['data/*.png']
+        'sandbox_fm': ['data/*.*']
     },
     entry_points={
         'console_scripts': [

@@ -36,12 +36,13 @@ def create_fig():
         )
     ax.axis('off')
     ax.autoscale('off')
-    img = plt.imread('bps/background.jpg')
+    # TODO: use proper path (something with pkgdata) for img.
+    img = plt.imread('../data/background.jpg')
     ax.imshow(img, aspect='auto')  # aspect on auto for fullscreen figure
 
     # BPS figure
     ax2 = plt.axes((0, 0, 1, 0.7))
-    img2 = plt.imread('bps/BPS.png')
+    img2 = plt.imread('../data/BPS.png')
     img2_dim = np.shape(img2)
     ax2.axis('off')
     xshift = 200

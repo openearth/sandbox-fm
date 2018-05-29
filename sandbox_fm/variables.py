@@ -62,19 +62,6 @@ def compute_delta_height(data, idx):
 
     kinect_height = data['kinect_height']
 
-    # Only use the part of the kinect images where the changes are larger than threshold
-    # kinect_threshold = data['bedlevel_update_threshold'] # m
-    # kinect_maximum = data['bedlevel_update_maximum'] # m 
-    
-    # if 'kinect_height_last_update' not in data:
-    #     data['kinect_height_last_update'] = data['kinect_height']
-    #     
-    # kinect_changes = np.abs(kinect_height - data['kinect_height_last_update']) > kinect_threshold
-    # kinect_maximum_not_exceeded = kinect_height < kinect_maximum
-    
-    # print('Changes in n cells',np.sum(kinect_changes))
-
-
     x_nodes_box, y_nodes_box = transform(data['X_NODES'].ravel(), data['Y_NODES'].ravel(), data['model2img'])
 
     # nearest pixels
@@ -89,7 +76,6 @@ def compute_delta_height(data, idx):
 
 def run_update_bedlevel(data, model):
     ''' update the bed level in the model'''
-
 
     logger.info('Updating bed level')
 

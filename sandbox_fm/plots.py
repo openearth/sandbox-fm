@@ -17,9 +17,9 @@ import skimage.draw
 from .cm import (
     bastei,
     colombia,
-    transparent_water,
-    bastei
+    transparent_water
 )
+
 from .models import (
     available
 )
@@ -96,12 +96,12 @@ default_config = {
     "velocities_vmin": 0,  # Color scale velocity
     "velocities_vmax": 2,  # Color scale velocity
     "depth_vmin": 0,  # Color scale waterdepth
-    "depth_vmax": 3,  # Color scale waterdepth 
+    "depth_vmax": 3,  # Color scale waterdepth
     'default_view': 1,  # Default view to load
     'bedlevel_update_threshold': 0.5,  # Threshold (model meters) at which bed level an update is being done
     'bedlevel_update_maximum': 9999,  # Threshold (model meters) at which level the bed level is no longer updated (used for correcting for 'arms')
     'auto_bedlevel_update_interval': 0,  # Interval (s) at which the bed level is automatically updated
-    'figure_axis': [0, 0, 1, 1],  # Left, Bottom, Right, Top. Can be used for (too large) beamer projections; to limit the part of the figure which is filled with axis. 
+    'figure_axis': [0, 0, 1, 1],  # Left, Bottom, Right, Top. Can be used for (too large) beamer projections; to limit the part of the figure which is filled with axis.
 }
 
 
@@ -225,14 +225,7 @@ class Visualization():
         logger.info('size in inches: %s', self.fig.get_size_inches())
         # force low dpi
         self.quitting = False
-        
-        # Adjusting the subplots 
-        self.fig.subplots_adjust(
-            left=data['figure_axis'][0],
-            bottom=data['figure_axis'][1],
-            right=data['figure_axis'][2],
-            top=data['figure_axis'][3]
-        )
+
         self.ax.axis('off')
         plt.ion()
         plt.show(block=False)
@@ -333,6 +326,12 @@ class Visualization():
         height_cells_img = data['height_cells_img']
         waterdepth = waterlevel_img - height_cells_img
         mask = waterdepth < 0.1
+
+        if 'background_img_mask' in data:
+            # should be same dimensions
+            # if mask > 0, (white painted), always make dry
+            mask = np.logical_or(mask, data['background_img_mask'])
+
         data['watermask'] = mask
         data['waterlevel_img'] = waterlevel_img
         data['waterdepth_img'] = np.ma.masked_array(waterdepth, mask=mask)
@@ -495,10 +494,15 @@ class Visualization():
     def init_background(self, data):
         if data['background_name']:
             data['background_img'] = plt.imread(data['background_name'])
+            # read the mask where to always show the background
+            if data['background_mask_name']:
+                background_img_mask = plt.imread(data['background_mask_name'])
+                data['background_img_mask'] = background_img_mask > 0
+
         else:
             # 10 black pixels
             data['background_img'] = np.zeros((10, 10, 3))
-            logger.warn('could not find background image: %s', data['background_name'])
+            logger.warn('could not find background image: %s, default names background.jpg/png', data['background_name'])
 
     def add_background(self, data):
         self.handles['background'] = self.ax.imshow(
@@ -789,6 +793,13 @@ class Visualization():
 
     def initialize(self, data):
         """"""
+        # Adjusting the subplots
+        self.fig.subplots_adjust(
+            left=data['figure_axis'][0],
+            bottom=data['figure_axis'][1],
+            right=data['figure_axis'][2],
+            top=data['figure_axis'][3]
+        )
         self.init_grid(data)
 
         self.current_view = views[data['default_view']]
