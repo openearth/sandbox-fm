@@ -32,16 +32,58 @@ def dflowfm_compute(data):
         # compute derivitave variables, should be consistent shape now.
     data['is_wet'] = data['s1'] > data['bl']
 
-    
+import ctypes
+import numpy as np
+import pathlib
+import bmi.wrapper
+import time
+
+
+class FMCustomWrapper(bmi.wrapper.BMIWrapper):
+    def __init__(self, *args, **kwargs):
+        super(self.__class__, self).__init__(*args, **kwargs)
+        self.library.update_land_.argtypes = [
+            ctypes.POINTER(ctypes.c_int),
+            ctypes.POINTER(ctypes.c_double)
+        ]
+
+    def set_var(self, name, arr):
+        if name == 'zk':
+            zk_old = self.get_var('zk').copy()
+        super(self.__class__, self).set_var(name, arr)
+        if name == 'zk':
+            zk_new = self.get_var('zk')
+            # get indices of changed bathymetries
+            indices, = np.where(zk_old != zk_new)
+            # see implementation in unstruc_bmi
+            # workaround for missing bathy updates
+            for idx in indices:
+                self.library.update_land_(
+                    ctypes.byref(ctypes.c_int(idx + 1)),
+                    ctypes.byref(ctypes.c_double(zk_new[idx]))
+                )
+            self.library.on_land_change_()
+
+
 
 def update_height_dflowfm(idx, height_nodes_new, data, model):
-    nn = 0
-    for i in np.where(idx)[0]:
-        # Only update model where the bed level changed (by compute_delta_height)
-        if height_nodes_new[i] < data['bedlevel_update_maximum'] and np.abs(height_nodes_new[i] - data['HEIGHT_NODES'][i]) > data['bedlevel_update_threshold']:
-            nn += 1
-            model.set_var_slice('zk', [int(i+1)], [1], height_nodes_new[i:i + 1])
-    print('Total bed level updates', nn)
+    # import ipdb
+    # ipdb.set_trace()
+    # nn = 0
+    # for i in np.where(idx)[0]:
+    #     # Only update model where the bed level changed (by compute_delta_height)
+    #     if True:  # height_nodes_new[i] < data['bedlevel_update_maximum'] and np.abs(height_nodes_new[i] - data['HEIGHT_NODES'][i]) > data['bedlevel_update_threshold']:
+    #         nn += 1
+    #         model.set_var_slice('zk', [int(i+1)], [1], height_nodes_new[i:i + 1])
+    # model.set_var_slice('zk', [int(0+1)], [len(height_nodes_new)], height_nodes_new)
+    zk = model.get_var('zk') + 1
+    model.set_var('zk', zk)
+    # model.library.update_land_.argtypes = [ctypes.POINTER(ctypes.c_int), ctypes.POINTER(ctypes.c_double)]
+    # n = 1000
+    # for i in range(n):
+    #     model.library.update_land_(ctypes.byref(ctypes.c_int(i + 1)), ctypes.byref(ctypes.c_double(zk[i])))
+    # model.library.on_land_change_()
+    # print('Total bed level updates', nn)
 
 dflowfm = {
     "initial_vars": [
@@ -98,7 +140,7 @@ def update_structure_height_xbeach(idx, height_nodes_copy, data, model):
     delta_height = height_nodes_copy - data['HEIGHT_NODES']
     data['STRUCTURE_HEIGHT'].ravel()[idx] = delta_height.ravel()[idx]
 
-    
+
 xbeach = {
     "initial_vars": [
         'x',
