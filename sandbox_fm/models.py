@@ -42,7 +42,7 @@ import time
 class FMCustomWrapper(bmi.wrapper.BMIWrapper):
     def __init__(self, *args, **kwargs):
         super(self.__class__, self).__init__(*args, **kwargs)
-        self.library.update_land_.argtypes = [
+        self.library.update_land.argtypes = [
             ctypes.POINTER(ctypes.c_int),
             ctypes.POINTER(ctypes.c_double)
         ]
@@ -50,6 +50,7 @@ class FMCustomWrapper(bmi.wrapper.BMIWrapper):
     def set_var(self, name, arr):
         if name == 'zk':
             zk_old = self.get_var('zk').copy()
+        logger.info('Updating layer {}'.format(name))
         super(self.__class__, self).set_var(name, arr)
         if name == 'zk':
             zk_new = self.get_var('zk')
@@ -58,11 +59,11 @@ class FMCustomWrapper(bmi.wrapper.BMIWrapper):
             # see implementation in unstruc_bmi
             # workaround for missing bathy updates
             for idx in indices:
-                self.library.update_land_(
+                self.library.update_land(
                     ctypes.byref(ctypes.c_int(idx + 1)),
                     ctypes.byref(ctypes.c_double(zk_new[idx]))
                 )
-            self.library.on_land_change_()
+            self.library.on_land_change()
 
 
 
