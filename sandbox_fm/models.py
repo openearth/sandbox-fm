@@ -38,7 +38,7 @@ import pathlib
 import bmi.wrapper
 import time
 
-
+# The set_var does not work in current versions of FM
 class FMCustomWrapper(bmi.wrapper.BMIWrapper):
     def __init__(self, *args, **kwargs):
         super(self.__class__, self).__init__(*args, **kwargs)
@@ -78,7 +78,7 @@ def update_height_dflowfm(idx, height_nodes_new, data, model):
     #         model.set_var_slice('zk', [int(i+1)], [1], height_nodes_new[i:i + 1])
     # model.set_var_slice('zk', [int(0+1)], [len(height_nodes_new)], height_nodes_new)
     zk = model.get_var('zk') + 1
-    model.set_var('zk', zk)
+    model.set_var_slice('zk',[1], [len(height_nodes_new)], height_nodes_new)  # This is quick!
     # model.library.update_land_.argtypes = [ctypes.POINTER(ctypes.c_int), ctypes.POINTER(ctypes.c_double)]
     # n = 1000
     # for i in range(n):
