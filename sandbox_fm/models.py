@@ -77,7 +77,7 @@ def update_height_dflowfm(idx, height_nodes_new, data, model):
     #         nn += 1
     #         model.set_var_slice('zk', [int(i+1)], [1], height_nodes_new[i:i + 1])
     # model.set_var_slice('zk', [int(0+1)], [len(height_nodes_new)], height_nodes_new)
-    model.set_var_slice('zk',[1], [len(height_nodes_new)], height_nodes_new)  # This is quick!
+    model.set_var_slice('zk', [1], [len(height_nodes_new)], height_nodes_new)  # This is quick!
     # model.library.update_land_.argtypes = [ctypes.POINTER(ctypes.c_int), ctypes.POINTER(ctypes.c_double)]
     # n = 1000
     # for i in range(n):
