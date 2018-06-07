@@ -14,6 +14,8 @@ import scipy.interpolate
 import numpy as np
 import skimage.draw
 
+import cm as cm
+
 from .cm import (
     bastei,
     colombia,
@@ -93,6 +95,7 @@ default_config = {
     "scale": 5.0,  # Multiplication on flow velocity for particle speed
     "height_vmin": 0,  # Color scale bedlevel / kinect height
     "height_vmax": 9,  # Color scale bedlevel / kinect height
+    "height_cmap": 'bastei',
     "velocities_vmin": 0,  # Color scale velocity
     "velocities_vmax": 2,  # Color scale velocity
     "depth_vmin": 0,  # Color scale waterdepth
@@ -254,7 +257,7 @@ class Visualization():
         # Plot scanned height
         self.handles['kinect_height'] = self.ax.imshow(
             data['kinect_height_img'],
-            bastei,
+            getattr(cm, data['height_cmap']),
             vmin=data['height_vmin'],
             vmax=data['height_vmax']
         )
@@ -283,7 +286,7 @@ class Visualization():
 
         self.handles['height_cells'] = self.ax.imshow(
             data['height_cells_img'],
-            cmap=bastei,
+            cmap=getattr(cm,data['height_cmap']),
             alpha=1,
             vmin=data['height_vmin'],
             vmax=data['height_vmax']
@@ -361,7 +364,7 @@ class Visualization():
         N_water = matplotlib.colors.Normalize(data['depth_vmin'], data['depth_vmax'])
         color_water = transparent_water(N_water(data['waterdepth_img']))
         N_land = matplotlib.colors.Normalize(data['height_vmin'], data['height_vmax'])
-        color_land = bastei(N_land(data['kinect_height_img']))
+        color_land = getattr(cm,data['height_cmap'])(N_land(data['kinect_height_img']))
         color_combined = color_water
 
         color_combined[data['watermask'], :] = color_land[data['watermask'], :]

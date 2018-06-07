@@ -70,21 +70,21 @@ class FMCustomWrapper(bmi.wrapper.BMIWrapper):
 def update_height_dflowfm(idx, height_nodes_new, data, model):
     # import ipdb
     # ipdb.set_trace()
-    # nn = 0
-    # for i in np.where(idx)[0]:
-    #     # Only update model where the bed level changed (by compute_delta_height)
-    #     if True:  # height_nodes_new[i] < data['bedlevel_update_maximum'] and np.abs(height_nodes_new[i] - data['HEIGHT_NODES'][i]) > data['bedlevel_update_threshold']:
-    #         nn += 1
-    #         model.set_var_slice('zk', [int(i+1)], [1], height_nodes_new[i:i + 1])
+    nn = 0
+    for i in np.where(idx)[0]:
+        # Only update model where the bed level changed (by compute_delta_height)
+        if True:  # height_nodes_new[i] < data['bedlevel_update_maximum'] and np.abs(height_nodes_new[i] - data['HEIGHT_NODES'][i]) > data['bedlevel_update_threshold']:
+            nn += 1
+            model.set_var_slice('zk', [int(i+1)], [1], height_nodes_new[i:i + 1])
     # model.set_var_slice('zk', [int(0+1)], [len(height_nodes_new)], height_nodes_new)
-    zk = model.get_var('zk') + 1
-    model.set_var_slice('zk',[1], [len(height_nodes_new)], height_nodes_new)  # This is quick!
+    # zk = model.get_var('zk') + 1
+    # model.set_var_slice('zk',[1], [len(height_nodes_new)], height_nodes_new)  # This is quick!
     # model.library.update_land_.argtypes = [ctypes.POINTER(ctypes.c_int), ctypes.POINTER(ctypes.c_double)]
     # n = 1000
     # for i in range(n):
     #     model.library.update_land_(ctypes.byref(ctypes.c_int(i + 1)), ctypes.byref(ctypes.c_double(zk[i])))
     # model.library.on_land_change_()
-    # print('Total bed level updates', nn)
+    print('Total bed level updates', nn)
 
 dflowfm = {
     "initial_vars": [
