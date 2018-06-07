@@ -7,3 +7,4 @@ cmocean==1.1
 mmi==0.1.19
 git+https://github.com/j08lue/pycpt.git
 opencv-python
+mpi4py

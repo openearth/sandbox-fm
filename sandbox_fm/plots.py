@@ -14,7 +14,7 @@ import scipy.interpolate
 import numpy as np
 import skimage.draw
 
-import cm as cm
+import sandbox_fm.cm as cm
 
 from .cm import (
     bastei,
