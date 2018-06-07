@@ -20,7 +20,7 @@ import matplotlib.backend_bases
 import matplotlib.pyplot as plt
 
 import bmi.wrapper
-#from mmi.mmi_client import MMIClient
+from mmi.mmi_client import MMIClient
 from mmi import recv_array
 
 HAVE_MPI = False
