@@ -2,7 +2,8 @@ REM set FMDIR=d:\software\dflowfm-x64-1.1.285.55900
 REM set FMDIR=d:\software\dflowfm-x64-1.1.269.53512
 set FMDIR=D:\software\dflowfm-x64-1.1.285.55669
 set PATH=%FMDIR%;D:\software\Anaconda3\envs\sandbox\Scripts\;%PATH%
-start mmi runner dflowfm ../models/Lent/FlowFM.mdu --port 62000 --pause -o s1 -o bl -o ucx -o ucy -o zk --bmi-class sandbox_fm.models.FMCustomWrapper
+REM start mmi runner dflowfm ../models/Lent/FlowFM.mdu --port 62000 --pause -o s1 -o bl -o ucx -o ucy -o zk --bmi-class sandbox_fm.models.FMCustomWrapper
+start mmi runner dflowfm ../models/Lent/FlowFM.mdu --port 62000 --pause -o s1 -o bl -o ucx -o ucy -o zk
 start sandbox-fm run --mmi tcp://localhost:62000 ../models/Lent/FlowFM.mdu
 start bps.py
 pause
