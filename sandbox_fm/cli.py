@@ -5,6 +5,7 @@ import logging
 import time
 import json
 import functools
+import collections
 
 try:
     from itertools import izip as zip
@@ -320,6 +321,10 @@ def run(schematization, engine, max_iterations, mmi):
     data['height_cells_original'] = data['HEIGHT_CELLS'].copy()
     data['kinect_height_original'] = data['kinect_height'].copy()
 
+    buffer_size = 50
+    data['kinect_height_buffer'] = collections.deque(maxlen=buffer_size)
+    data['kinect_height_buffer'].append(data['kinect_height'])
+
     vis = Visualization()
     update_vars(data, model)
     vis.initialize(data)
@@ -341,7 +346,8 @@ def run(schematization, engine, max_iterations, mmi):
         if not mmi:
             update_vars(data, model)
         else:
-            # listen for at most 10 miliseconds for incomming data (flush the queue)
+            pass
+            listen for at most 10 miliseconds for incomming data (flush the queue)
             for sock, n in sub_poller.poll(10):
                 for i in range(n):
                     message = recv_array(sock)
@@ -350,7 +356,12 @@ def run(schematization, engine, max_iterations, mmi):
         # update kinect
         data['kinect_height'] = kinect_height
         data['kinect_image'] = kinect_image
+
+        # Update buffered
+        data['kinect_height_buffer'].append(data['kinect_height'])
+
         tics['update_vars'] = time.time()
+
 
         gestures = recognize_gestures(data['kinect_height'])
         data['gestures'] = gestures

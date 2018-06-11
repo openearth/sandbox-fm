@@ -60,7 +60,9 @@ def update_with_message(data, model, message):
 def compute_delta_height(data, idx):
     """compute the bed level change, normalized a bit and only for cells in idx """
 
-    kinect_height = data['kinect_height']
+    # kinect_height = data['kinect_height']
+    buffer_quantile = 25
+    kinect_height = np.percentile(data['kinect_height_buffer'], q=buffer_quantile, axis=0)
 
     x_nodes_box, y_nodes_box = transform(data['X_NODES'].ravel(), data['Y_NODES'].ravel(), data['model2img'])
 
