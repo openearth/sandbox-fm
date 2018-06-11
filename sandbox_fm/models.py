@@ -6,17 +6,13 @@ logger = logging.getLogger(__name__)
 
 
 # Temporary copied from sandbox_fm.variables, because importing fails
-def update_initial_vars(data, model):
-    """get the initial variables for the model"""
-    # variables on t=0
+def update_vars(data, model):
+    """get the variables from the model and put them in the data dictionary"""
     meta = available[model.engine]
-    for name in meta['initial_vars']:
-        data[name] = model.get_var(name)
-
     for name in meta['vars']:
         data[name] = model.get_var(name)
-        data[name + '_0'] = model.get_var(name).copy()
-    meta['compute'](data)
+    # do some stuff per model
+    meta["compute"](data)
     for key, val in meta["mapping"].items():
         data[key] = data[val]
 
@@ -98,14 +94,15 @@ def update_height_dflowfm(idx, height_nodes_new, data, model):
     #         nn += 1
     #         model.set_var_slice('zk', [int(i+1)], [1], height_nodes_new[i:i + 1])
     # print('Total bed level updates', nn)
+    drycells = (data['s1'] - data['bl']) < 0.1
     model.set_var_slice('zk', [1], [len(height_nodes_new)], height_nodes_new)  # This is quick!
     # model.set_var('zk', height_nodes_new)
 
     # If the cell was dry before, keep it dry by lowering the water level
-    update_initial_vars(data, model)
+    update_vars(data, model)
     bl = data['bl'].copy()
     s1 = data['s1'].copy()
-    s1[not data['is_wet']] = bl[not data['is_wet']]
+    s1[drycells] = bl[drycells]
     model.set_var_slice('s1', [1], [len(s1)], s1)
     # model.set_var('s1', s1)  # Does not work?
 
