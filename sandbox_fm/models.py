@@ -29,7 +29,7 @@ def dflowfm_compute(data):
         if arr.shape[0] == data['numk']:
             data[var_name] = arr[:data['numk']]
         elif arr.shape[0] == data['ndx']:
-            "should be of shape ndx"
+            # should be of shape ndxi (without ghost cells)
             # ndxi:ndx are the boundary points
             # (See  netcdf write code in unstruc)
             data[var_name] = arr[:data['ndxi']]
