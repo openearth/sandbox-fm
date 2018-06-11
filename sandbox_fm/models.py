@@ -83,6 +83,14 @@ def update_height_dflowfm(idx, height_nodes_new, data, model):
     model.set_var_slice('zk', [1], [len(height_nodes_new)], height_nodes_new)  # This is quick!
     # model.set_var('zk', height_nodes_new)
 
+    # If the cell was dry before, keep it dry by lowering the water level
+    bl = model.get_var('bl')
+    s1 = model.get_var('s1').copy()
+    s1[data['is_wet']] = bl[data['is_wet']]
+    model.set_var_slice('s1', [1], [len(s1)], s1)
+    # model.set_var('s1', s1)  # Does not work?
+
+
 
 dflowfm = {
     "initial_vars": [
