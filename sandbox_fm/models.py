@@ -102,8 +102,8 @@ def update_height_dflowfm(idx, height_nodes_new, data, model):
     update_vars(data, model)
     bl = data['bl'].copy()
     s1 = data['s1'].copy()
-    s1[drycells] = bl[drycells]
-    model.set_var_slice('s1', [1], [len(s1)], s1)
+    s1[drycells] = bl[drycells] - 0.5
+    # model.set_var_slice('s1', [1], [len(s1)], s1)
     # model.set_var('s1', s1)  # Does not work?
 
 
