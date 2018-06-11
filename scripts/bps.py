@@ -134,7 +134,7 @@ if __name__ == '__main__':
     rect = Rectangle((0, 0), ax.get_xlim()[1], 0, facecolor='b', alpha=0.5)
     ax.add_patch(rect)
 
-    normalize_s1 = matplotlib.colors.Normalize(7, 12, clip=True)
+    normalize_s1 = matplotlib.colors.Normalize(6, 12, clip=True)
 
     animation = matplotlib.animation.FuncAnimation(
         fig,

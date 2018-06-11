@@ -18,7 +18,7 @@ bps.py &
 
 sleep 5
 
-wmctrl -r 'BPS' -b toggle, fullscreen
+wmctrl -r 'BPS' -b toggle,fullscreen
 
 wmctrl -r 'Sandbox_figure' -e 0,1920,0,640,480
 wmctrl -r 'Sandbox_figure' -b toggle,fullscreen
