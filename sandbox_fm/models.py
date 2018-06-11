@@ -1,7 +1,24 @@
 import numpy as np
 import logging
 
+
 logger = logging.getLogger(__name__)
+
+
+# Temporary copied from sandbox_fm.variables, because importing fails
+def update_initial_vars(data, model):
+    """get the initial variables for the model"""
+    # variables on t=0
+    meta = available[model.engine]
+    for name in meta['initial_vars']:
+        data[name] = model.get_var(name)
+
+    for name in meta['vars']:
+        data[name] = model.get_var(name)
+        data[name + '_0'] = model.get_var(name).copy()
+    meta['compute'](data)
+    for key, val in meta["mapping"].items():
+        data[key] = data[val]
 
 dflowfm_vars = ['bl', 'ucx', 'ucy', 's1', 'zk']
 
@@ -30,8 +47,9 @@ def dflowfm_compute(data):
                 var_name
             )
             raise ValueError(msg)
-        # compute derivitave variables, should be consistent shape now.
-    data['is_wet'] = data['s1'] > data['bl']
+    # compute derivitave variables, should be consistent shape now.
+    # Arbitrary theshhold of 0.1 m for dry cells
+    data['is_wet'] = (data['s1'] - data['bl']) < 0.1
 
 # # Disable the FMCustomWrapper. The method to update with set_var did not
 # # work, so we are now using set_var_slice, which is working correctly in BMIW
@@ -84,8 +102,9 @@ def update_height_dflowfm(idx, height_nodes_new, data, model):
     # model.set_var('zk', height_nodes_new)
 
     # If the cell was dry before, keep it dry by lowering the water level
-    bl = model.get_var('bl')
-    s1 = model.get_var('s1').copy()
+    update_initial_vars(data, model)
+    bl = data['bl'].copy()
+    s1 = data['s1'].copy()
     s1[data['is_wet']] = bl[data['is_wet']]
     model.set_var_slice('s1', [1], [len(s1)], s1)
     # model.set_var('s1', s1)  # Does not work?
