@@ -321,9 +321,10 @@ def run(schematization, engine, max_iterations, mmi):
     data['height_cells_original'] = data['HEIGHT_CELLS'].copy()
     data['kinect_height_original'] = data['kinect_height'].copy()
 
-    buffer_size = 50
-    data['kinect_height_buffer'] = collections.deque(maxlen=buffer_size)
-    data['kinect_height_buffer'].append(data['kinect_height'])
+    if data['average_kinect_height']:
+        buffer_size = 50
+        data['kinect_height_buffer'] = collections.deque(maxlen=buffer_size)
+        data['kinect_height_buffer'].append(data['kinect_height'])
 
     vis = Visualization()
     update_vars(data, model)
@@ -346,8 +347,7 @@ def run(schematization, engine, max_iterations, mmi):
         if not mmi:
             update_vars(data, model)
         else:
-            pass
-            listen for at most 10 miliseconds for incomming data (flush the queue)
+            # listen for at most 10 miliseconds for incomming data (flush the queue)
             for sock, n in sub_poller.poll(10):
                 for i in range(n):
                     message = recv_array(sock)
@@ -358,7 +358,8 @@ def run(schematization, engine, max_iterations, mmi):
         data['kinect_image'] = kinect_image
 
         # Update buffered
-        data['kinect_height_buffer'].append(data['kinect_height'])
+        if data['average_kinect_height']:
+            data['kinect_height_buffer'].append(data['kinect_height'])
 
         tics['update_vars'] = time.time()
 

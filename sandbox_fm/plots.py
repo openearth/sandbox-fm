@@ -103,9 +103,11 @@ default_config = {
     'erosion_cmap': 'balance_r',
     'erosion_vmin': -1,
     'erosion_vmax': 1,
+
     'bedlevel_update_threshold': 0.5,  # Threshold (model meters) at which bed level an update is being done
     'bedlevel_update_maximum': 9999,  # Threshold (model meters) at which level the bed level is no longer updated (used for correcting for 'arms')
     'auto_bedlevel_update_interval': 0,  # Interval (s) at which the bed level is automatically updated
+    'average_kinect_height': 1,  # If true the bed level update will use a percentile of a set of images instead of the current kinect height
     'figure_axis': [0, 0, 1, 1],  # Left, Bottom, Right, Top. Can be used for (too large) beamer projections; to limit the part of the figure which is filled with axis.
 }
 
