@@ -6,6 +6,9 @@ source ~/Envs/sandbox/bin/activate
 model=../models/Lent/FlowFM.mdu
 
 cd ~/sandbox-fm/scripts/
+
+sleep 30
+
 mmi-runner dflowfm $model --port 62000 --pause -o s1 -o bl -o ucx -o ucy -o zk &
 
 sleep 5
