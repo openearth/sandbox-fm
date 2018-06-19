@@ -16,6 +16,7 @@ def update_vars(data, model):
     for key, val in meta["mapping"].items():
         data[key] = data[val]
 
+
 dflowfm_vars = ['bl', 'ucx', 'ucy', 's1', 'zk']
 
 
@@ -85,26 +86,9 @@ def dflowfm_compute(data):
 #             self.library.on_land_change()
 
 
-
 def update_height_dflowfm(idx, height_nodes_new, data, model):
-    # nn = 0
-    # for i in np.where(idx)[0]:
-    #     # Only update model where the bed level changed (by compute_delta_height)
-    #     if True:  # height_nodes_new[i] < data['bedlevel_update_maximum'] and np.abs(height_nodes_new[i] - data['HEIGHT_NODES'][i]) > data['bedlevel_update_threshold']:
-    #         nn += 1
-    #         model.set_var_slice('zk', [int(i+1)], [1], height_nodes_new[i:i + 1])
-    # print('Total bed level updates', nn)
-    drycells = (data['s1'] - data['bl']) < 0.1
     model.set_var_slice('zk', [1], [len(height_nodes_new)], height_nodes_new)  # This is quick!
-    # model.set_var('zk', height_nodes_new)
-
-    # If the cell was dry before, keep it dry by lowering the water level
-    update_vars(data, model)
-    bl = data['bl'].copy()
-    s1 = data['s1'].copy()
-    s1[drycells] = bl[drycells]
-    model.set_var_slice('s1', [1], [len(s1)], s1)
-    # model.set_var('s1', s1)  # Does not work?
+    # model.set_var('zk', height_nodes_new)  # Does not work
 
 
 
