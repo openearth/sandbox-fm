@@ -20,7 +20,7 @@ mpl.rcParams['toolbar'] = 'None'
 
 HIS_XY = (189020, 430051)  # Inflow Boundary
 # HIS_XY = (188252, 429208) # Bastei_1
-
+HIS_XY = (188900, 429880)  # Waal just inside sandbox (upstream)
 
 def create_fig():
     """create a figure with axes"""
@@ -134,7 +134,7 @@ if __name__ == '__main__':
     rect = Rectangle((0, 0), ax.get_xlim()[1], 0, facecolor='b', alpha=0.5)
     ax.add_patch(rect)
 
-    normalize_s1 = matplotlib.colors.Normalize(7, 12, clip=True)
+    normalize_s1 = matplotlib.colors.Normalize(6, 12, clip=True)
 
     animation = matplotlib.animation.FuncAnimation(
         fig,
