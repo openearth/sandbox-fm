@@ -110,7 +110,7 @@ def depth_images():
         yield depth.astype('double')
 
 def depth_images_choice():
-    kinect_depth_mode = 1  # 0 = get measured depths
+    kinect_depth_mode = 0  # 0 = get measured depths
                            # 1 = get percentile of measured depths
                            # 2 = use exponential averaged measured depth
     """generate a chosen depth image type"""
