@@ -43,7 +43,6 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 
-# TODO: the script is not using the key below, but the order of this array (=key -1)
 views = {
     1: {
         "name": "Kinect",
