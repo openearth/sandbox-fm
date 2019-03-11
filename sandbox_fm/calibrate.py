@@ -197,7 +197,7 @@ def compute_transforms(calibration):
         "beamer"
     ]
     point_arrays = {}
-    for name in points:
+    for name in point_names:
         if name == 'box':
             arr = np.array(DEFAULT_BOX, dtype='float32')
         elif name in calibration:
