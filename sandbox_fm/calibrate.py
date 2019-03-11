@@ -187,41 +187,34 @@ def transform(x, y, M):
 
 def compute_transforms(calibration):
     """compute transformation matrices based on calibration data"""
-    model_points = np.array(calibration["model_points"], dtype="float32")
-    img_points = np.array(calibration["img_points"], dtype="float32")
-    box = np.array(calibration.get("box", DEFAULT_BOX), dtype="float32")
 
-    logger.info("model_points %s, box %s", model_points, box)
-    model2box = cv2.getPerspectiveTransform(
-        np.array(model_points, dtype='float32'),
-        box
-    )
-    img2box = cv2.getPerspectiveTransform(
-        np.array(img_points, dtype='float32'),
-        box
-    )
-    img2model = cv2.getPerspectiveTransform(
-        np.array(img_points, dtype='float32'),
-        np.array(model_points, dtype='float32')
-    )
-    model2img = cv2.getPerspectiveTransform(
-        np.array(model_points, dtype='float32'),
-        np.array(img_points, dtype='float32')
-    )
-    box2model = cv2.getPerspectiveTransform(
-        np.array(box, dtype='float32'),
-        np.array(model_points, dtype='float32')
-    )
-    box2img = cv2.getPerspectiveTransform(
-        np.array(box, dtype='float32'),
-        np.array(img_points, dtype='float32')
-    )
-    transforms = {
-        "model2box": model2box,
-        "img2box": img2box,
-        "img2model": img2model,
-        "model2img": model2img,
-        "box2model": box2model,
-        "box2img": box2img
-    }
+    point_names = ["model", "img", "box"]
+    point_arrays = {}
+    for name in points:
+        if name == 'box':
+            arr = np.array(DEFAULT_BOX, dtype='float32')
+        elif name in calibration:
+            arr = np.array(calibration[name], dtype='float32')
+        elif name + "_points" in calibration:
+            arr = np.array(calibration[name + "_points"], dtype='float32')
+        else:
+            continue
+        point_arrays[name] = arr
+
+    transforms = {}
+    for a in point_names:
+        for b in point_names:
+            if a == b:
+                continue
+            if not (a in point_arrays):
+                continue
+            if not (b in point_arrays):
+                continue
+            transform_name = a + '2' + b
+            transform = cv2.getPerspectiveTransform(
+                point_arrays[a],
+                point_arrays[b]
+            )
+            transforms[transform_name] = transform
+
     return transforms
