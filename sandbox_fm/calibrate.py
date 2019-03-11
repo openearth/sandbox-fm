@@ -188,7 +188,14 @@ def transform(x, y, M):
 def compute_transforms(calibration):
     """compute transformation matrices based on calibration data"""
 
-    point_names = ["model", "img", "box"]
+    point_names = [
+        "model",
+        "img",
+        "box",
+        "img_pre_cut",
+        "img_post_cut",
+        "beamer"
+    ]
     point_arrays = {}
     for name in points:
         if name == 'box':
