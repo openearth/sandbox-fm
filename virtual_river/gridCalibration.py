@@ -6,31 +6,72 @@ Created on Thu Jan  3 10:49:34 2019
 """
 
 
-# import time
+import json
 import cv2
 import numpy as np
 import geojson
+import sandbox_fm.calibrate
+from sandbox_fm.calibration_wizard import NumpyEncoder
 
 
-def detectCorners(filename, method = 'standard'):
+def create_calibration_file(img_x, img_y, cut_points):
     """
-    functiebeschrijving
+    Function that creates the calibration file (json format) and returns the
+    transforms that can be used by other functions.
     """
-    img = cv2.imread(filename) # load image
-    gray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY) # convert image to grayscale
+    calibration = {}
+    # model points following SandBox implementation; between [-600, -400] and [600, 400] 
+    calibration['model_points'] = ([-400, 300 ], [400, 300], [400, -300], [-400, -300])
+    # resolution camera; FullHD
+    calibration['img_points'] = [0, 0], [1920, 0], [1920, 1080], [0, 1080]
+    # calibration points used to cut images
+    calibration['img_pre_cut_points'] = cut_points.tolist()
+    # corners of image after image cut
+    calibration['img_post_cut_points'] = [0, 0], [img_x, 0], [img_x, img_y],  [0, img_y]
+    # tygron project creation; empty world coordinates
+    calibration['tygron_export'] = [0, 0], [1000, 0], [1000, -750],  [0, -750]
+    # tygron project update; world coordinates once created
+    calibration['tygron_update'] = [0, 0], [1000, 0], [1000, 750],  [0, 750]
+    # height range
+    calibration['z'] = [0.0, 9.0]
+    # height of game pieces; may be subject to change after interpolation
+    calibration['z_values'] = [0, 5]
+    # box == beamer
+    calibration['box'] = [0, 0], [640, 0], [640, 480], [0, 480]
+    transforms = sandbox_fm.calibrate.compute_transforms(calibration)
+    calibration.update(transforms)
+    with open('calibration.json', 'w') as f:
+        json.dump(calibration, f, sort_keys=True, indent=2, cls=NumpyEncoder)
+    return transforms
+
+
+def detect_corners(filename, method='standard'):
+    """
+    Function that detects the corners of the board (the four white circles)
+    and returns their coordinates as a 2D array.
+    """
+    img = cv2.imread(filename)  # load image
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)  # convert image to grayscale
     if method == 'adaptive':
-        blur = cv2.medianBlur(gray, 5) # flur grayscale image
-        thresh = cv2.adaptiveThreshold(blur, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY,11,2)
-        cv2.imwrite('Adaptive_threshold.jpg', thresh) # store threshold image
+        blur = cv2.medianBlur(gray, 5)  # flur grayscale image
+        thresh = cv2.adaptiveThreshold(blur, 255,
+                                       cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+                                       cv2.THRESH_BINARY, 11, 2)
+        cv2.imwrite('Adaptive_threshold.jpg', thresh)  # store threshold image
     else:
         blur = cv2.GaussianBlur(gray, (5, 5), 0)  # flur grayscale image
-        ret, thresh = cv2.threshold(blur, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)  # threshold grayscale image as binary
+        # threshold grayscale image as binary
+        ret, thresh = cv2.threshold(blur, 0, 255,
+                                    cv2.THRESH_BINARY + cv2.THRESH_OTSU)
         cv2.imwrite('Standard_threshold.jpg', thresh)  # store threshold image
 
-    # detect corner circles in the image (min/max radius ensures only finding those)
-    circles = cv2.HoughCircles(thresh, cv2.HOUGH_GRADIENT, 1, 200, param1 = 50, param2 = 22, minRadius = 50, maxRadius = 70)
+    # detect corner circles in the image (min/max radius ensures only
+    # finding those)
+    circles = cv2.HoughCircles(thresh, cv2.HOUGH_GRADIENT, 1, 200, param1=50,
+                               param2=22, minRadius=50, maxRadius=70)
 
-    # ensure at least some circles were found, such falesafes (also for certain error types) should be build in in later versions
+    # ensure at least some circles were found, such falesafes (also for certain
+    # error types) should be build in in later versions
     if circles is None:
         print('no circles')
         return
@@ -40,24 +81,22 @@ def detectCorners(filename, method = 'standard'):
     canvas = circles[:, :2]
 
     for (x, y, r) in circles:
-        cv2.circle(img, (x, y), r, (0, 255, 0), 4) # draw circle around detected corner
-        cv2.rectangle(img, (x - 5, y - 5), (x + 5, y + 5), (0, 128, 255), -1) # draw rectangle at center of detected corner
-        #canvas.append([x, y]) # store corner coordinates
+        # draw circle around detected corner
+        cv2.circle(img, (x, y), r, (0, 255, 0), 4)
+        # draw rectangle at center of detected corner
+        cv2.rectangle(img, (x - 5, y - 5), (x + 5, y + 5), (0, 128, 255), -1)
 
-    # cv2.imwrite('CornersDetected.jpg', img) # store the corner detection image
-    """
-    # storing corners for the perspective warp, disabled
-
-    with open('circles_real.txt', 'w') as f:
-        for item in circles:
-            f.write("%s\n" % item)
-    print('stored')
-    """
+    #cv2.imwrite('CornersDetected.jpg', img) # store the corner detection image
     return canvas, thresh
 
 
-def rotateGrid(canvas, img):
-    # get index of one of the two highest corners, store it and delete from array
+def rotate_grid(canvas, img):
+    """
+    Function that sorts the four corners in the right order (top left, top
+    right, bottom right, bottom left) and returns the perspective transform
+    to be used throughout the session.
+    """
+    # get index of one of the two top corners, store it and delete from array
     lowest_y = int(np.argmin(canvas, axis=0)[1:])
     top_corner1 = canvas[lowest_y]
     x1 = top_corner1[0]
@@ -94,41 +133,50 @@ def rotateGrid(canvas, img):
 
     # this value needs changing according to image size
     img_y = 3000  # warped image height
-    ratio = 1.3861874976470018770202169598726  # height/width ratio given current grid
+    # height/width ratio given current grid
+    ratio = 1.3861874976470018770202169598726
     img_x = int(round(img_y * ratio))  # warped image width
-    pts2 = np.float32([[0, 0],[img_x, 0],[img_x, img_y],[0, img_y]])  # size for warped image
-    perspective = cv2.getPerspectiveTransform(pts1, pts2)  # get perspective to warp image
+    # size for warped image
+    pts2 = np.float32([[0, 0],[img_x, 0],[img_x, img_y],[0, img_y]])
+    # get perspective to warp image
+    perspective = cv2.getPerspectiveTransform(pts1, pts2)
 
     # warp image according to the perspective transform and store image
     # warped = cv2.warpPerspective(img, perspective, (img_x, img_y))
     # cv2.imwrite('warpedGrid.jpg', warped)
-    origins, radius, features = calcGrid(img_y, img_x)
+    origins, radius = calc_grid(img_y, img_x)
+    features = create_features(origins, radius)
+    origins = np.array(origins)
     return perspective, img_x, img_y, origins, radius, pts1, features
 
 
-def calcGrid(height, width):
+def calc_grid(height, width):
+    """
+    Function that calculates the midpoint coordinates of each hexagon in the
+    transformed picture.
+    """
     # determine size of grid circles from image and step size in x direction
-    radius = int(round(height / 10))
+    radius = (height / 10)
     x_step = np.cos(np.deg2rad(30)) * radius
-    # print(x_step)
     origins = []
-
     # determine x and y coordinates of gridcells midpoints
     for a in range(1, 16):  # range reflects gridsize in x direction
-        x = int(round(x_step * a))
+        x = (x_step * a)
         for b in range(1, 11):  # range reflects gridsize in y direction
             if a % 2 == 0:
                 if b == 10:
                     continue
-                y = int(round(radius * b))
+                y = (radius * b)
             else:
-                y = int(round(radius * (b - 0.5)))
+                y = (radius * (b - 0.5))
             origins.append([x, y])
-    features = createFeatures(origins, radius)
-    return np.array(origins), radius, features
+    return origins, radius
 
 
-def createFeatures(origins, radius):
+def create_features(origins, radius):
+    """
+    Function that creates Polygon features (hexagon shaped) for all hexagons.
+    """
     radius = radius/2
     dist = radius/np.cos(np.deg2rad(30))
     x_jump = dist/2
@@ -142,16 +190,18 @@ def createFeatures(origins, radius):
         point4 = [x-dist, y]
         point5 = [x-x_jump, y-y_jump]
         point6 = [x+x_jump, y-y_jump]
-        polygon = geojson.Polygon([[point1, point2, point3, point4, point5, point6, point1]])
+        polygon = geojson.Polygon([[point1, point2, point3, point4, point5,
+                                    point6, point1]])
         feature = geojson.Feature(id=i, geometry=polygon)
-        features.append(feature)  # features['polygon_%d'%d] = [point1, point2, point3, point4, point5, point6]
-    return features  
+        features.append(feature)
+    return features
 
-
-"""
-# this function draws the grid as calculated by calcGrid function. Not called in the script
 
 def drawMask(origins, img):
+    """
+    Function that can be called to draw the mask and print hexagon numbers.
+    This function is currently not called. Can be removed at a later stage.
+    """
     global count
     global radius
     r = int(round(radius / 2))
@@ -160,9 +210,9 @@ def drawMask(origins, img):
         # corresponding to the center of the circle
         cv2.circle(img, (x, y), r, (0, 255, 0), 4)
         #cv2.rectangle(img, (x - 5, y - 5), (x + 5, y + 5), (0, 128, 255), -1)
-        cv2.putText(img, str(count), (x - 50, y + 30), cv2.FONT_HERSHEY_SIMPLEX, 3, (0, 0, 255), 1)   
+        cv2.putText(img, str(count), (x - 50, y + 30),
+                    cv2.FONT_HERSHEY_SIMPLEX, 3, (0, 0, 255), 1)
     # save image with grid
     cv2.imwrite('drawGrid.jpg', img)
     print('success')
-    return  
-"""
+    return

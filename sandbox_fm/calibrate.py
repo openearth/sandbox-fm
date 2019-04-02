@@ -194,7 +194,9 @@ def compute_transforms(calibration):
         "box",
         "img_pre_cut",
         "img_post_cut",
-        "beamer"
+        "beamer",
+		"tygron_export",
+		"tygron_update"
     ]
     point_arrays = {}
     for name in point_names:
