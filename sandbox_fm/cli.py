@@ -328,7 +328,7 @@ def run(schematization, engine, max_iterations, mmi):
     data['kinect_height_original'] = data['kinect_height'].copy()
 
     if data['average_kinect_height']:
-        buffer_size = 100
+        buffer_size = 1
         data['kinect_height_buffer'] = collections.deque(maxlen=buffer_size)
 
     vis = Visualization()
