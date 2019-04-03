@@ -101,7 +101,11 @@ def cli():
      - r -> reset bathymethry
      - b -> set bed level
     """
-    logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(level=logging.INFO,
+                    filename='bps.log',
+                    format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
+                    datefmt='%H:%M:%S',
+                    filemode='w')
     logging.root.setLevel(logging.INFO)
     logger.info("Welcome to the sandbox software.")
 
