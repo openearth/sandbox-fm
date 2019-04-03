@@ -367,8 +367,8 @@ def run(schematization, engine, max_iterations, mmi):
             logging.info('Adding depth mask to buffer')
             kinect_height_threshold = data['kinect_height'].copy()
             # If cells are above the threshold, we use the original kinect_image_height values
-            kinect_above_maximum = kinect_height_threshold > data['bedlevel_update_maximum']
-            kinect_height_threshold[kinect_above_maximum] = data['kinect_height_original'][kinect_above_maximum]
+            # kinect_above_maximum = kinect_height_threshold > data['bedlevel_update_maximum']
+            # kinect_height_threshold[kinect_above_maximum] = data['kinect_height_original'][kinect_above_maximum]
             # Add to buffer
             data['kinect_height_buffer'].append(kinect_height_threshold)
 
