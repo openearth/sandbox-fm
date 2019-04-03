@@ -88,7 +88,6 @@ def dflowfm_compute(data):
 
 def update_height_dflowfm(idx, height_nodes_new, data, model):
     model.set_var_slice('zk', [1], [len(height_nodes_new)], height_nodes_new)  # This is quick!
-    model.on_land_change()
     # model.set_var('zk', height_nodes_new)  # Does not work
 
 
