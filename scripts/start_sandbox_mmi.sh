@@ -7,7 +7,11 @@ model=../models/Lent/FlowFM.mdu
 
 cd ~/sandbox-fm/scripts/
 
+xrandr --listactivemonitors
 sleep 30
+xrandr --listactivemonitors
+sleep 30
+xrandr --listactivemonitors
 
 mmi-runner dflowfm $model --port 62000 --pause -o s1 -o bl -o ucx -o ucy -o zk &
 
