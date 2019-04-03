@@ -364,7 +364,7 @@ def run(schematization, engine, max_iterations, mmi):
 
         # Update buffered
         if data['average_kinect_height']:
-            logging.info('Adding depth mask to buffer')
+            logging.info('Adding additional depth image to buffer')
             kinect_height_threshold = data['kinect_height'].copy()
             # If cells are above the threshold, we use the original kinect_image_height values
             # kinect_above_maximum = kinect_height_threshold > data['bedlevel_update_maximum']
@@ -402,7 +402,7 @@ def run(schematization, engine, max_iterations, mmi):
             if time_since_bed_update >  data['auto_bedlevel_update_interval']:
                 run_update_bedlevel(data, model)
                 last_bed_update = time.time()
-            tics['automate_bed_update'] = time.time()
+            tics['automatic_bed_update'] = time.time()
 
         logger.info("tics: %s", tic_report(tics))
 

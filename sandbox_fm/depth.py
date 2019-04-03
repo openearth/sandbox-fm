@@ -155,7 +155,7 @@ def calibrated_height_images(depth_max_min, z_min_max, anomaly_name='anomaly.npy
         return height
     f = functools.partial(values2height, z_min_max=z_min_max, depth_max_min=depth_max_min)
 
-    for raw in depth_images_choice():
+    for raw in depth_images():
         # correct for anomaly
         height = f(raw - anomaly)
         yield height
