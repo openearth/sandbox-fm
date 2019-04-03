@@ -102,7 +102,7 @@ def cli():
      - b -> set bed level
     """
     logging.basicConfig(level=logging.INFO,
-                    filename='bps.log',
+                    filename='sandbox.log',
                     format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
                     datefmt='%H:%M:%S',
                     filemode='w')
