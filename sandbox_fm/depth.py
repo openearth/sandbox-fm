@@ -12,7 +12,6 @@ import scipy.interpolate
 from .calibrate import HEIGHT, WIDTH, depth2xyzuv
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
 
 
 class MockupFreenect(object):
@@ -81,7 +80,6 @@ def percentile_depth_images(buffer_size=50, q=25):
     """"compute running percentile images"""
     buffer = collections.deque(maxlen=buffer_size)
     for img in depth_images():
-        logging.info('Adding depth mask to buffer')
         buffer.append(img)
         perc = np.percentile(buffer, q=q, axis=0)
         perc = np.ma.masked_equal(perc, (2 ** 11) - 1)

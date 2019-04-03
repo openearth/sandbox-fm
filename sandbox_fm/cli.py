@@ -63,7 +63,11 @@ from .gestures import (
     recognize_gestures
 )
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.INFO,
+                    filename='sandbox.log',
+                    format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
+                    datefmt='%H:%M:%S',
+                    filemode='w')
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
@@ -101,11 +105,7 @@ def cli():
      - r -> reset bathymethry
      - b -> set bed level
     """
-    logging.basicConfig(level=logging.INFO,
-                    filename='sandbox.log',
-                    format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
-                    datefmt='%H:%M:%S',
-                    filemode='w')
+    logging.basicConfig(level=logging.INFO)
     logging.root.setLevel(logging.INFO)
     logger.info("Welcome to the sandbox software.")
 
@@ -364,6 +364,7 @@ def run(schematization, engine, max_iterations, mmi):
 
         # Update buffered
         if data['average_kinect_height']:
+            logging.info('Adding depth mask to buffer')
             kinect_height_threshold = data['kinect_height'].copy()
             # If cells are above the threshold, we use the original kinect_image_height values
             kinect_above_maximum = kinect_height_threshold > data['bedlevel_update_maximum']
@@ -394,7 +395,8 @@ def run(schematization, engine, max_iterations, mmi):
 
             model.update(dt)
         tics['model'] = time.time()
-
+        
+        # Automatic bed level update every xx seconds
         if data['auto_bedlevel_update_interval']:
             time_since_bed_update = (time.time() - last_bed_update)
             if time_since_bed_update >  data['auto_bedlevel_update_interval']:
