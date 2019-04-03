@@ -49,7 +49,7 @@ def update_with_message(data, model, message):
     data[var_name] = arr
     # lookup the metadata for this model
     meta_model = available[model.engine]
-    # compute derivitave variables
+    # compute derivative variables
     meta_model["compute"](data)
     # store in the "known name"
     mapped_name = meta_model['reverse_mapping'][var_name]
