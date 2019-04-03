@@ -13,8 +13,8 @@ xrandr --listactivemonitors
 sleep 30
 xrandr --listactivemonitors
 
-# mmi-runner dflowfm $model --port 62000 --pause -o s1 -o bl -o ucx -o ucy -o zk &
-mmi-runner dflowfm $model --port 62000 --pause -o s1 --interval 10 &
+mmi-runner dflowfm $model --port 62000 --pause -o s1 -o bl -o ucx -o ucy -o zk --interval=20 &
+# mmi-runner dflowfm $model --port 62000 --pause -o s1 --interval 10 &
 
 sleep 5
 

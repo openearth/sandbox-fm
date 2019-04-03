@@ -328,7 +328,7 @@ def run(schematization, engine, max_iterations, mmi):
     data['kinect_height_original'] = data['kinect_height'].copy()
 
     if data['average_kinect_height']:
-        buffer_size = 1
+        buffer_size = 100
         data['kinect_height_buffer'] = collections.deque(maxlen=buffer_size)
 
     vis = Visualization()
@@ -356,6 +356,7 @@ def run(schematization, engine, max_iterations, mmi):
             for sock, n in sub_poller.poll(10):
                 for i in range(n):
                     message = recv_array(sock)
+                    logging.info('Received mmi %s', message[1]['name'])
                     update_with_message(data, model, message)
 
         # update kinect
@@ -367,8 +368,8 @@ def run(schematization, engine, max_iterations, mmi):
             logging.info('Adding additional depth image to buffer')
             kinect_height_threshold = data['kinect_height'].copy()
             # If cells are above the threshold, we use the original kinect_image_height values
-            # kinect_above_maximum = kinect_height_threshold > data['bedlevel_update_maximum']
-            # kinect_height_threshold[kinect_above_maximum] = data['kinect_height_original'][kinect_above_maximum]
+            kinect_above_maximum = kinect_height_threshold > data['bedlevel_update_maximum']
+            kinect_height_threshold[kinect_above_maximum] = data['kinect_height_original'][kinect_above_maximum]
             # Add to buffer
             data['kinect_height_buffer'].append(kinect_height_threshold)
 
