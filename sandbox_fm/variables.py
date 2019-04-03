@@ -64,7 +64,7 @@ def compute_delta_height(data, idx):
     if not data['average_kinect_height']:
         kinect_height = data['kinect_height']
     else:
-        buffer_quantile = 50
+        buffer_quantile = 25
         kinect_height = np.percentile(data['kinect_height_buffer'], q=buffer_quantile, axis=0)
 
     x_nodes_box, y_nodes_box = transform(data['X_NODES'].ravel(), data['Y_NODES'].ravel(), data['model2img'])

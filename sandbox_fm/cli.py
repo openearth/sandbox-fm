@@ -115,7 +115,7 @@ def record():
     for i, (video, raw) in enumerate(zip(videos, raws)):
         skimage.io.imsave("video_%06d.png" % (i, ), video)
         raw.dump("raw_%06d.npy" % (i, ))
-        if i > 5:
+        if i > 1000000:
             break
 
 
@@ -322,7 +322,7 @@ def run(schematization, engine, max_iterations, mmi):
     data['kinect_height_original'] = data['kinect_height'].copy()
 
     if data['average_kinect_height']:
-        buffer_size = 10
+        buffer_size = 100
         data['kinect_height_buffer'] = collections.deque(maxlen=buffer_size)
 
     vis = Visualization()
