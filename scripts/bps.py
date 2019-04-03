@@ -18,7 +18,15 @@ import threading
 import matplotlib as mpl
 mpl.rcParams['toolbar'] = 'None'
 
-HIS_XY = (189020, 430051)  # Inflow Boundary
+import logging
+logging.basicConfig(filename='bps.log',
+                    format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
+                    datefmt='%H:%M:%S',
+                    level=logging.DEBUG,
+                    filemode='w')
+
+
+# HIS_XY = (189020, 430051)  # Inflow Boundary
 # HIS_XY = (188252, 429208) # Bastei_1
 HIS_XY = (188900, 429880)  # Waal just inside sandbox (upstream)
 
@@ -61,6 +69,8 @@ def init(ln):
 
 def update(frame, ln, ax, data, rect):
     """update the line"""
+    logging.debug('{} - Current water level: {}'.format(data['counter'], data['s1']))
+
     val = normalize_s1(data['s1']) * ax.get_ylim()[1]
     ln.set_data([ax.get_xlim()[0], ax.get_xlim()[1]], [val, val])
     # ax.set_title('Current water level: {:.2f}'.format(data['s1']))
@@ -83,9 +93,9 @@ def update_data(poller, data):
                 message = mmi.recv_array(sock)
                 arr, meta = message
                 if meta['name'] == 's1':
-                    # just pick a value
                     data['counter'] += 1
                     data['s1'] = arr[data['id']]
+                    # logging.debug('Full array of waterlevels: {}'.format(arr))
 
 
 def XY_to_array(model, xy):
@@ -94,6 +104,8 @@ def XY_to_array(model, xy):
 
     distsquared = ((X - xy[0])**2 + (Y - xy[1])**2)
     idmin = np.argmin(distsquared)
+
+    logging.debug('Looking for closest point "xy" to x: {}, y: {}. Closest point has id {}'.format(xy, X, Y, idmin))
     return idmin
 
 
