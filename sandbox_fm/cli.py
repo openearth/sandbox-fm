@@ -32,7 +32,6 @@ except ImportError:
     pass
 
 # don't import before MPI, otherwise segfault under OSX
-import skimage.io
 
 from .depth import (
     depth_images,
@@ -110,6 +109,9 @@ def cli():
 @cli.command()
 def record():
     """record 5 frames, for testing"""
+    
+    import skimage.io
+    
     videos = video_images()
     raws = depth_images()
     for i, (video, raw) in enumerate(zip(videos, raws)):
