@@ -111,17 +111,21 @@ def main_menu():
                 print("Updating board state")
                 turn += 1
                 filename = 'board_image%d.jpg' % turn  # snapshot filename
-                with open('hexagons_tygron_update_transformed_test2.geojson') as f:
+                with open('hexagons_tygron_update_transformed_test4.geojson') as f:
                     hexagons_old = geojson.load(f)
-                with open('hexagons_tygron_update_transformed_test1.geojson') as g:
+                with open('hexagons_tygron_update_transformed_test3.geojson') as g:
                     hexagons_new = geojson.load(g)
                 tic = time.time()
-                z_changed = compare.compare_hex(token, hexagons_old, hexagons_new)
+                hexagons_new = tygron.update_hexagons_tygron_id(token,
+                                                                hexagons_new)
+                z_changed = compare.compare_hex(token, hexagons_old,
+                                                hexagons_new)
                 tac = time.time()
                 grid_interpolated, tec = gridmap.hex_to_points(hexagons_new,
                                                                grid_interpolated,
                                                                changed_hex=z_changed,
                                                                turn=turn)
+                #tygron.get_buildings(token)
                 toc = time.time()
                 print("Updated to " + str(turn) +
                       ". Comparison update time: " + str(tac-tic) +
@@ -175,6 +179,7 @@ def initialize(filename):
         hexagons = detect.detect_markers(filename, pers, img_x, img_y,
                                          origins, radius, features)
         print("processed initial board state")
+        hexagons = tygron.update_hexagons_tygron_id(token, hexagons)
         hexagons_sandbox = detect.transform(hexagons, transforms,
                                             export="sandbox")
         hexagons_tygron = detect.transform(hexagons, transforms,
@@ -187,6 +192,9 @@ def initialize(filename):
         grid_interpolated, tec = gridmap.hex_to_points(hexagons_sandbox, grid,
                                                        start=True)
         print("executed grid interpolation")
+        tygron.set_terrain_type(token, hexagons_water, terrain_type="water")
+        tygron.set_terrain_type(token, hexagons_land, terrain_type="land")
+        print("updated Tygron")
     try:
         return token, hexagons_sandbox, hexagons_tygron, hexagons_water, \
             hexagons_land, grid, grid_interpolated, transforms

@@ -97,12 +97,13 @@ def detect_markers(file, pers, img_x, img_y, origins, r, features,
         # cv2.imwrite(filenameGeo, maskedImgGeo)
         # cv2.imwrite(filenameEco, maskedImgEco)
         feature.properties["id"] = i
+        feature.properties["tygron_id"] = i
         feature.properties["z"] = len(contoursGeo)
         feature.properties["landuse"] = len(contoursEco)
     with open('hexagons.geojson', 'w') as f:
         geojson.dump(geojson.FeatureCollection(features), f, sort_keys=True,
                      indent=2)
-    return features
+    return geojson.FeatureCollection(features)
 
 
 def transform(features, transforms, export=None):
@@ -124,7 +125,7 @@ def transform(features, transforms, export=None):
         print("unknown export method, current supported are: 'sandbox', "
               "'tygron' & 'tygron_initialize'")
         return features
-    for feature in features:
+    for feature in features.features:
         pts = np.array(feature.geometry["coordinates"][0], dtype="float32")
         # points should be channels
         # pts = np.c_[pts, np.zeros_like(pts[:, 0])]

@@ -7,6 +7,7 @@ Created on Wed Mar 27 11:25:35 2019
 
 import requests
 import base64
+import json
 import geojson
 from shapely import geometry
 
@@ -43,6 +44,36 @@ def join_session(username, password, application_type="EDITOR",
         return None
 
 
+def get_buildings(api_key, api_endpoint=("https://engine.tygron.com/api/"
+                                         "session/items/buildings/?f=JSON&")):
+    """
+    Function to retrieve all building information from Tygron.
+    """
+    data = requests.get(api_endpoint+api_key)
+    buildings_json = data.json()
+    with open('buildings.json', 'w') as f:
+        json.dump(buildings_json, f, sort_keys=True, indent=2)
+    return buildings_json
+
+
+def update_hexagons_tygron_id(api_key, hexagons):
+    buildings_json = get_buildings(api_key)
+    building_indices = {}
+    for building in buildings_json:
+        name = building["name"]
+        tygron_id = building["id"]
+        try:
+            building_indices.update({int(name): tygron_id})
+        except ValueError:
+            print("faulty building name for building with ID " +
+                  str(building["id"]))
+            continue
+    for feature in hexagons.features:
+        tygron_id = building_indices.get(feature.id, None)
+        feature.properties["tygron_id"] = tygron_id
+    return hexagons
+
+
 def set_function(api_key, hex_id, new_type,
                  api_endpoint=("https://engine.tygron.com/api/session/event/"
                                "EditorBuildingEventType/SET_FUNCTION/?")):
@@ -51,7 +82,7 @@ def set_function(api_key, hex_id, new_type,
     Building function in Tygron.
     """
     r = requests.post(url=api_endpoint+api_key, json=[hex_id, new_type])
-    print(r.text)
+    #print(r, r.text)
     """try:
         pastebin_url = r.json()
         print(pastebin_url)
@@ -61,14 +92,127 @@ def set_function(api_key, hex_id, new_type,
     return
 
 
-def get_buildings(api_key, api_endpoint=("https://engine.tygron.com/api/"
-                                         "session/items/buildings/?f=JSON&")):
+def set_name(api_key, tygron_id, hex_id,
+             api_endpoint=("https://engine.tygron.com/api/session/event/"
+                           "EditorBuildingEventType/SET_NAME/?")):
+    r = requests.post(url=api_endpoint+api_key, json=[tygron_id, str(hex_id)])
+    return
+
+
+def set_terrain_type(api_key, hexagons, terrain_type="land"):
     """
-    Function to retrieve all building information from Tygron.
+    Function that updates terrain in Tygron. Mainly, it updates terrain from
+    land to water and visa versa. In case of water to land, first changes the
+    hexagon terrain to water and then adds a building to it which is
+    subsequently updated to a specific land use. In case of land to water,
+    first removes any building (the land use) from the hexagon and then changes
+    the terrain to water.
     """
-    data = requests.get(api_endpoint+api_key)
-    buildings_json = data.json()
-    return buildings_json
+    print("updating terrain")
+    counter = 0
+    polygons = []
+    if terrain_type == "water":
+        for feature in hexagons.features:
+            shape = geometry.asShape(feature.geometry)
+            polygons.append(shape)
+            remove_polygon(api_key, feature.properties["tygron_id"], shape)
+            counter += 1
+            print(counter)
+        multipolygon = geometry.MultiPolygon(polygons)
+        hexagons2change = geometry.mapping(multipolygon)
+        r = update_terrain(api_key, hexagons2change, terrain_type=terrain_type)
+        try:
+            pastebin_url = r.json()
+            print(pastebin_url)
+        except ValueError:
+            print("water terrain updated")
+    else:
+        for feature in hexagons.features:
+            shape = geometry.asShape(feature.geometry)
+            polygons.append(shape)
+            if feature.properties["tygron_id"] is None:
+                tygron_id = add_standard(api_key)
+                feature.properties["tygron_id"] = tygron_id
+                set_name(api_key, tygron_id, feature.id)
+            else:
+                continue
+        multipolygon = geometry.MultiPolygon(polygons)
+        hexagons2change = geometry.mapping(multipolygon)
+        r = update_terrain(api_key, hexagons2change, terrain_type=terrain_type)
+        for feature in hexagons.features:
+            shape = geometry.asShape(feature.geometry)
+            add_polygon(api_key, feature.properties["tygron_id"], shape)
+            set_function(api_key, feature.properties["tygron_id"], 0)
+            counter += 1
+            print(counter)
+        try:
+            pastebin_url = r.json()
+            print(pastebin_url)
+        except ValueError:
+            print("land terrain updated")
+    return
+
+
+def remove_polygon(api_key, hexagon_id, hexagon_shape,
+                   api_endpoint=("https://engine.tygron.com/api/session/event/"
+                                 "EditorBuildingEventType/"
+                                 "BUILDING_REMOVE_POLYGONS/?")):
+    """
+    Function that removes a building (land use) from a hexagon in Tygron.
+    """
+    multi = geometry.MultiPolygon([hexagon_shape])
+    remove = geometry.mapping(multi)
+    r = requests.post(url=api_endpoint+api_key, json=[hexagon_id, 1, remove])
+    #print(r.text)
+    return
+
+
+def add_polygon(api_key, hexagon_id, hexagon_shape,
+                api_endpoint=("https://engine.tygron.com/api/session/event/"
+                              "EditorBuildingEventType/"
+                              "BUILDING_ADD_POLYGONS/?")):
+    """
+    Function that adds a polygon to a building (land use) for a hexagon in
+    Tygron.
+    """
+    multi = geometry.MultiPolygon([hexagon_shape])
+    add = geometry.mapping(multi)
+    r = requests.post(url=api_endpoint+api_key, json=[hexagon_id, 1, add])
+    #print(r, r.text)
+    return
+
+
+def add_standard(api_key,
+                 api_endpoint=("https://engine.tygron.com/api/session/event/"
+                               "EditorBuildingEventType/ADD_STANDARD/?")):
+    r = requests.post(url=api_endpoint+api_key, json=[0])
+    #print(r, r.text)
+    return r.text
+
+
+def add_section(api_key, hexagon_ids,
+                api_endpoint=("https://engine.tygron.com/api/session/event/"
+                              "EditorBuildingEventType/ADD_SECTION/?")):
+    r = requests.post(url=api_endpoint+api_key, json=[hexagon_ids])
+    #print(r.text)
+    return
+
+
+def update_terrain(api_key, hexagons, terrain_type="land",
+                   api_endpoint=("https://engine.tygron.com/api/session/event/"
+                                 "EditorTerrainTypeEventType/"
+                                 "ADD_TERRAIN_POLYGONS/?")):
+    """
+    Function that changes the terrain of a hexagon in Tygron. Changes the
+    terrain from land to water or from water to land.
+    """
+    if terrain_type == "water":
+        terrain_id = 3
+    else:
+        terrain_id = 0
+    r = requests.post(url=api_endpoint+api_key, json=[terrain_id,
+                                                      hexagons, True])
+    return r
 
 
 def set_elevation(tiff_file, api_key, start=False):
@@ -105,115 +249,7 @@ def set_elevation(tiff_file, api_key, start=False):
         return
 
 
-def set_terrain_type(api_key, hexagons, terrain_type="land"):
-    """
-    Function that updates terrain in Tygron. Mainly, it updates terrain from
-    land to water and visa versa. In case of water to land, first changes the
-    hexagon terrain to water and then adds a building to it which is
-    subsequently updated to a specific land use. In case of land to water,
-    first removes any building (the land use) from the hexagon and then changes
-    the terrain to water.
-    """
-    polygons = []
-    if terrain_type == "water":
-        for feature in hexagons.features:
-            shape = geometry.asShape(feature.geometry)
-            polygons.append(shape)
-            remove_polygon(api_key, feature.id, shape)
-        multipolygon = geometry.MultiPolygon(polygons)
-        hexagons2change = geometry.mapping(multipolygon)
-        r = update_terrain(api_key, hexagons2change, terrain_type=terrain_type)
-        try:
-            pastebin_url = r.json()
-            print(pastebin_url)
-        except ValueError:
-            print("test")
-    else:
-        """
-        to do: see if only one for loop can be used --> do this after steps for
-        updating are clear, question is currently with Rudolf.
-        """
-        hexagon_ids = []
-        for feature in hexagons.features:
-            shape = geometry.asShape(feature.geometry)
-            hexagon_ids.append(feature.id)
-            polygons.append(shape)
-        multipolygon = geometry.MultiPolygon(polygons)
-        hexagons2change = geometry.mapping(multipolygon)
-        r = update_terrain(api_key, hexagons2change, terrain_type=terrain_type)
-        add_section(api_key, hexagon_ids)
-        for feature in hexagons.features:
-            shape = geometry.asShape(feature.geometry)
-            #building = geojson.GeometryCollection(feature.geometry)
-            #add_building(api_key, feature.id, building)
-            add_polygon(api_key, feature.id, shape)
-            set_function(api_key, feature.id, 0)
-        try:
-            pastebin_url = r.json()
-            print(pastebin_url)
-        except ValueError:
-            print("land terrain updated")
-    """
-    for feature in hexagons.features:
-        shape = geometry.asShape(feature.geometry)
-        polygons.append(shape)
-        if terrain_type == "water":
-            remove_polygon(api_key, feature.id, shape)
-        else:
-            add_polygon(api_key, feature.id, shape)
-    multipolygon = geometry.MultiPolygon(polygons)
-    hexagons2change = geometry.mapping(multipolygon)
-    r = update_polygon(api_key, hexagons2change, terrain_type=terrain_type)
-    print(r, r.text)
-    try:
-        pastebin_url = r.json()
-        print(pastebin_url)
-    except ValueError:
-        if terrain_type == "water":
-            print("waterbodies updated")
-        else:
-            print("land terrain updated")
-    """
-
-
-def remove_polygon(api_key, hexagon_id, hexagon_shape,
-                   api_endpoint=("https://engine.tygron.com/api/session/event/"
-                                 "EditorBuildingEventType/"
-                                 "BUILDING_REMOVE_POLYGONS/?")):
-    """
-    Function that removes a building (land use) from a hexagon in Tygron.
-    """
-    multi = geometry.MultiPolygon([hexagon_shape])
-    remove = geometry.mapping(multi)
-    r = requests.post(url=api_endpoint+api_key, json=[hexagon_id, 1, remove])
-    print(r.text)
-    return
-
-
-def add_polygon(api_key, hexagon_id, hexagon_shape,
-                api_endpoint=("https://engine.tygron.com/api/session/event/"
-                              "EditorBuildingEventType/"
-                              "BUILDING_ADD_POLYGONS/?")):
-    """
-    Function that adds a polygon to a building (land use) for a hexagon in
-    Tygron.
-    """
-    multi = geometry.MultiPolygon([hexagon_shape])
-    add = geometry.mapping(multi)
-    r = requests.post(url=api_endpoint+api_key, json=[hexagon_id, 1, add])
-    print(r.text)
-    return
-
-
 """
-def add_standard(api_key, hexagon_id,
-                 api_endpoint=("https://engine.tygron.com/api/session/event/"
-                               "EditorBuildingEventType/ADD_STANDARD/?")):
-    r = requests.post(url=api_endpoint+api_key, json=[hexagon_id])
-    print(r, r.text)
-    return
-
-
 def add_building(api_key, hexagon_id, hexagon_shape,
                  api_endpoint=("https://engine.tygron.com/api/session/event/"
                                "EditorBuildingEventType/"
@@ -223,31 +259,6 @@ def add_building(api_key, hexagon_id, hexagon_shape,
     print(r, r.text)
     return r
 """
-
-
-def add_section(api_key, hexagon_ids,
-                api_endpoint=("https://engine.tygron.com/api/session/event/"
-                              "EditorBuildingEventType/ADD_SECTION/?")):
-    r = requests.post(url=api_endpoint+api_key, json=[hexagon_ids])
-    print(r.text)
-    return
-
-
-def update_terrain(api_key, hexagons, terrain_type="land",
-                   api_endpoint=("https://engine.tygron.com/api/session/event/"
-                                 "EditorTerrainTypeEventType/"
-                                 "ADD_TERRAIN_POLYGONS/?")):
-    """
-    Function that changes the terrain of a hexagon in Tygron. Changes the
-    terrain from land to water or from water to land.
-    """
-    if terrain_type == "water":
-        terrain_id = 3
-    else:
-        terrain_id = 0
-    r = requests.post(url=api_endpoint+api_key, json=[terrain_id,
-                                                      hexagons, True])
-    return r
 
 
 if __name__ == '__main__':
@@ -260,10 +271,12 @@ if __name__ == '__main__':
         print("logging in to Tygron failed, unable to make changes in Tygron")
     else:
         api_key = "token="+api_key
-        print(api_key)
-        set_function(api_key, 60, 0)
+        #print(api_key)
+        #set_function(api_key, 60, 0)
+        #add_standard(api_key)
         buildings_json = get_buildings(api_key)
-        print(buildings_json)
-        with open('waterbodies.geojson') as f:
+        #print(buildings_json)
+        with open('waterbodies_tygron_transformed.geojson') as f:
             hexagons = geojson.load(f)
+        hexagons = update_hexagons_tygron_id(api_key, hexagons)
         set_terrain_type(api_key, hexagons, terrain_type="water")
