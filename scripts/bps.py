@@ -22,7 +22,7 @@ import logging
 logging.basicConfig(filename='bps.log',
                     format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
                     datefmt='%H:%M:%S',
-                    level=logging.DEBUG,
+                    level=logging.INFO,
                     filemode='w')
 
 
@@ -146,7 +146,7 @@ if __name__ == '__main__':
     rect = Rectangle((0, 0), ax.get_xlim()[1], 0, facecolor='b', alpha=0.5)
     ax.add_patch(rect)
 
-    normalize_s1 = matplotlib.colors.Normalize(6, 12, clip=True)
+    normalize_s1 = matplotlib.colors.Normalize(8, 12, clip=True)
 
     animation = matplotlib.animation.FuncAnimation(
         fig,
