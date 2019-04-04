@@ -5,6 +5,7 @@ import logging
 import time
 import json
 import functools
+import collections
 
 try:
     from itertools import izip as zip
@@ -31,7 +32,6 @@ except ImportError:
     pass
 
 # don't import before MPI, otherwise segfault under OSX
-import skimage.io
 
 from .depth import (
     depth_images,
@@ -63,7 +63,11 @@ from .gestures import (
     recognize_gestures
 )
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.INFO,
+                    filename='sandbox.log',
+                    format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
+                    datefmt='%H:%M:%S',
+                    filemode='w')
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
@@ -109,12 +113,15 @@ def cli():
 @cli.command()
 def record():
     """record 5 frames, for testing"""
+    
+    import skimage.io
+    
     videos = video_images()
     raws = depth_images()
     for i, (video, raw) in enumerate(zip(videos, raws)):
         skimage.io.imsave("video_%06d.png" % (i, ), video)
         raw.dump("raw_%06d.npy" % (i, ))
-        if i > 5:
+        if i > 1000000:
             break
 
 
@@ -320,6 +327,10 @@ def run(schematization, engine, max_iterations, mmi):
     data['height_cells_original'] = data['HEIGHT_CELLS'].copy()
     data['kinect_height_original'] = data['kinect_height'].copy()
 
+    if data['average_kinect_height']:
+        buffer_size = 100
+        data['kinect_height_buffer'] = collections.deque(maxlen=buffer_size)
+
     vis = Visualization()
     update_vars(data, model)
     vis.initialize(data)
@@ -345,12 +356,25 @@ def run(schematization, engine, max_iterations, mmi):
             for sock, n in sub_poller.poll(10):
                 for i in range(n):
                     message = recv_array(sock)
+                    logging.info('Received mmi %s', message[1]['name'])
                     update_with_message(data, model, message)
 
         # update kinect
         data['kinect_height'] = kinect_height
         data['kinect_image'] = kinect_image
+
+        # Update buffered
+        if data['average_kinect_height']:
+            logging.info('Adding additional depth image to buffer')
+            kinect_height_threshold = data['kinect_height'].copy()
+            # If cells are above the threshold, we use the original kinect_image_height values
+            kinect_above_maximum = kinect_height_threshold > data['bedlevel_update_maximum']
+            kinect_height_threshold[kinect_above_maximum] = data['kinect_height_original'][kinect_above_maximum]
+            # Add to buffer
+            data['kinect_height_buffer'].append(kinect_height_threshold)
+
         tics['update_vars'] = time.time()
+
 
         gestures = recognize_gestures(data['kinect_height'])
         data['gestures'] = gestures
@@ -372,13 +396,14 @@ def run(schematization, engine, max_iterations, mmi):
 
             model.update(dt)
         tics['model'] = time.time()
-
+        
+        # Automatic bed level update every xx seconds
         if data['auto_bedlevel_update_interval']:
             time_since_bed_update = (time.time() - last_bed_update)
             if time_since_bed_update >  data['auto_bedlevel_update_interval']:
                 run_update_bedlevel(data, model)
                 last_bed_update = time.time()
-            tics['automate_bed_update'] = time.time()
+            tics['automatic_bed_update'] = time.time()
 
         logger.info("tics: %s", tic_report(tics))
 

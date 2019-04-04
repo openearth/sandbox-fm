@@ -6,9 +6,15 @@ source ~/Envs/sandbox/bin/activate
 model=../models/Lent/FlowFM.mdu
 
 cd ~/sandbox-fm/scripts/
-echo 'in sandbox folder' > autostart.log
 
-mmi-runner dflowfm $model --port 62000 --pause -o s1 -o bl -o ucx -o ucy -o zk &
+xrandr --listactivemonitors
+sleep 30
+xrandr --listactivemonitors
+sleep 30
+xrandr --listactivemonitors
+
+mmi-runner dflowfm $model --port 62000 --pause -o s1 -o bl -o ucx -o ucy -o zk --interval=20 &
+# mmi-runner dflowfm $model --port 62000 --pause -o s1 --interval 10 &
 
 sleep 5
 
@@ -20,10 +26,10 @@ bps.py &
 
 sleep 5
 
-wmctrl -r 'Sandbox_figure' -e 0,1920,0,640,480
-wmctrl -r 'Sandbox_figure' -b toggle,fullscreen
 wmctrl -r 'BPS' -b toggle,fullscreen
 
-echo 'done' > autostart2.log
+wmctrl -r 'Sandbox_figure' -e 0,1920,0,640,480
+wmctrl -r 'Sandbox_figure' -b toggle,fullscreen
+
 
 read

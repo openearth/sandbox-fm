@@ -49,7 +49,7 @@ def update_with_message(data, model, message):
     data[var_name] = arr
     # lookup the metadata for this model
     meta_model = available[model.engine]
-    # compute derivitave variables
+    # compute derivative variables
     meta_model["compute"](data)
     # store in the "known name"
     mapped_name = meta_model['reverse_mapping'][var_name]
@@ -60,7 +60,12 @@ def update_with_message(data, model, message):
 def compute_delta_height(data, idx):
     """compute the bed level change, normalized a bit and only for cells in idx """
 
-    kinect_height = data['kinect_height']
+
+    if not data['average_kinect_height']:
+        kinect_height = data['kinect_height']
+    else:
+        buffer_quantile = 50
+        kinect_height = np.percentile(data['kinect_height_buffer'], q=buffer_quantile, axis=0)
 
     x_nodes_box, y_nodes_box = transform(data['X_NODES'].ravel(), data['Y_NODES'].ravel(), data['model2img'])
 

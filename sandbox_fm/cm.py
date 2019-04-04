@@ -4,6 +4,7 @@ import matplotlib.colors
 from matplotlib.colors import ListedColormap
 from matplotlib.colors import hex2color, rgb2hex
 from numpy import nan, inf
+import cmocean.cm
 
 from pycpt.load import gmtColormap
 
@@ -326,6 +327,10 @@ transparent_water = matplotlib.colors.LinearSegmentedColormap.from_list(
         (1.0, (0.1, 0.2, 0.8, 0.9))
     ]
 )
+
+ice_r = cmocean.cm.ice_r
+balance_r = cmocean.cm.balance_r
+speed = cmocean.cm.speed
 
 if __name__ == "__main__":
     import matplotlib.pyplot as plt

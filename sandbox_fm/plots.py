@@ -9,16 +9,11 @@ import matplotlib.pyplot as plt
 import matplotlib.patches
 import matplotlib.streamplot
 import matplotlib
-import cmocean.cm
 import scipy.interpolate
 import numpy as np
 import skimage.draw
 
-from .cm import (
-    bastei,
-    colombia,
-    transparent_water
-)
+import sandbox_fm.cm as cm
 
 from .models import (
     available
@@ -48,7 +43,6 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 
-# TODO: the script is not using the key below, but the order of this array (=key -1)
 views = {
     1: {
         "name": "Kinect",
@@ -93,14 +87,26 @@ default_config = {
     "scale": 5.0,  # Multiplication on flow velocity for particle speed
     "height_vmin": 0,  # Color scale bedlevel / kinect height
     "height_vmax": 9,  # Color scale bedlevel / kinect height
+    "height_cmap": 'bastei',  # Color map of the bedlevel / kinect height
     "velocities_vmin": 0,  # Color scale velocity
-    "velocities_vmax": 2,  # Color scale velocity
+    "velocities_vmax": 2,  # Color scale velocity,
+    "velocities_cmap": 'speed',  # Color map of the velocity
     "depth_vmin": 0,  # Color scale waterdepth
     "depth_vmax": 3,  # Color scale waterdepth
+    "depth_cmap": 'transparent_water',  # color map of the waterdepth
     'default_view': 1,  # Default view to load
+    'wave_cmap': 'ice_r',
+    'wave_vmin': -2,
+    'wave_vmax': 1,
+
+    'erosion_cmap': 'balance_r',
+    'erosion_vmin': -1,
+    'erosion_vmax': 1,
+
     'bedlevel_update_threshold': 0.5,  # Threshold (model meters) at which bed level an update is being done
     'bedlevel_update_maximum': 9999,  # Threshold (model meters) at which level the bed level is no longer updated (used for correcting for 'arms')
     'auto_bedlevel_update_interval': 0,  # Interval (s) at which the bed level is automatically updated
+    'average_kinect_height': 1,  # If true the bed level update will use a percentile of a set of images instead of the current kinect height
     'figure_axis': [0, 0, 1, 1],  # Left, Bottom, Right, Top. Can be used for (too large) beamer projections; to limit the part of the figure which is filled with axis.
 }
 
@@ -254,7 +260,7 @@ class Visualization():
         # Plot scanned height
         self.handles['kinect_height'] = self.ax.imshow(
             data['kinect_height_img'],
-            bastei,
+            getattr(cm, data['height_cmap']),
             vmin=data['height_vmin'],
             vmax=data['height_vmax']
         )
@@ -283,7 +289,7 @@ class Visualization():
 
         self.handles['height_cells'] = self.ax.imshow(
             data['height_cells_img'],
-            cmap=bastei,
+            cmap=getattr(cm, data['height_cmap']),
             alpha=1,
             vmin=data['height_vmin'],
             vmax=data['height_vmax']
@@ -314,10 +320,10 @@ class Visualization():
     def add_waterdepth(self, data):
         self.handles['waterdepth'] = self.ax.imshow(
             data['waterdepth_img'],
-            cmap=transparent_water,
+            cmap=getattr(cm, data['depth_cmap']),
             alpha=1.0,
-            vmin=0,
-            vmax=5
+            vmin=data['depth_vmin'],
+            vmax=data['depth_vmax']
         )
 
     def update_waterdepth(self, data):
@@ -359,9 +365,9 @@ class Visualization():
 
         # Or as colors
         N_water = matplotlib.colors.Normalize(data['depth_vmin'], data['depth_vmax'])
-        color_water = transparent_water(N_water(data['waterdepth_img']))
+        color_water = getattr(cm, data['depth_cmap'])(N_water(data['waterdepth_img']))
         N_land = matplotlib.colors.Normalize(data['height_vmin'], data['height_vmax'])
-        color_land = bastei(N_land(data['kinect_height_img']))
+        color_land = getattr(cm, data['height_cmap'])(N_land(data['kinect_height_img']))
         color_combined = color_water
 
         color_combined[data['watermask'], :] = color_land[data['watermask'], :]
@@ -452,9 +458,9 @@ class Visualization():
     def add_wavesurface(self, data):
         self.handles['wavesurface'] = self.ax.imshow(
             data['waterlevel_gradient_img'],
-            cmocean.cm.ice_r,
-            vmin=-2,
-            vmax=1
+            getattr(cm, data['wave_cmap']),
+            vmin=data['wave_vmin'],
+            vmax=data['wave_vmax']
         )
 
     def update_wavesurface(self, data):
@@ -477,10 +483,10 @@ class Visualization():
     def add_erosion(self, data):
         self.handles['erosion'] = self.ax.imshow(
             data['erosion_img'],
-            cmocean.cm.balance_r,     # or balance
+            getattr(cm, data['erosion_cmap']),     # or balance
             alpha=1,
-            vmin=-1,
-            vmax=1
+            vmin=data['erosion_vmin'],
+            vmax=data['erosion_vmax']
         )
 
     def update_erosion(self, data):
@@ -578,10 +584,10 @@ class Visualization():
         # Plot flow magnitude
         self.handles['mag'] = self.ax.imshow(
             data['mag_img'],
-            cmocean.cm.speed,
+            getattr(cm, data['velocities_cmap']),
             alpha=1,
-            vmin=0,
-            vmax=2,
+            vmin=data['velocities_vmin'],
+            vmax=data['velocities_vmax'],
             animated=True
         )
     def update_mag(self, data):

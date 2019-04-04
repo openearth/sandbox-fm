@@ -54,6 +54,12 @@ Windows Install
 - ``pip install cmocean``
 - Make sure the dflowfm.dll/xbeach.dll is somewhere in your PATH definition
 
+Installing libreenect
+---------------------
+
+Download: https://github.com/OpenKinect/libfreenect/tree/master/wrappers/python
+''pip install .''
+
 
 Using models
 ------------

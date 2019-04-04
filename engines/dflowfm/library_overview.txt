@@ -1,0 +1,28 @@
+-rwxr-xr-x 1 sandbox sandbox 18863918 juin  10 20:24 libdflowfm.so*
+-rwxr-xr-x 1 sandbox sandbox 18863918 juin  10 20:24 libdflowfm.so.0*
+-rwxr-xr-x 1 sandbox sandbox 18863918 juin  10 20:24 libdflowfm.so.0.0.0*
+-rwxr-xr-x 1 sandbox sandbox  1524280 juin  10 20:24 libflow1d.so*
+-rwxr-xr-x 1 sandbox sandbox  1524280 juin  10 20:24 libflow1d.so.0*
+-rwxr-xr-x 1 sandbox sandbox  1524280 juin  10 20:24 libflow1d.so.0.0.0*
+-rwxr-xr-x 1 sandbox sandbox  5394682 juin  10 20:24 libgfortran.so.3*
+-rwxr-xr-x 1 sandbox sandbox   262054 juin  10 20:24 libgridgeom.so*
+-rwxr-xr-x 1 sandbox sandbox   262054 juin  10 20:24 libgridgeom.so.0*
+-rwxr-xr-x 1 sandbox sandbox   262054 juin  10 20:24 libgridgeom.so.0.0.0*
+-rwxr-xr-x 1 sandbox sandbox   149150 juin  10 20:24 libhdf5_hl.so.9*
+-rwxr-xr-x 1 sandbox sandbox  3290705 juin  10 20:24 libhdf5.so.9*
+-rwxr-xr-x 1 sandbox sandbox   951596 juin  10 20:24 libmetis.so*
+-rwxr-xr-x 1 sandbox sandbox   184905 juin  10 20:24 libmpicxx.so.12*
+-rwxr-xr-x 1 sandbox sandbox   381299 juin  10 20:24 libmpifort.so.12*
+-rwxr-xr-x 1 sandbox sandbox  2433550 juin  10 20:24 libmpi.so.12*
+-rwxr-xr-x 1 sandbox sandbox  1129844 juin  10 20:24 libnetcdff.so.6*
+-rwxr-xr-x 1 sandbox sandbox  2548104 juin  10 20:24 libnetcdf.so.7*
+-rwxrwxr-x 1 sandbox sandbox 10392038 juin  10 20:24 libpetsc.so*
+-rw-r--r-- 1 sandbox sandbox      654 mai   15 13:39 libraries.txt
+-rwxr-xr-x 1 sandbox sandbox    11665 juin  10 20:24 libsigwatch.so*
+-rwxr-xr-x 1 sandbox sandbox    11665 juin  10 20:24 libsigwatch.so.0*
+-rwxr-xr-x 1 sandbox sandbox    11665 juin  10 20:24 libsigwatch.so.0.0.0*
+
+_del:
+total 8
+drwxr-xr-x 2 sandbox sandbox 4096 juin  11 10:08 ./
+drwxr-xr-x 3 sandbox sandbox 4096 juin  11 10:49 ../
