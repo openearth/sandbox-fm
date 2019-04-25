@@ -75,13 +75,13 @@ def main_menu():
                       correct filename
                 """
                 tic = time.time()
-                try:
-                    token, hex_sandbox, hex_tygron, hex_water, hex_land, \
-                    grid, grid_interpolated, transforms = initialize(filename)
-                except TypeError:
-                    print("Calibration failed, closing application")
-                    time.sleep(2)
-                    break
+                #try:
+                token, hex_sandbox, hex_tygron, hex_water, hex_land, \
+                grid, grid_interpolated, transforms = initialize(filename)
+                #except TypeError:
+                    #print("Calibration failed, closing application")
+                    #time.sleep(2)
+                    #break
                 with open('token.txt', 'w') as f:
                     f.write(token)
                 hex_sandbox_prev = hex_sandbox
@@ -121,15 +121,14 @@ def main_menu():
                 z_changed = compare.compare_hex(token, hexagons_old,
                                                 hexagons_new)
                 tac = time.time()
-                grid_interpolated, tec = gridmap.hex_to_points(hexagons_new,
-                                                               grid_interpolated,
-                                                               changed_hex=z_changed,
-                                                               turn=turn)
-                #tygron.get_buildings(token)
+                grid_interpolated = gridmap.hex_to_points(hexagons_new,
+                                                          grid_interpolated,
+                                                          changed_hex=z_changed,
+                                                          turn=turn)
                 toc = time.time()
                 print("Updated to " + str(turn) +
                       ". Comparison update time: " + str(tac-tic) +
-                      ". Interpolation update time: " + str(tec-tac) +
+                      ". Interpolation update time: " + str(toc-tac) +
                       ". Total update time: " + str(toc-tic))
             else:
                 print("No calibration run, please first calibrate Virtual"
@@ -189,9 +188,14 @@ def initialize(filename):
         print("prepared geojson files")
         grid = gridmap.read_grid()
         print("loaded grid")
-        grid_interpolated, tec = gridmap.hex_to_points(hexagons_sandbox, grid,
+        grid_interpolated = gridmap.hex_to_points(hexagons_sandbox, grid,
                                                        start=True)
         print("executed grid interpolation")
+        """
+        This section is not very efficient, once the system is up and running
+        replace this to either also check which hexagons need to change or make
+        an empty project area that is either land or water only.
+        """
         tygron.set_terrain_type(token, hexagons_water, terrain_type="water")
         tygron.set_terrain_type(token, hexagons_land, terrain_type="land")
         print("updated Tygron")

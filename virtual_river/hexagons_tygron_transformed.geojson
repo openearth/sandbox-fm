@@ -44,6 +44,7 @@
       },
       "id": 0,
       "properties": {
+        "column": 1,
         "id": 0,
         "landuse": 0,
         "tygron_id": 0,
@@ -89,6 +90,7 @@
       },
       "id": 1,
       "properties": {
+        "column": 1,
         "id": 1,
         "landuse": 0,
         "tygron_id": 1,
@@ -134,6 +136,7 @@
       },
       "id": 2,
       "properties": {
+        "column": 1,
         "id": 2,
         "landuse": 0,
         "tygron_id": 2,
@@ -179,9 +182,10 @@
       },
       "id": 3,
       "properties": {
+        "column": 1,
         "id": 3,
         "landuse": 0,
-        "tygron_id": 143,
+        "tygron_id": null,
         "z": 1
       },
       "type": "Feature"
@@ -224,6 +228,7 @@
       },
       "id": 4,
       "properties": {
+        "column": 1,
         "id": 4,
         "landuse": 0,
         "tygron_id": null,
@@ -269,6 +274,7 @@
       },
       "id": 5,
       "properties": {
+        "column": 1,
         "id": 5,
         "landuse": 0,
         "tygron_id": null,
@@ -314,6 +320,7 @@
       },
       "id": 6,
       "properties": {
+        "column": 1,
         "id": 6,
         "landuse": 0,
         "tygron_id": 6,
@@ -359,6 +366,7 @@
       },
       "id": 7,
       "properties": {
+        "column": 1,
         "id": 7,
         "landuse": 0,
         "tygron_id": 7,
@@ -404,6 +412,7 @@
       },
       "id": 8,
       "properties": {
+        "column": 1,
         "id": 8,
         "landuse": 0,
         "tygron_id": 8,
@@ -449,6 +458,7 @@
       },
       "id": 9,
       "properties": {
+        "column": 1,
         "id": 9,
         "landuse": 0,
         "tygron_id": 9,
@@ -494,6 +504,7 @@
       },
       "id": 10,
       "properties": {
+        "column": 2,
         "id": 10,
         "landuse": 0,
         "tygron_id": 10,
@@ -539,6 +550,7 @@
       },
       "id": 11,
       "properties": {
+        "column": 2,
         "id": 11,
         "landuse": 0,
         "tygron_id": 11,
@@ -584,9 +596,10 @@
       },
       "id": 12,
       "properties": {
+        "column": 2,
         "id": 12,
         "landuse": 0,
-        "tygron_id": 144,
+        "tygron_id": null,
         "z": 1
       },
       "type": "Feature"
@@ -629,6 +642,7 @@
       },
       "id": 13,
       "properties": {
+        "column": 2,
         "id": 13,
         "landuse": 0,
         "tygron_id": 13,
@@ -674,6 +688,7 @@
       },
       "id": 14,
       "properties": {
+        "column": 2,
         "id": 14,
         "landuse": 0,
         "tygron_id": null,
@@ -719,6 +734,7 @@
       },
       "id": 15,
       "properties": {
+        "column": 2,
         "id": 15,
         "landuse": 0,
         "tygron_id": null,
@@ -764,6 +780,7 @@
       },
       "id": 16,
       "properties": {
+        "column": 2,
         "id": 16,
         "landuse": 0,
         "tygron_id": 16,
@@ -809,6 +826,7 @@
       },
       "id": 17,
       "properties": {
+        "column": 2,
         "id": 17,
         "landuse": 0,
         "tygron_id": 17,
@@ -854,6 +872,7 @@
       },
       "id": 18,
       "properties": {
+        "column": 2,
         "id": 18,
         "landuse": 0,
         "tygron_id": 18,
@@ -899,6 +918,7 @@
       },
       "id": 19,
       "properties": {
+        "column": 3,
         "id": 19,
         "landuse": 0,
         "tygron_id": 19,
@@ -944,6 +964,7 @@
       },
       "id": 20,
       "properties": {
+        "column": 3,
         "id": 20,
         "landuse": 0,
         "tygron_id": 20,
@@ -989,9 +1010,10 @@
       },
       "id": 21,
       "properties": {
+        "column": 3,
         "id": 21,
         "landuse": 0,
-        "tygron_id": 145,
+        "tygron_id": null,
         "z": 1
       },
       "type": "Feature"
@@ -1034,6 +1056,7 @@
       },
       "id": 22,
       "properties": {
+        "column": 3,
         "id": 22,
         "landuse": 0,
         "tygron_id": 22,
@@ -1079,6 +1102,7 @@
       },
       "id": 23,
       "properties": {
+        "column": 3,
         "id": 23,
         "landuse": 0,
         "tygron_id": 23,
@@ -1124,6 +1148,7 @@
       },
       "id": 24,
       "properties": {
+        "column": 3,
         "id": 24,
         "landuse": 0,
         "tygron_id": null,
@@ -1169,6 +1194,7 @@
       },
       "id": 25,
       "properties": {
+        "column": 3,
         "id": 25,
         "landuse": 9,
         "tygron_id": null,
@@ -1214,6 +1240,7 @@
       },
       "id": 26,
       "properties": {
+        "column": 3,
         "id": 26,
         "landuse": 0,
         "tygron_id": 26,
@@ -1259,6 +1286,7 @@
       },
       "id": 27,
       "properties": {
+        "column": 3,
         "id": 27,
         "landuse": 0,
         "tygron_id": 27,
@@ -1304,6 +1332,7 @@
       },
       "id": 28,
       "properties": {
+        "column": 3,
         "id": 28,
         "landuse": 0,
         "tygron_id": 28,
@@ -1349,6 +1378,7 @@
       },
       "id": 29,
       "properties": {
+        "column": 4,
         "id": 29,
         "landuse": 0,
         "tygron_id": 29,
@@ -1394,6 +1424,7 @@
       },
       "id": 30,
       "properties": {
+        "column": 4,
         "id": 30,
         "landuse": 0,
         "tygron_id": 30,
@@ -1439,9 +1470,10 @@
       },
       "id": 31,
       "properties": {
+        "column": 4,
         "id": 31,
         "landuse": 0,
-        "tygron_id": 146,
+        "tygron_id": null,
         "z": 1
       },
       "type": "Feature"
@@ -1484,6 +1516,7 @@
       },
       "id": 32,
       "properties": {
+        "column": 4,
         "id": 32,
         "landuse": 0,
         "tygron_id": 32,
@@ -1529,6 +1562,7 @@
       },
       "id": 33,
       "properties": {
+        "column": 4,
         "id": 33,
         "landuse": 4,
         "tygron_id": 33,
@@ -1574,6 +1608,7 @@
       },
       "id": 34,
       "properties": {
+        "column": 4,
         "id": 34,
         "landuse": 0,
         "tygron_id": null,
@@ -1619,6 +1654,7 @@
       },
       "id": 35,
       "properties": {
+        "column": 4,
         "id": 35,
         "landuse": 0,
         "tygron_id": null,
@@ -1664,6 +1700,7 @@
       },
       "id": 36,
       "properties": {
+        "column": 4,
         "id": 36,
         "landuse": 0,
         "tygron_id": 36,
@@ -1709,6 +1746,7 @@
       },
       "id": 37,
       "properties": {
+        "column": 4,
         "id": 37,
         "landuse": 0,
         "tygron_id": 37,
@@ -1754,6 +1792,7 @@
       },
       "id": 38,
       "properties": {
+        "column": 5,
         "id": 38,
         "landuse": 0,
         "tygron_id": 38,
@@ -1799,6 +1838,7 @@
       },
       "id": 39,
       "properties": {
+        "column": 5,
         "id": 39,
         "landuse": 0,
         "tygron_id": 39,
@@ -1844,9 +1884,10 @@
       },
       "id": 40,
       "properties": {
+        "column": 5,
         "id": 40,
         "landuse": 0,
-        "tygron_id": 147,
+        "tygron_id": null,
         "z": 1
       },
       "type": "Feature"
@@ -1889,6 +1930,7 @@
       },
       "id": 41,
       "properties": {
+        "column": 5,
         "id": 41,
         "landuse": 0,
         "tygron_id": 41,
@@ -1934,6 +1976,7 @@
       },
       "id": 42,
       "properties": {
+        "column": 5,
         "id": 42,
         "landuse": 0,
         "tygron_id": 42,
@@ -1979,6 +2022,7 @@
       },
       "id": 43,
       "properties": {
+        "column": 5,
         "id": 43,
         "landuse": 9,
         "tygron_id": null,
@@ -2024,6 +2068,7 @@
       },
       "id": 44,
       "properties": {
+        "column": 5,
         "id": 44,
         "landuse": 0,
         "tygron_id": null,
@@ -2069,6 +2114,7 @@
       },
       "id": 45,
       "properties": {
+        "column": 5,
         "id": 45,
         "landuse": 0,
         "tygron_id": 45,
@@ -2114,6 +2160,7 @@
       },
       "id": 46,
       "properties": {
+        "column": 5,
         "id": 46,
         "landuse": 0,
         "tygron_id": 46,
@@ -2159,6 +2206,7 @@
       },
       "id": 47,
       "properties": {
+        "column": 5,
         "id": 47,
         "landuse": 0,
         "tygron_id": 47,
@@ -2204,6 +2252,7 @@
       },
       "id": 48,
       "properties": {
+        "column": 6,
         "id": 48,
         "landuse": 0,
         "tygron_id": 48,
@@ -2249,6 +2298,7 @@
       },
       "id": 49,
       "properties": {
+        "column": 6,
         "id": 49,
         "landuse": 0,
         "tygron_id": 49,
@@ -2294,9 +2344,10 @@
       },
       "id": 50,
       "properties": {
+        "column": 6,
         "id": 50,
         "landuse": 0,
-        "tygron_id": 148,
+        "tygron_id": null,
         "z": 1
       },
       "type": "Feature"
@@ -2339,6 +2390,7 @@
       },
       "id": 51,
       "properties": {
+        "column": 6,
         "id": 51,
         "landuse": 0,
         "tygron_id": 51,
@@ -2384,6 +2436,7 @@
       },
       "id": 52,
       "properties": {
+        "column": 6,
         "id": 52,
         "landuse": 0,
         "tygron_id": null,
@@ -2429,6 +2482,7 @@
       },
       "id": 53,
       "properties": {
+        "column": 6,
         "id": 53,
         "landuse": 9,
         "tygron_id": null,
@@ -2474,6 +2528,7 @@
       },
       "id": 54,
       "properties": {
+        "column": 6,
         "id": 54,
         "landuse": 0,
         "tygron_id": 54,
@@ -2519,6 +2574,7 @@
       },
       "id": 55,
       "properties": {
+        "column": 6,
         "id": 55,
         "landuse": 0,
         "tygron_id": 55,
@@ -2564,6 +2620,7 @@
       },
       "id": 56,
       "properties": {
+        "column": 6,
         "id": 56,
         "landuse": 0,
         "tygron_id": 56,
@@ -2609,6 +2666,7 @@
       },
       "id": 57,
       "properties": {
+        "column": 7,
         "id": 57,
         "landuse": 0,
         "tygron_id": 57,
@@ -2654,6 +2712,7 @@
       },
       "id": 58,
       "properties": {
+        "column": 7,
         "id": 58,
         "landuse": 0,
         "tygron_id": 58,
@@ -2699,9 +2758,10 @@
       },
       "id": 59,
       "properties": {
+        "column": 7,
         "id": 59,
         "landuse": 0,
-        "tygron_id": 149,
+        "tygron_id": null,
         "z": 1
       },
       "type": "Feature"
@@ -2744,6 +2804,7 @@
       },
       "id": 60,
       "properties": {
+        "column": 7,
         "id": 60,
         "landuse": 0,
         "tygron_id": 60,
@@ -2789,6 +2850,7 @@
       },
       "id": 61,
       "properties": {
+        "column": 7,
         "id": 61,
         "landuse": 0,
         "tygron_id": null,
@@ -2834,6 +2896,7 @@
       },
       "id": 62,
       "properties": {
+        "column": 7,
         "id": 62,
         "landuse": 0,
         "tygron_id": null,
@@ -2879,6 +2942,7 @@
       },
       "id": 63,
       "properties": {
+        "column": 7,
         "id": 63,
         "landuse": 0,
         "tygron_id": 63,
@@ -2924,6 +2988,7 @@
       },
       "id": 64,
       "properties": {
+        "column": 7,
         "id": 64,
         "landuse": 0,
         "tygron_id": 64,
@@ -2969,6 +3034,7 @@
       },
       "id": 65,
       "properties": {
+        "column": 7,
         "id": 65,
         "landuse": 0,
         "tygron_id": 65,
@@ -3014,6 +3080,7 @@
       },
       "id": 66,
       "properties": {
+        "column": 7,
         "id": 66,
         "landuse": 0,
         "tygron_id": 66,
@@ -3059,6 +3126,7 @@
       },
       "id": 67,
       "properties": {
+        "column": 8,
         "id": 67,
         "landuse": 0,
         "tygron_id": 67,
@@ -3104,6 +3172,7 @@
       },
       "id": 68,
       "properties": {
+        "column": 8,
         "id": 68,
         "landuse": 0,
         "tygron_id": 68,
@@ -3149,9 +3218,10 @@
       },
       "id": 69,
       "properties": {
+        "column": 8,
         "id": 69,
         "landuse": 0,
-        "tygron_id": 150,
+        "tygron_id": null,
         "z": 1
       },
       "type": "Feature"
@@ -3194,6 +3264,7 @@
       },
       "id": 70,
       "properties": {
+        "column": 8,
         "id": 70,
         "landuse": 0,
         "tygron_id": null,
@@ -3239,6 +3310,7 @@
       },
       "id": 71,
       "properties": {
+        "column": 8,
         "id": 71,
         "landuse": 0,
         "tygron_id": null,
@@ -3284,6 +3356,7 @@
       },
       "id": 72,
       "properties": {
+        "column": 8,
         "id": 72,
         "landuse": 0,
         "tygron_id": 72,
@@ -3329,6 +3402,7 @@
       },
       "id": 73,
       "properties": {
+        "column": 8,
         "id": 73,
         "landuse": 0,
         "tygron_id": 73,
@@ -3374,6 +3448,7 @@
       },
       "id": 74,
       "properties": {
+        "column": 8,
         "id": 74,
         "landuse": 0,
         "tygron_id": 74,
@@ -3419,6 +3494,7 @@
       },
       "id": 75,
       "properties": {
+        "column": 8,
         "id": 75,
         "landuse": 0,
         "tygron_id": 75,
@@ -3464,6 +3540,7 @@
       },
       "id": 76,
       "properties": {
+        "column": 9,
         "id": 76,
         "landuse": 0,
         "tygron_id": 76,
@@ -3509,6 +3586,7 @@
       },
       "id": 77,
       "properties": {
+        "column": 9,
         "id": 77,
         "landuse": 0,
         "tygron_id": 77,
@@ -3554,6 +3632,7 @@
       },
       "id": 78,
       "properties": {
+        "column": 9,
         "id": 78,
         "landuse": 0,
         "tygron_id": 78,
@@ -3599,6 +3678,7 @@
       },
       "id": 79,
       "properties": {
+        "column": 9,
         "id": 79,
         "landuse": 9,
         "tygron_id": null,
@@ -3644,6 +3724,7 @@
       },
       "id": 80,
       "properties": {
+        "column": 9,
         "id": 80,
         "landuse": 9,
         "tygron_id": null,
@@ -3689,6 +3770,7 @@
       },
       "id": 81,
       "properties": {
+        "column": 9,
         "id": 81,
         "landuse": 0,
         "tygron_id": 81,
@@ -3734,6 +3816,7 @@
       },
       "id": 82,
       "properties": {
+        "column": 9,
         "id": 82,
         "landuse": 0,
         "tygron_id": 82,
@@ -3779,6 +3862,7 @@
       },
       "id": 83,
       "properties": {
+        "column": 9,
         "id": 83,
         "landuse": 0,
         "tygron_id": 83,
@@ -3824,6 +3908,7 @@
       },
       "id": 84,
       "properties": {
+        "column": 9,
         "id": 84,
         "landuse": 0,
         "tygron_id": 84,
@@ -3869,6 +3954,7 @@
       },
       "id": 85,
       "properties": {
+        "column": 9,
         "id": 85,
         "landuse": 4,
         "tygron_id": 85,
@@ -3914,6 +4000,7 @@
       },
       "id": 86,
       "properties": {
+        "column": 10,
         "id": 86,
         "landuse": 0,
         "tygron_id": 86,
@@ -3959,6 +4046,7 @@
       },
       "id": 87,
       "properties": {
+        "column": 10,
         "id": 87,
         "landuse": 0,
         "tygron_id": 87,
@@ -4004,6 +4092,7 @@
       },
       "id": 88,
       "properties": {
+        "column": 10,
         "id": 88,
         "landuse": 0,
         "tygron_id": null,
@@ -4049,6 +4138,7 @@
       },
       "id": 89,
       "properties": {
+        "column": 10,
         "id": 89,
         "landuse": 9,
         "tygron_id": null,
@@ -4094,6 +4184,7 @@
       },
       "id": 90,
       "properties": {
+        "column": 10,
         "id": 90,
         "landuse": 0,
         "tygron_id": 90,
@@ -4139,6 +4230,7 @@
       },
       "id": 91,
       "properties": {
+        "column": 10,
         "id": 91,
         "landuse": 0,
         "tygron_id": 91,
@@ -4184,6 +4276,7 @@
       },
       "id": 92,
       "properties": {
+        "column": 10,
         "id": 92,
         "landuse": 0,
         "tygron_id": 92,
@@ -4229,6 +4322,7 @@
       },
       "id": 93,
       "properties": {
+        "column": 10,
         "id": 93,
         "landuse": 0,
         "tygron_id": 93,
@@ -4274,6 +4368,7 @@
       },
       "id": 94,
       "properties": {
+        "column": 10,
         "id": 94,
         "landuse": 0,
         "tygron_id": 94,
@@ -4319,6 +4414,7 @@
       },
       "id": 95,
       "properties": {
+        "column": 11,
         "id": 95,
         "landuse": 0,
         "tygron_id": 95,
@@ -4364,6 +4460,7 @@
       },
       "id": 96,
       "properties": {
+        "column": 11,
         "id": 96,
         "landuse": 0,
         "tygron_id": 96,
@@ -4409,6 +4506,7 @@
       },
       "id": 97,
       "properties": {
+        "column": 11,
         "id": 97,
         "landuse": 0,
         "tygron_id": 97,
@@ -4454,6 +4552,7 @@
       },
       "id": 98,
       "properties": {
+        "column": 11,
         "id": 98,
         "landuse": 0,
         "tygron_id": null,
@@ -4499,6 +4598,7 @@
       },
       "id": 99,
       "properties": {
+        "column": 11,
         "id": 99,
         "landuse": 9,
         "tygron_id": null,
@@ -4544,6 +4644,7 @@
       },
       "id": 100,
       "properties": {
+        "column": 11,
         "id": 100,
         "landuse": 0,
         "tygron_id": 100,
@@ -4589,6 +4690,7 @@
       },
       "id": 101,
       "properties": {
+        "column": 11,
         "id": 101,
         "landuse": 0,
         "tygron_id": null,
@@ -4634,6 +4736,7 @@
       },
       "id": 102,
       "properties": {
+        "column": 11,
         "id": 102,
         "landuse": 0,
         "tygron_id": 102,
@@ -4679,6 +4782,7 @@
       },
       "id": 103,
       "properties": {
+        "column": 11,
         "id": 103,
         "landuse": 0,
         "tygron_id": 103,
@@ -4724,6 +4828,7 @@
       },
       "id": 104,
       "properties": {
+        "column": 11,
         "id": 104,
         "landuse": 0,
         "tygron_id": 104,
@@ -4769,6 +4874,7 @@
       },
       "id": 105,
       "properties": {
+        "column": 12,
         "id": 105,
         "landuse": 0,
         "tygron_id": 105,
@@ -4814,6 +4920,7 @@
       },
       "id": 106,
       "properties": {
+        "column": 12,
         "id": 106,
         "landuse": 0,
         "tygron_id": 106,
@@ -4859,6 +4966,7 @@
       },
       "id": 107,
       "properties": {
+        "column": 12,
         "id": 107,
         "landuse": 0,
         "tygron_id": 107,
@@ -4904,6 +5012,7 @@
       },
       "id": 108,
       "properties": {
+        "column": 12,
         "id": 108,
         "landuse": 0,
         "tygron_id": null,
@@ -4949,6 +5058,7 @@
       },
       "id": 109,
       "properties": {
+        "column": 12,
         "id": 109,
         "landuse": 9,
         "tygron_id": null,
@@ -4994,6 +5104,7 @@
       },
       "id": 110,
       "properties": {
+        "column": 12,
         "id": 110,
         "landuse": 0,
         "tygron_id": null,
@@ -5039,6 +5150,7 @@
       },
       "id": 111,
       "properties": {
+        "column": 12,
         "id": 111,
         "landuse": 9,
         "tygron_id": null,
@@ -5084,6 +5196,7 @@
       },
       "id": 112,
       "properties": {
+        "column": 12,
         "id": 112,
         "landuse": 0,
         "tygron_id": 112,
@@ -5129,6 +5242,7 @@
       },
       "id": 113,
       "properties": {
+        "column": 12,
         "id": 113,
         "landuse": 0,
         "tygron_id": 113,
@@ -5174,6 +5288,7 @@
       },
       "id": 114,
       "properties": {
+        "column": 13,
         "id": 114,
         "landuse": 0,
         "tygron_id": 114,
@@ -5219,6 +5334,7 @@
       },
       "id": 115,
       "properties": {
+        "column": 13,
         "id": 115,
         "landuse": 0,
         "tygron_id": 115,
@@ -5264,6 +5380,7 @@
       },
       "id": 116,
       "properties": {
+        "column": 13,
         "id": 116,
         "landuse": 0,
         "tygron_id": 116,
@@ -5309,6 +5426,7 @@
       },
       "id": 117,
       "properties": {
+        "column": 13,
         "id": 117,
         "landuse": 0,
         "tygron_id": null,
@@ -5354,6 +5472,7 @@
       },
       "id": 118,
       "properties": {
+        "column": 13,
         "id": 118,
         "landuse": 0,
         "tygron_id": null,
@@ -5399,6 +5518,7 @@
       },
       "id": 119,
       "properties": {
+        "column": 13,
         "id": 119,
         "landuse": 0,
         "tygron_id": 119,
@@ -5444,6 +5564,7 @@
       },
       "id": 120,
       "properties": {
+        "column": 13,
         "id": 120,
         "landuse": 0,
         "tygron_id": null,
@@ -5489,6 +5610,7 @@
       },
       "id": 121,
       "properties": {
+        "column": 13,
         "id": 121,
         "landuse": 0,
         "tygron_id": 121,
@@ -5534,6 +5656,7 @@
       },
       "id": 122,
       "properties": {
+        "column": 13,
         "id": 122,
         "landuse": 0,
         "tygron_id": 122,
@@ -5579,6 +5702,7 @@
       },
       "id": 123,
       "properties": {
+        "column": 13,
         "id": 123,
         "landuse": 0,
         "tygron_id": 123,
@@ -5624,6 +5748,7 @@
       },
       "id": 124,
       "properties": {
+        "column": 14,
         "id": 124,
         "landuse": 0,
         "tygron_id": 124,
@@ -5669,6 +5794,7 @@
       },
       "id": 125,
       "properties": {
+        "column": 14,
         "id": 125,
         "landuse": 0,
         "tygron_id": 125,
@@ -5714,6 +5840,7 @@
       },
       "id": 126,
       "properties": {
+        "column": 14,
         "id": 126,
         "landuse": 9,
         "tygron_id": null,
@@ -5759,6 +5886,7 @@
       },
       "id": 127,
       "properties": {
+        "column": 14,
         "id": 127,
         "landuse": 9,
         "tygron_id": null,
@@ -5804,6 +5932,7 @@
       },
       "id": 128,
       "properties": {
+        "column": 14,
         "id": 128,
         "landuse": 0,
         "tygron_id": 128,
@@ -5849,6 +5978,7 @@
       },
       "id": 129,
       "properties": {
+        "column": 14,
         "id": 129,
         "landuse": 0,
         "tygron_id": 129,
@@ -5894,6 +6024,7 @@
       },
       "id": 130,
       "properties": {
+        "column": 14,
         "id": 130,
         "landuse": 0,
         "tygron_id": 130,
@@ -5939,6 +6070,7 @@
       },
       "id": 131,
       "properties": {
+        "column": 14,
         "id": 131,
         "landuse": 0,
         "tygron_id": 131,
@@ -5984,6 +6116,7 @@
       },
       "id": 132,
       "properties": {
+        "column": 14,
         "id": 132,
         "landuse": 0,
         "tygron_id": 132,
@@ -6029,6 +6162,7 @@
       },
       "id": 133,
       "properties": {
+        "column": 15,
         "id": 133,
         "landuse": 0,
         "tygron_id": 133,
@@ -6074,6 +6208,7 @@
       },
       "id": 134,
       "properties": {
+        "column": 15,
         "id": 134,
         "landuse": 0,
         "tygron_id": 134,
@@ -6119,6 +6254,7 @@
       },
       "id": 135,
       "properties": {
+        "column": 15,
         "id": 135,
         "landuse": 0,
         "tygron_id": null,
@@ -6164,6 +6300,7 @@
       },
       "id": 136,
       "properties": {
+        "column": 15,
         "id": 136,
         "landuse": 9,
         "tygron_id": null,
@@ -6209,6 +6346,7 @@
       },
       "id": 137,
       "properties": {
+        "column": 15,
         "id": 137,
         "landuse": 0,
         "tygron_id": 137,
@@ -6254,6 +6392,7 @@
       },
       "id": 138,
       "properties": {
+        "column": 15,
         "id": 138,
         "landuse": 0,
         "tygron_id": 138,
@@ -6299,6 +6438,7 @@
       },
       "id": 139,
       "properties": {
+        "column": 15,
         "id": 139,
         "landuse": 0,
         "tygron_id": 139,
@@ -6344,6 +6484,7 @@
       },
       "id": 140,
       "properties": {
+        "column": 15,
         "id": 140,
         "landuse": 0,
         "tygron_id": 140,
@@ -6389,6 +6530,7 @@
       },
       "id": 141,
       "properties": {
+        "column": 15,
         "id": 141,
         "landuse": 0,
         "tygron_id": 141,
@@ -6434,6 +6576,7 @@
       },
       "id": 142,
       "properties": {
+        "column": 15,
         "id": 142,
         "landuse": 0,
         "tygron_id": 142,

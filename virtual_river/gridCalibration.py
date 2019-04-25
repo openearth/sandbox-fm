@@ -86,7 +86,7 @@ def detect_corners(filename, method='standard'):
         # draw rectangle at center of detected corner
         cv2.rectangle(img, (x - 5, y - 5), (x + 5, y + 5), (0, 128, 255), -1)
 
-    #cv2.imwrite('CornersDetected.jpg', img) # store the corner detection image
+    cv2.imwrite('CornersDetected.jpg', img) # store the corner detection image
     return canvas, thresh
 
 
@@ -144,13 +144,13 @@ def rotate_grid(canvas, img):
     # warp image according to the perspective transform and store image
     # warped = cv2.warpPerspective(img, perspective, (img_x, img_y))
     # cv2.imwrite('warpedGrid.jpg', warped)
-    origins, radius = calc_grid(img_y, img_x)
-    features = create_features(origins, radius)
-    origins = np.array(origins)
+    #origins, radius = calc_grid(img_y, img_x)
+    features, origins, radius = create_features(img_y, img_x)
+    #origins = np.array(origins)
     return perspective, img_x, img_y, origins, radius, pts1, features
 
 
-def calc_grid(height, width):
+def create_features(height, width):
     """
     Function that calculates the midpoint coordinates of each hexagon in the
     transformed picture.
@@ -159,6 +159,7 @@ def calc_grid(height, width):
     radius = (height / 10)
     x_step = np.cos(np.deg2rad(30)) * radius
     origins = []
+    column = []
     # determine x and y coordinates of gridcells midpoints
     for a in range(1, 16):  # range reflects gridsize in x direction
         x = (x_step * a)
@@ -170,13 +171,32 @@ def calc_grid(height, width):
             else:
                 y = (radius * (b - 0.5))
             origins.append([x, y])
-    return origins, radius
+            column.append(a)
+    origins = np.array(origins)
+    dist = (radius/2)/np.cos(np.deg2rad(30))
+    x_jump = dist/2
+    y_jump = radius/2
+    features = []
+    for i, (x, y) in enumerate(origins):
+        point1 = [x+dist, y]
+        point2 = [x+x_jump, y+y_jump]
+        point3 = [x-x_jump, y+y_jump]
+        point4 = [x-dist, y]
+        point5 = [x-x_jump, y-y_jump]
+        point6 = [x+x_jump, y-y_jump]
+        polygon = geojson.Polygon([[point1, point2, point3, point4, point5,
+                                    point6, point1]])
+        feature = geojson.Feature(id=i, geometry=polygon, properties={"column": column[i]})
+        #feature.properties["column"] = column[i]
+        if i == 1:
+            print(feature)
+        features.append(feature)
+    return features, origins, radius
 
 
+"""
 def create_features(origins, radius):
-    """
-    Function that creates Polygon features (hexagon shaped) for all hexagons.
-    """
+    # Function that creates Polygon features (hexagon shaped) for all hexagons.
     radius = radius/2
     dist = radius/np.cos(np.deg2rad(30))
     x_jump = dist/2
@@ -195,6 +215,7 @@ def create_features(origins, radius):
         feature = geojson.Feature(id=i, geometry=polygon)
         features.append(feature)
     return features
+"""
 
 
 def drawMask(origins, img):

@@ -100,10 +100,11 @@ def detect_markers(file, pers, img_x, img_y, origins, r, features,
         feature.properties["tygron_id"] = i
         feature.properties["z"] = len(contoursGeo)
         feature.properties["landuse"] = len(contoursEco)
+    hexagons = geojson.FeatureCollection(features)
     with open('hexagons.geojson', 'w') as f:
-        geojson.dump(geojson.FeatureCollection(features), f, sort_keys=True,
+        geojson.dump(hexagons, f, sort_keys=True,
                      indent=2)
-    return geojson.FeatureCollection(features)
+    return hexagons
 
 
 def transform(features, transforms, export=None):
@@ -174,6 +175,7 @@ def transform(features, transforms, export=None):
 if __name__ == '__main__':
     tic = time.time()  # start performance timer
     filename = 'board_image0.jpg'
+    #filename = 'webcam_test.jpg'
     # image name for calibration (would be first image pre-session)
     canvas, thresh = cali.detect_corners(filename, method='adaptive')
     # store calibration values as global variables
