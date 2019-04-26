@@ -16,8 +16,9 @@ import matplotlib.pyplot as plt
 from scipy.spatial import cKDTree
 from shapely import geometry
 from shapely.ops import unary_union
-import rasterio as rio
-#from rasterio.features import rasterize
+from rasterio import open as opentif
+from rasterio.features import rasterize
+from rasterio.crs import CRS
 from PIL import Image
 from io import BytesIO
 
@@ -497,11 +498,14 @@ def create_geotiff(grid):
     features = geojson.FeatureCollection(features)
     geometries = [feature.geometry for feature in features['features']]
     out = np.array([feature.properties['z'] for feature in features['features']])
-    img = rio.features.rasterize(zip(geometries, out), out_shape=(750, 1000))
+    img = rasterize(zip(geometries, out), out_shape=(750, 1000))
     img = cv2.flip(img, 0)
     plt.imshow(img)
     
-    with rio.open('geotiff_test.tif', 'w', driver='GTiff', width=1000, height=750, count=1, dtype=img.dtype) as dst:
+    #crs = CRS({"init": "epsg:3857"}) 8969 8966
+    crs = CRS.from_epsg(3857)
+    with opentif('geotiff_test2.tif', 'w', driver='GTiff', width=1000, height=750, count=1, dtype=img.dtype) as dst:
+        dst.crs = crs
         dst.write(img, 1)
     return
 
