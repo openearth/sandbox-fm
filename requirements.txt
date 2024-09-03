@@ -2,7 +2,7 @@ matplotlib==2.0.2
 scikit-image==0.13.1
 bmi-python==0.2.6
 scikit-image==0.13.1
-tqdm==4.19.5
+tqdm==4.66.5
 cmocean==1.1
 mmi==0.1.19
 git+https://github.com/j08lue/pycpt.git
